@@ -1,0 +1,35 @@
+{
+  "name": "skylark-slax-runtime",
+  "description": "The skylark shells widget",
+  "version": "0.9.0",
+  "keywords": [
+    "skylark",
+    "ui",
+    "shells"
+  ],
+  "homepage": "https://github.com/skylark-slax/skylark-slax-runtime/",
+  "author": "Hudaokeji, Inc.",
+  "scripts": {
+    "build": "sbundle build ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/skylark-slax/skylark-slax-runtime.git"
+  },
+  "bugs": {
+    "url": "https://github.com/skylark-slax/skylark-slax-runtime/issues"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "skylark-ajaxfy-routers": "git+https://github.com/skylark-ajaxfy/skylark-ajaxfy-routers.git#master",
+    "skylark-ajaxfy-spa": "git+https://github.com/skylark-ajaxfy/skylark-ajaxfy-spa.git#master",
+    "skylark-jquery": "git+https://github.com/skylark-integration/skylark-jquery.git#master",
+    "skylark-langx": "git+https://github.com/skylarklangx/skylark-langx.git#master",
+    "skylark-storages-cache": "git+https://github.com/skylark-storages/skylark-storages-cache.git#master",
+    "skylark-ui-shells": "git+https://github.com/skylarkui/skylark-ui-shells.git#master",
+    "skylark-utils-dom": "git+https://github.com/skylarkutils/skylark-utils-dom.git#master"
+  },
+  "engines": {
+    "node": ">=0.10.1"
+  }
+}

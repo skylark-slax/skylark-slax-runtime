@@ -1,5 +1,6 @@
 define([
 	"./slax"
 ],function(slax){
-	return slax.caches = {};
+        
+	return slax.templates = {};
 })
