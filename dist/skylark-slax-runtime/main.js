@@ -5,5 +5,5 @@
  * @link https://github.com/skylark-slax/skylark-slax-runtime/
  * @license MIT
  */
-define(["./slax","./cache","skylark-langx","skylark-utils-dom","skylark-ui-shells","skylark-jquery","skylark-ajaxfy-spa"],function(a){return a});
+define(["./slax","./cache","skylark-langx","skylark-utils-dom","skylark-widgets-shells","skylark-jquery","skylark-ajaxfy-spa"],function(a){return a});
 //# sourceMappingURL=sourcemaps/main.js.map

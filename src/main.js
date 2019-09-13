@@ -3,7 +3,7 @@ define([
 	"./cache",
 	"skylark-langx",
 	"skylark-utils-dom",
-	"skylark-ui-shells",
+	"skylark-widgets-shells",
 	"skylark-jquery",
 	"skylark-ajaxfy-spa"
 ],function(slax){

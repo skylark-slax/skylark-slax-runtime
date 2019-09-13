@@ -92,7 +92,6 @@ define('skylark-slax-runtime/slax',[
 	"skylark-langx-hoster",
 	"skylark-langx-async",
 	"skylark-langx-xhr",
-	"skylark-utils-dom/eventer",
 	"skylark-utils-dom/eventer"
 ],function(skylark, objects, hoster, async, Xhr, eventer){
 
@@ -226,7 +225,7 @@ define('skylark-slax-runtime/main',[
 	"./cache",
 	"skylark-langx",
 	"skylark-utils-dom",
-	"skylark-ui-shells",
+	"skylark-widgets-shells",
 	"skylark-jquery",
 	"skylark-ajaxfy-spa"
 ],function(slax){

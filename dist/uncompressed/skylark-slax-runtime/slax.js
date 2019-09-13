@@ -4,7 +4,6 @@ define([
 	"skylark-langx-hoster",
 	"skylark-langx-async",
 	"skylark-langx-xhr",
-	"skylark-utils-dom/eventer",
 	"skylark-utils-dom/eventer"
 ],function(skylark, objects, hoster, async, Xhr, eventer){
 
