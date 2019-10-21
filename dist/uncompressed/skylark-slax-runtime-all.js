@@ -4911,6 +4911,16 @@ define('skylark-domx-noder/noder',[
       return (node === document.body) ? true : document.body.contains(node);
     }        
 
+    var blockNodes = ["div", "p", "ul", "ol", "li", "blockquote", "hr", "pre", "h1", "h2", "h3", "h4", "h5", "table"];
+
+    function isBlockNode(node) {
+        if (!node || node.nodeType === 3) {
+          return false;
+        }
+        return new RegExp("^(" + (blockNodes.join('|')) + ")$").test(node.nodeName.toLowerCase());
+    }
+
+
     /*   
      * Get the owner document object for the specified element.
      * @param {Node} elm
@@ -5033,7 +5043,17 @@ define('skylark-domx-noder/noder',[
             scrollParent;
     };
 
-        /*   
+
+    function reflow(elm) {
+        if (el == null) {
+          elm = document;
+        }
+        elm.offsetHeight;
+
+        return this;      
+    }
+
+    /*   
      * Replace an old node with the specified node.
      * @param {Node} node
      * @param {Node} oldNode
@@ -5228,6 +5248,8 @@ define('skylark-domx-noder/noder',[
         prepend: prepend,
 
         append: append,
+
+        reflow: reflow,
 
         remove: remove,
 
@@ -8139,15 +8161,12 @@ define('skylark-langx/main',[
 
 define('skylark-langx', ['skylark-langx/main'], function (main) { return main; });
 
-define('skylark-utils-dom/browser',[
-    "./dom",
-    "skylark-domx-browser"
-], function(dom,browser) {
-    "use strict";
+define('skylark-widgets-shells/shells',[
+	"skylark-langx/skylark"
+],function(skylark){
+	return skylark.attach("widgets.shells",{});
 
-    return dom.browser = browser;
 });
-
 define('skylark-domx-css/css',[
     "skylark-langx/skylark",
     "skylark-langx/langx",
@@ -8507,12 +8526,180 @@ define('skylark-utils-dom/css',[
      return dom.css = css;
 });
 
-define('skylark-utils-dom/datax',[
+define('skylark-domx-scripter/scripter',[
+    "skylark-langx/skylark",
+    "skylark-langx/langx",
+    "skylark-domx-noder",
+    "skylark-domx-finder"
+], function(skylark, langx, noder, finder) {
+
+    var head = document.getElementsByTagName('head')[0],
+        scriptsByUrl = {},
+        scriptElementsById = {},
+        count = 0;
+
+    var rscriptType = ( /^$|^module$|\/(?:java|ecma)script/i );
+
+    function scripter() {
+        return scripter;
+    }
+
+
+    var preservedScriptAttributes = {
+        type: true,
+        src: true,
+        nonce: true,
+        noModule: true
+    };
+
+    function evaluate(code,node, doc ) {
+        doc = doc || document;
+
+        var i, val,
+            script = doc.createElement("script");
+
+        script.text = code;
+        if ( node ) {
+            for ( i in preservedScriptAttributes ) {
+
+                // Support: Firefox 64+, Edge 18+
+                // Some browsers don't support the "nonce" property on scripts.
+                // On the other hand, just using `getAttribute` is not enough as
+                // the `nonce` attribute is reset to an empty string whenever it
+                // becomes browsing-context connected.
+                // See https://github.com/whatwg/html/issues/2369
+                // See https://html.spec.whatwg.org/#nonce-attributes
+                // The `node.getAttribute` check was added for the sake of
+                // `jQuery.globalEval` so that it can fake a nonce-containing node
+                // via an object.
+                val = node[ i ] || node.getAttribute && node.getAttribute( i );
+                if ( val ) {
+                    script.setAttribute( i, val );
+                }
+            }
+        }
+        doc.head.appendChild( script ).parentNode.removeChild( script );
+
+        return this;
+    }
+
+    langx.mixin(scripter, {
+        /*
+         * Load a script from a url into the document.
+         * @param {} url
+         * @param {} loadedCallback
+         * @param {} errorCallback
+         */
+        loadJavaScript: function(url, loadedCallback, errorCallback) {
+            var script = scriptsByUrl[url];
+            if (!script) {
+                script = scriptsByUrl[url] = {
+                    state: 0, //0:unload,1:loaded,-1:loaderror
+                    loadedCallbacks: [],
+                    errorCallbacks: []
+                }
+            }
+
+            script.loadedCallbacks.push(loadedCallback);
+            script.errorCallbacks.push(errorCallback);
+
+            if (script.state === 1) {
+                script.node.onload();
+            } else if (script.state === -1) {
+                script.node.onerror();
+            } else {
+                var node = script.node = document.createElement("script"),
+                    id = script.id = (count++);
+
+                node.type = "text/javascript";
+                node.async = false;
+                node.defer = false;
+                startTime = new Date().getTime();
+                head.appendChild(node);
+
+                node.onload = function() {
+                        script.state = 1;
+
+                        var callbacks = script.loadedCallbacks,
+                            i = callbacks.length;
+
+                        while (i--) {
+                            callbacks[i]();
+                        }
+                        script.loadedCallbacks = [];
+                        script.errorCallbacks = [];
+                    },
+                    node.onerror = function() {
+                        script.state = -1;
+                        var callbacks = script.errorCallbacks,
+                            i = callbacks.length;
+
+                        while (i--) {
+                            callbacks[i]();
+                        }
+                        script.loadedCallbacks = [];
+                        script.errorCallbacks = [];
+                    };
+                node.src = url;
+
+                scriptElementsById[id] = node;
+            }
+            return script.id;
+        },
+        /*
+         * Remove the specified script from the document.
+         * @param {Number} id
+         */
+        deleteJavaScript: function(id) {
+            var node = scriptElementsById[id];
+            if (node) {
+                var url = node.src;
+                noder.remove(node);
+                delete scriptElementsById[id];
+                delete scriptsByUrl[url];
+            }
+        },
+
+        evaluate : evaluate,
+
+        html : function(node,value) {
+
+            var result = noder.html(node,value);
+
+            if (value !== undefined) {
+                var scripts = node.querySelectorAll('script');
+
+                for (var i =0; i<scripts.length; i++) {
+                    var node1 = scripts[i];
+                    if (rscriptType.test( node1.type || "" ) ) {
+                      evaluate(node1.textContent,node1);
+                    }
+                }       
+                return this;         
+            } else {
+                return result;
+            }
+
+
+
+        }
+    });
+
+    return skylark.attach("domx.scripter", scripter);
+});
+define('skylark-domx-scripter/main',[
+	"./scripter"
+],function(scripter){
+	return scripter;
+});
+define('skylark-domx-scripter', ['skylark-domx-scripter/main'], function (main) { return main; });
+
+define('skylark-utils-dom/scripter',[
     "./dom",
-    "skylark-domx-data"
-], function(dom, datax) {
- 
-    return dom.datax = datax;
+    "skylark-domx-scripter"
+], function(dom, scripter) {
+
+    return dom.scripter = scripter;
 });
 define('skylark-utils-dom/finder',[
     "./dom",
@@ -10137,329 +10324,10 @@ define('skylark-domx-fx/fx',[
 });
 define('skylark-domx-fx/main',[
 	"./fx"
-],function(browser){
+],function(fx){
 	return fx;
 });
 define('skylark-domx-fx', ['skylark-domx-fx/main'], function (main) { return main; });
-
-define('skylark-utils-dom/fx',[
-    "./dom",
-    "skylark-domx-fx"
-], function(dom, fx) {
-    return dom.fx = fx;
-});
-define('skylark-utils-dom/geom',[
-    "./dom",
-    "skylark-domx-geom"
-], function(dom, geom) {
-
-    return dom.geom = geom;
-});
-define('skylark-domx-transforms/transforms',[
-    "skylark-langx/skylark",
-    "skylark-langx/langx",
-    "skylark-domx-browser",
-    "skylark-domx-data",
-    "skylark-domx-styler"
-], function(skylark,langx,browser,datax,styler) {
-  var css3Transform = browser.normalizeCssProperty("transform");
-
-  function getMatrix(radian, x, y) {
-    var Cos = Math.cos(radian), Sin = Math.sin(radian);
-    return {
-      M11: Cos * x, 
-      M12: -Sin * y,
-      M21: Sin * x, 
-      M22: Cos * y
-    };
-  }
-
-  function getZoom(scale, zoom) {
-      return scale > 0 && scale > -zoom ? zoom :
-        scale < 0 && scale < zoom ? -zoom : 0;
-  }
-
-    function change(el,d) {
-      var matrix = getMatrix(d.radian, d.y, d.x);
-      styler.css(el,css3Transform, "matrix("
-        + matrix.M11.toFixed(16) + "," + matrix.M21.toFixed(16) + ","
-        + matrix.M12.toFixed(16) + "," + matrix.M22.toFixed(16) + ", 0, 0)"
-      );      
-  }
-
-  function transformData(el,d) {
-    if (d) {
-      datax.data(el,"transform",d);
-    } else {
-      d = datax.data(el,"transform") || {};
-      d.radian = d.radian || 0;
-      d.x = d.x || 1;
-      d.y = d.y || 1;
-      d.zoom = d.zoom || 1;
-      return d;     
-    }
-  }
-
-  var calcs = {
-    //Vertical flip
-    vertical : function (d) {
-        d.radian = Math.PI - d.radian; 
-        d.y *= -1;
-    },
-
-   //Horizontal flip
-    horizontal : function (d) {
-        d.radian = Math.PI - d.radian; 
-        d.x *= -1;
-    },
-
-    //Rotate according to angle
-    rotate : function (d,degress) {
-        d.radian = degress * Math.PI / 180;; 
-    },
-
-    //Turn left 90 degrees
-    left : function (d) {
-        d.radian -= Math.PI / 2; 
-    },
-
-    //Turn right 90 degrees
-    right : function (d) {
-        d.radian += Math.PI / 2; 
-    },
- 
-    //zoom
-    scale: function (d,zoom) {
-        var hZoom = getZoom(d.y, zoom), vZoom = getZoom(d.x, zoom);
-        if (hZoom && vZoom) {
-          d.y += hZoom; 
-          d.x += vZoom;
-        }
-    }, 
-
-    //zoom in
-    zoomin: function (d) { 
-      calcs.scale(d,0.1); 
-    },
-    
-    //zoom out
-    zoomout: function (d) { 
-      calcs.scale(d,-0.1); 
-    }
-
-  };
-  
-  
-  function _createApiMethod(calcFunc) {
-    return function() {
-      var args = langx.makeArray(arguments),
-        el = args.shift(),
-          d = transformData(el);
-        args.unshift(d);
-        calcFunc.apply(this,args)
-        change(el,d);
-        transformData(el,d);
-    }
-  }
-  
-  function transforms() {
-    return transforms;
-  }
-
-  ["vertical","horizontal","rotate","left","right","scale","zoom","zoomin","zoomout"].forEach(function(name){
-    transforms[name] = _createApiMethod(calcs[name]);
-  });
-
-  langx.mixin(transforms, {
-    reset : function(el) {
-      var d = {
-        x : 1,
-        y : 1,
-        radian : 0,
-      }
-      change(el,d);
-      transformData(el,d);
-    }
-  });
-
-
-  return skylark.attach("domx.transforms", transforms);
-});
-
-define('skylark-domx-transforms/main',[
-	"./transforms"
-],function(transforms){
-	return transforms;
-});
-define('skylark-domx-transforms', ['skylark-domx-transforms/main'], function (main) { return main; });
-
-define('skylark-domx-scripter/scripter',[
-    "skylark-langx/skylark",
-    "skylark-langx/langx",
-    "skylark-domx-noder",
-    "skylark-domx-finder"
-], function(skylark, langx, noder, finder) {
-
-    var head = document.getElementsByTagName('head')[0],
-        scriptsByUrl = {},
-        scriptElementsById = {},
-        count = 0;
-
-    var rscriptType = ( /^$|^module$|\/(?:java|ecma)script/i );
-
-    function scripter() {
-        return scripter;
-    }
-
-
-    var preservedScriptAttributes = {
-        type: true,
-        src: true,
-        nonce: true,
-        noModule: true
-    };
-
-    function evaluate(code,node, doc ) {
-        doc = doc || document;
-
-        var i, val,
-            script = doc.createElement("script");
-
-        script.text = code;
-        if ( node ) {
-            for ( i in preservedScriptAttributes ) {
-
-                // Support: Firefox 64+, Edge 18+
-                // Some browsers don't support the "nonce" property on scripts.
-                // On the other hand, just using `getAttribute` is not enough as
-                // the `nonce` attribute is reset to an empty string whenever it
-                // becomes browsing-context connected.
-                // See https://github.com/whatwg/html/issues/2369
-                // See https://html.spec.whatwg.org/#nonce-attributes
-                // The `node.getAttribute` check was added for the sake of
-                // `jQuery.globalEval` so that it can fake a nonce-containing node
-                // via an object.
-                val = node[ i ] || node.getAttribute && node.getAttribute( i );
-                if ( val ) {
-                    script.setAttribute( i, val );
-                }
-            }
-        }
-        doc.head.appendChild( script ).parentNode.removeChild( script );
-
-        return this;
-    }
-
-    langx.mixin(scripter, {
-        /*
-         * Load a script from a url into the document.
-         * @param {} url
-         * @param {} loadedCallback
-         * @param {} errorCallback
-         */
-        loadJavaScript: function(url, loadedCallback, errorCallback) {
-            var script = scriptsByUrl[url];
-            if (!script) {
-                script = scriptsByUrl[url] = {
-                    state: 0, //0:unload,1:loaded,-1:loaderror
-                    loadedCallbacks: [],
-                    errorCallbacks: []
-                }
-            }
-
-            script.loadedCallbacks.push(loadedCallback);
-            script.errorCallbacks.push(errorCallback);
-
-            if (script.state === 1) {
-                script.node.onload();
-            } else if (script.state === -1) {
-                script.node.onerror();
-            } else {
-                var node = script.node = document.createElement("script"),
-                    id = script.id = (count++);
-
-                node.type = "text/javascript";
-                node.async = false;
-                node.defer = false;
-                startTime = new Date().getTime();
-                head.appendChild(node);
-
-                node.onload = function() {
-                        script.state = 1;
-
-                        var callbacks = script.loadedCallbacks,
-                            i = callbacks.length;
-
-                        while (i--) {
-                            callbacks[i]();
-                        }
-                        script.loadedCallbacks = [];
-                        script.errorCallbacks = [];
-                    },
-                    node.onerror = function() {
-                        script.state = -1;
-                        var callbacks = script.errorCallbacks,
-                            i = callbacks.length;
-
-                        while (i--) {
-                            callbacks[i]();
-                        }
-                        script.loadedCallbacks = [];
-                        script.errorCallbacks = [];
-                    };
-                node.src = url;
-
-                scriptElementsById[id] = node;
-            }
-            return script.id;
-        },
-        /*
-         * Remove the specified script from the document.
-         * @param {Number} id
-         */
-        deleteJavaScript: function(id) {
-            var node = scriptElementsById[id];
-            if (node) {
-                var url = node.src;
-                noder.remove(node);
-                delete scriptElementsById[id];
-                delete scriptsByUrl[url];
-            }
-        },
-
-        evaluate : evaluate,
-
-        html : function(node,value) {
-
-            var result = noder.html(node,value);
-
-            if (value !== undefined) {
-                var scripts = node.querySelectorAll('script');
-
-                for (var i =0; i<scripts.length; i++) {
-                    var node1 = scripts[i];
-                    if (rscriptType.test( node1.type || "" ) ) {
-                      evaluate(node1.textContent,node1);
-                    }
-                }       
-                return this;         
-            } else {
-                return result;
-            }
-
-
-
-        }
-    });
-
-    return skylark.attach("domx.scripter", scripter);
-});
-define('skylark-domx-scripter/main',[
-	"./scripter"
-],function(scripter){
-	return scripter;
-});
-define('skylark-domx-scripter', ['skylark-domx-scripter/main'], function (main) { return main; });
 
 define('skylark-domx-query/query',[
     "skylark-langx/skylark",
@@ -11405,6 +11273,14 @@ define('skylark-domx-query/query',[
         $.fn.enableSelection = function() {
             return this.off( ".ui-disableSelection" );
         };
+
+        $.fn.reflow = function() {
+            return noder.flow(this[0]);
+        };
+
+        $.fn.isBlockNode = function() {
+            return noder.isBlockNode(this[0]);
+        };
        
 
     })(query);
@@ -11430,301 +11306,13 @@ define('skylark-domx-query/main',[
 });
 define('skylark-domx-query', ['skylark-domx-query/main'], function (main) { return main; });
 
-define('skylark-domx-images/images',[
-    "skylark-langx/skylark",
-    "skylark-langx/langx",
-    "skylark-domx-eventer",
-    "skylark-domx-noder",
-    "skylark-domx-finder",
-    "skylark-domx-geom",
-    "skylark-domx-styler",
-    "skylark-domx-data",
-    "skylark-domx-transforms",
+define('skylark-utils-dom/query',[
+    "./dom",
     "skylark-domx-query"
-], function(skylark,langx,eventer,noder,finder,geom,styler,datax,transforms,$) {
+], function(dom, query) {
 
-  function watch(imgs) {
-    if (!langx.isArray(imgs)) {
-      imgs = [imgs];
-    }
-    var totalCount = imgs.length,
-        progressedCount = 0,
-        successedCount = 0,
-        faileredCount = 0,
-        d = new langx.Deferred();
+    return dom.query = query;
 
-
-    function complete() {
-
-      d.resolve({
-        "total" : totalCount,
-        "successed" : successedCount,
-        "failered" : faileredCount,
-        "imgs" : imgs 
-      });
-    }
-
-    function progress(img,isLoaded) {
-
-      progressedCount++;
-      if (isLoaded) {
-        successedCount ++ ; 
-      } else {
-        faileredCount ++ ;
-      }
-
-      // progress event
-      d.progress({
-        "img" : img,
-        "isLoaded" : isLoaded,
-        "progressed" : progressedCount,
-        "total" : totalCount,
-        "imgs" : imgs 
-      });
-
-      // check if completed
-      if ( progressedCount == totalCount ) {
-        complete();
-      }
-    }
-
-    function check() {
-      if (!imgs.length ) {
-        complete();
-        return;
-      }
-
-      imgs.forEach(function(img) {
-        if (isCompleted(img)) {
-          progress(img,isLoaded(img));
-        } else {
-          eventer.on(img,{
-            "load" : function() {
-              progress(img,true);
-            },
-
-            "error" : function() {
-              progress(img,false);
-            }
-          });      
-        }
-      });
-    }
-
-    langx.defer(check);
-
-    d.promise.totalCount = totalCount;
-    return d.promise;
-  }
-
-
-  function isCompleted(img) {
-     return img.complete && img.naturalWidth !== undefined;
-  }
-
-  function isLoaded(img) {
-    return img.complete && img.naturalWidth !== 0;
-  }
-
-  function loaded(elm,options) {
-    var imgs = [];
-
-    options = options || {};
-
-    function addBackgroundImage (elm1) {
-
-      var reURL = /url\((['"])?(.*?)\1\)/gi;
-      var matches = reURL.exec( styler.css(elm1,"background-image"));
-      var url = matches && matches[2];
-      if ( url ) {
-        var img = new Image();
-        img.src = url;
-        imgs.push(img);
-      }
-    }
-
-    // filter siblings
-    if ( elm.nodeName == 'IMG' ) {
-      imgs.push( elm );
-    } else {
-      // find children
-      var childImgs = finder.findAll(elm,'img');
-      // concat childElems to filterFound array
-      for ( var i=0; i < childImgs.length; i++ ) {
-        imgs.push(childImgs[i]);
-      }
-
-      // get background image on element
-      if ( options.background === true ) {
-        addBackgroundImage(elm);
-      } else  if ( typeof options.background == 'string' ) {
-        var children = finder.findAll(elm, options.background );
-        for ( i=0; i < children.length; i++ ) {
-          addBackgroundImage( children[i] );
-        }
-      }
-    }
-
-    return watch(imgs);
-  }
-
-  function preload(urls,options) {
-      if (langx.isString(urls)) {
-        urls = [urls];
-      }
-      var images = [];
-
-      urls.forEach(function(url){
-        var img = new Image();
-        img.src = url;
-        images.push(img);
-      });
-
-      return watch(images);
-  }
-
-
-  $.fn.imagesLoaded = function( options ) {
-    return loaded(this,options);
-  };
-
-
-  function viewer(el,options) {
-    var img ,
-        style = {},
-        clientSize = geom.clientSize(el),
-        loadedCallback = options.loaded,
-        faileredCallback = options.failered;
-
-    function onload() {
-        styler.css(img,{//居中
-          top: (clientSize.height - img.offsetHeight) / 2 + "px",
-          left: (clientSize.width - img.offsetWidth) / 2 + "px"
-        });
-
-        transforms.reset(img);
-
-        styler.css(img,{
-          visibility: "visible"
-        });
-
-        if (loadedCallback) {
-          loadedCallback();
-        }
-    }
-
-    function onerror() {
-
-    }
-    function _init() {
-      style = styler.css(el,["position","overflow"]);
-      if (style.position != "relative" && style.position != "absolute") { 
-        styler.css(el,"position", "relative" );
-      }
-      styler.css(el,"overflow", "hidden" );
-
-      img = new Image();
-
-      styler.css(img,{
-        position: "absolute",
-        border: 0, padding: 0, margin: 0, width: "auto", height: "auto",
-        visibility: "hidden"
-      });
-
-      img.onload = onload;
-      img.onerror = onerror;
-
-      noder.append(el,img);
-
-      if (options.url) {
-        _load(options.url);
-      }
-    }
-
-    function _load(url) {
-        img.style.visibility = "hidden";
-        img.src = url;
-    }
-
-    function _dispose() {
-        noder.remove(img);
-        styler.css(el,style);
-        img = img.onload = img.onerror = null;
-    }
-
-    _init();
-
-    var ret =  {
-      load : _load,
-      dispose : _dispose
-    };
-
-    ["vertical","horizontal","rotate","left","right","scale","zoom","zoomin","zoomout","reset"].forEach(
-      function(name){
-        ret[name] = function() {
-          var args = langx.makeArray(arguments);
-          args.unshift(img);
-          transforms[name].apply(null,args);
-        }
-      }
-    );
-
-    return ret;
-  }
-
-  $.fn.imagesViewer = function( options ) {
-    return viewer(this,options);
-  };
-
-  function images() {
-    return images;
-  }
-
-  images.transform = function (el,options) {
-  };
-
-  ["vertical","horizontal","rotate","left","right","scale","zoom","zoomin","zoomout","reset"].forEach(
-    function(name){
-      images.transform[name] = transforms[name];
-    }
-  );
-
-
-  langx.mixin(images, {
-    isCompleted : isCompleted,
-
-    isLoaded : isLoaded,
-
-    loaded : loaded,
-
-    preload : preload,
-
-    viewer : viewer
-  });
-
-  return skylark.attach("domx.images" , images);
-});
-
-define('skylark-domx-images/main',[
-	"./images"
-],function(images){
-	return images;
-});
-define('skylark-domx-images', ['skylark-domx-images/main'], function (main) { return main; });
-
-define('skylark-utils-dom/images',[
-    "./dom",
-    "skylark-domx-images"
-], function(dom,images) {
-  return dom.images = images;
-});
-
-define('skylark-utils-dom/noder',[
-    "./dom",
-    "skylark-domx-noder"
-], function(dom, noder) {
-
-    return dom.noder = noder;
 });
 define('skylark-domx-velm/velm',[
     "skylark-langx/skylark",
@@ -12011,7 +11599,7 @@ define('skylark-domx-velm/velm',[
     });
 
 
-    return dom.elmx = elmx;
+    return skylark.attach("domx.elmx", elmx);
 });
 define('skylark-domx-velm/main',[
 	"./velm"
@@ -12091,9 +11679,7 @@ define('skylark-domx-plugins/plugins',[
             }
             if (!plugin) {
                 plugin = instantiate(elm, pluginName,typeof options == 'object' && options || {});
-            }
-
-            if (options) {
+            } else  if (options) {
                 var args = slice.call(arguments,1); //2
                 if (extfn) {
                     return extfn.apply(plugin,args);
@@ -12337,86 +11923,6 @@ define('skylark-domx-plugins/main',[
 });
 define('skylark-domx-plugins', ['skylark-domx-plugins/main'], function (main) { return main; });
 
-define('skylark-utils-dom/plugins',[
-    "./dom",
-    "skylark-domx-plugins"
-], function(dom, plugins) {
-    "use strict";
-
-
-    return dom.plugins = plugins;
-});
-define('skylark-utils-dom/query',[
-    "./dom",
-    "skylark-domx-query"
-], function(dom, query) {
-
-    return dom.query = query;
-
-});
-define('skylark-utils-dom/scripter',[
-    "./dom",
-    "skylark-domx-scripter"
-], function(dom, scripter) {
-
-    return dom.scripter = scripter;
-});
-define('skylark-utils-dom/styler',[
-    "./dom",
-    "skylark-domx-styler"
-], function(dom, styler) {
-
-    return dom.styler = styler;
-});
-define('skylark-utils-dom/transforms',[
-    "./dom",
-    "skylark-domx-transforms"
-], function(dom,transforms) {
-  return dom.transforms = transforms;
-});
-
-define('skylark-utils-dom/langx',[
-    "skylark-langx/langx"
-], function(langx) {
-    return langx;
-});
-
-define('skylark-utils-dom/elmx',[
-    "./dom",
-    "skylark-domx-velm"
-], function(dom, elmx) {
-     return dom.elmx = elmx;
-});
-define('skylark-utils-dom/main',[
-    "./dom",
-    "./browser",
-    "./css",
-    "./datax",
-    "./eventer",
-    "./finder",
-    "./fx",
-    "./geom",
-    "./images",
-    "./noder",
-    "./plugins",
-    "./query",
-    "./scripter",
-    "./styler",
-    "./transforms",
-    "./langx",
-    "./elmx"
-], function(dom) {
-    return dom;
-})
-;
-define('skylark-utils-dom', ['skylark-utils-dom/main'], function (main) { return main; });
-
-define('skylark-widgets-shells/shells',[
-	"skylark-langx/skylark"
-],function(skylark){
-	return skylark.attach("widgets.shells",{});
-
-});
 define('skylark-data-collection/collections',[
 	"skylark-langx/skylark"
 ],function(skylark){
@@ -12733,85 +12239,36 @@ define('skylark-data-collection/Map',[
     return Map;
 });
 
-define('skylark-widgets-swt/swt',[
-  "skylark-langx/skylark",
-  "skylark-langx/langx",
-  "skylark-utils-dom/browser",
-  "skylark-utils-dom/eventer",
-  "skylark-utils-dom/noder",
-  "skylark-utils-dom/geom",
-  "skylark-utils-dom/query"
-],function(skylark,langx,browser,eventer,noder,geom,$){
-	var ui = skylark.ui = skylark.ui || {};
-		sbswt = ui.sbswt = {};
 
-	var CONST = {
-		BACKSPACE_KEYCODE: 8,
-		COMMA_KEYCODE: 188, // `,` & `<`
-		DELETE_KEYCODE: 46,
-		DOWN_ARROW_KEYCODE: 40,
-		ENTER_KEYCODE: 13,
-		TAB_KEYCODE: 9,
-		UP_ARROW_KEYCODE: 38
-	};
+define('skylark-data-collection/HashMap',[
+    "./collections",
+	"./Map"
+],function(collections,_Map) {
 
-	var isShiftHeld = function isShiftHeld (e) { return e.shiftKey === true; };
-
-	var isKey = function isKey (keyCode) {
-		return function compareKeycodes (e) {
-			return e.keyCode === keyCode;
-		};
-	};
-
-	var isBackspaceKey = isKey(CONST.BACKSPACE_KEYCODE);
-	var isDeleteKey = isKey(CONST.DELETE_KEYCODE);
-	var isTabKey = isKey(CONST.TAB_KEYCODE);
-	var isUpArrow = isKey(CONST.UP_ARROW_KEYCODE);
-	var isDownArrow = isKey(CONST.DOWN_ARROW_KEYCODE);
-
-	var ENCODED_REGEX = /&[^\s]*;/;
-	/*
-	 * to prevent double encoding decodes content in loop until content is encoding free
-	 */
-	var cleanInput = function cleanInput (questionableMarkup) {
-		// check for encoding and decode
-		while (ENCODED_REGEX.test(questionableMarkup)) {
-			questionableMarkup = $('<i>').html(questionableMarkup).text();
-		}
-
-		// string completely decoded now encode it
-		return $('<i>').text(questionableMarkup).html();
-	};
-
-	langx.mixin(ui, {
-		CONST: CONST,
-		cleanInput: cleanInput,
-		isBackspaceKey: isBackspaceKey,
-		isDeleteKey: isDeleteKey,
-		isShiftHeld: isShiftHeld,
-		isTabKey: isTabKey,
-		isUpArrow: isUpArrow,
-		isDownArrow: isDownArrow
+	var HashMap = collections.HashMap = _Map.inherit({
 	});
 
-	return ui;
-
+	return HashMap;
 });
-
-define('skylark-widgets-swt/Widget',[
+define('skylark-widgets-base/base',[
+	"skylark-langx/skylark"
+],function(skylark){
+	return skylark.attach("widgets.base",{});
+});
+define('skylark-widgets-base/Widget',[
   "skylark-langx/skylark",
   "skylark-langx/langx",
-  "skylark-utils-dom/browser",
-  "skylark-utils-dom/datax",
-  "skylark-utils-dom/eventer",
-  "skylark-utils-dom/noder",
-  "skylark-utils-dom/geom",
-  "skylark-utils-dom/elmx",
-  "skylark-utils-dom/query",
-  "skylark-utils-dom/plugins",
-  "skylark-data-collection/Map",
-  "./swt"
-],function(skylark,langx,browser,datax,eventer,noder,geom,elmx,$,plugins,Map,swt){
+  "skylark-domx-browser",
+  "skylark-domx-data",
+  "skylark-domx-eventer",
+  "skylark-domx-noder",
+  "skylark-domx-geom",
+  "skylark-domx-velm",
+  "skylark-domx-query",
+  "skylark-domx-plugins",
+  "skylark-data-collection/HashMap",
+  "./base"
+],function(skylark,langx,browser,datax,eventer,noder,geom,elmx,$,plugins,HashMap,base){
 
 /*---------------------------------------------------------------------------------*/
 
@@ -12837,11 +12294,35 @@ define('skylark-widgets-swt/Widget',[
         }
         
         Object.defineProperty(this,"state",{
-          value :this.options.state || new Map()
+          value :this.options.state || new HashMap()
         });
 
         //this.state = this.options.state || new Map();
         this._init();
+
+        var addonCategoryOptions = this.options.addons;
+        if (addonCategoryOptions) {
+          var widgetCtor = this.constructor,
+              addons = widgetCtor.addons;
+          for (var categoryName in addonCategoryOptions) {
+              for (var i =0;i < addonCategoryOptions[categoryName].length; i++ ) {
+                var addonOption = addonCategoryOptions[categoryName][i];
+                if (langx.isString(addonOption)) {
+                  var addonName = addonOption,
+                      addonSetting = addons[categoryName][addonName],
+                      addonCtor = addonSetting.ctor ? addonSetting.ctor : addonSetting;
+
+                  this.addon(addonCtor,addonSetting.options);
+
+                }
+
+              }
+          }
+
+
+        }
+
+
      },
 
     /**
@@ -12954,15 +12435,14 @@ define('skylark-widgets-swt/Widget',[
       }
     },
 
-    addon : function(categoryName,addonName,setting) {
+    addon : function(ctor,setting) {
+      var categoryName = ctor.categoryName,
+          addonName = ctor.addonName;
+
       this._addons = this.addons || {};
       var category = this._addons[categoryName] = this._addons[categoryName] || {};
-      if (setting === undefined) {
-        return category[addonName] || null;      
-      } else {
-        category[addonName] = setting;
-        return this;
-      }
+      category[addonName] = new ctor(this,setting);
+      return this;
     },
 
     addons : function(categoryName,settings) {
@@ -12986,6 +12466,7 @@ define('skylark-widgets-swt/Widget',[
     render: function() {
       return this._elm;
     },
+
 
 
     /**
@@ -13202,7 +12683,13 @@ define('skylark-widgets-swt/Widget',[
     return ctor;
   };
 
-	return swt.Widget = Widget;
+	return base.Widget = Widget;
+});
+
+define('skylark-widgets-swt/Widget',[
+  "skylark-widgets-base/Widget"
+],function(Widget){
+  return Widget;
 });
 
 define('skylark-nprogress/nprogress',[],function(){
@@ -15697,14 +15184,536 @@ define('skylark-widgets-shells/Shell',[
 
 });
 
+define('skylark-utils-dom/browser',[
+    "./dom",
+    "skylark-domx-browser"
+], function(dom,browser) {
+    "use strict";
+
+    return dom.browser = browser;
+});
+
+define('skylark-utils-dom/datax',[
+    "./dom",
+    "skylark-domx-data"
+], function(dom, datax) {
+ 
+    return dom.datax = datax;
+});
+define('skylark-utils-dom/fx',[
+    "./dom",
+    "skylark-domx-fx"
+], function(dom, fx) {
+    return dom.fx = fx;
+});
+define('skylark-utils-dom/geom',[
+    "./dom",
+    "skylark-domx-geom"
+], function(dom, geom) {
+
+    return dom.geom = geom;
+});
+define('skylark-domx-transforms/transforms',[
+    "skylark-langx/skylark",
+    "skylark-langx/langx",
+    "skylark-domx-browser",
+    "skylark-domx-data",
+    "skylark-domx-styler"
+], function(skylark,langx,browser,datax,styler) {
+  var css3Transform = browser.normalizeCssProperty("transform");
+
+  function getMatrix(radian, x, y) {
+    var Cos = Math.cos(radian), Sin = Math.sin(radian);
+    return {
+      M11: Cos * x, 
+      M12: -Sin * y,
+      M21: Sin * x, 
+      M22: Cos * y
+    };
+  }
+
+  function getZoom(scale, zoom) {
+      return scale > 0 && scale > -zoom ? zoom :
+        scale < 0 && scale < zoom ? -zoom : 0;
+  }
+
+    function change(el,d) {
+      var matrix = getMatrix(d.radian, d.y, d.x);
+      styler.css(el,css3Transform, "matrix("
+        + matrix.M11.toFixed(16) + "," + matrix.M21.toFixed(16) + ","
+        + matrix.M12.toFixed(16) + "," + matrix.M22.toFixed(16) + ", 0, 0)"
+      );      
+  }
+
+  function transformData(el,d) {
+    if (d) {
+      datax.data(el,"transform",d);
+    } else {
+      d = datax.data(el,"transform") || {};
+      d.radian = d.radian || 0;
+      d.x = d.x || 1;
+      d.y = d.y || 1;
+      d.zoom = d.zoom || 1;
+      return d;     
+    }
+  }
+
+  var calcs = {
+    //Vertical flip
+    vertical : function (d) {
+        d.radian = Math.PI - d.radian; 
+        d.y *= -1;
+    },
+
+   //Horizontal flip
+    horizontal : function (d) {
+        d.radian = Math.PI - d.radian; 
+        d.x *= -1;
+    },
+
+    //Rotate according to angle
+    rotate : function (d,degress) {
+        d.radian = degress * Math.PI / 180;; 
+    },
+
+    //Turn left 90 degrees
+    left : function (d) {
+        d.radian -= Math.PI / 2; 
+    },
+
+    //Turn right 90 degrees
+    right : function (d) {
+        d.radian += Math.PI / 2; 
+    },
+ 
+    //zoom
+    scale: function (d,zoom) {
+        var hZoom = getZoom(d.y, zoom), vZoom = getZoom(d.x, zoom);
+        if (hZoom && vZoom) {
+          d.y += hZoom; 
+          d.x += vZoom;
+        }
+    }, 
+
+    //zoom in
+    zoomin: function (d) { 
+      calcs.scale(d,0.1); 
+    },
+    
+    //zoom out
+    zoomout: function (d) { 
+      calcs.scale(d,-0.1); 
+    }
+
+  };
+  
+  
+  function _createApiMethod(calcFunc) {
+    return function() {
+      var args = langx.makeArray(arguments),
+        el = args.shift(),
+          d = transformData(el);
+        args.unshift(d);
+        calcFunc.apply(this,args)
+        change(el,d);
+        transformData(el,d);
+    }
+  }
+  
+  function transforms() {
+    return transforms;
+  }
+
+  ["vertical","horizontal","rotate","left","right","scale","zoom","zoomin","zoomout"].forEach(function(name){
+    transforms[name] = _createApiMethod(calcs[name]);
+  });
+
+  langx.mixin(transforms, {
+    reset : function(el) {
+      var d = {
+        x : 1,
+        y : 1,
+        radian : 0,
+      }
+      change(el,d);
+      transformData(el,d);
+    }
+  });
+
+
+  return skylark.attach("domx.transforms", transforms);
+});
+
+define('skylark-domx-transforms/main',[
+	"./transforms"
+],function(transforms){
+	return transforms;
+});
+define('skylark-domx-transforms', ['skylark-domx-transforms/main'], function (main) { return main; });
+
+define('skylark-domx-images/images',[
+    "skylark-langx/skylark",
+    "skylark-langx/langx",
+    "skylark-domx-eventer",
+    "skylark-domx-noder",
+    "skylark-domx-finder",
+    "skylark-domx-geom",
+    "skylark-domx-styler",
+    "skylark-domx-data",
+    "skylark-domx-transforms",
+    "skylark-domx-query"
+], function(skylark,langx,eventer,noder,finder,geom,styler,datax,transforms,$) {
+
+  function watch(imgs) {
+    if (!langx.isArray(imgs)) {
+      imgs = [imgs];
+    }
+    var totalCount = imgs.length,
+        progressedCount = 0,
+        successedCount = 0,
+        faileredCount = 0,
+        d = new langx.Deferred();
+
+
+    function complete() {
+
+      d.resolve({
+        "total" : totalCount,
+        "successed" : successedCount,
+        "failered" : faileredCount,
+        "imgs" : imgs 
+      });
+    }
+
+    function progress(img,isLoaded) {
+
+      progressedCount++;
+      if (isLoaded) {
+        successedCount ++ ; 
+      } else {
+        faileredCount ++ ;
+      }
+
+      // progress event
+      d.progress({
+        "img" : img,
+        "isLoaded" : isLoaded,
+        "progressed" : progressedCount,
+        "total" : totalCount,
+        "imgs" : imgs 
+      });
+
+      // check if completed
+      if ( progressedCount == totalCount ) {
+        complete();
+      }
+    }
+
+    function check() {
+      if (!imgs.length ) {
+        complete();
+        return;
+      }
+
+      imgs.forEach(function(img) {
+        if (isCompleted(img)) {
+          progress(img,isLoaded(img));
+        } else {
+          eventer.on(img,{
+            "load" : function() {
+              progress(img,true);
+            },
+
+            "error" : function() {
+              progress(img,false);
+            }
+          });      
+        }
+      });
+    }
+
+    langx.defer(check);
+
+    d.promise.totalCount = totalCount;
+    return d.promise;
+  }
+
+
+  function isCompleted(img) {
+     return img.complete && img.naturalWidth !== undefined;
+  }
+
+  function isLoaded(img) {
+    return img.complete && img.naturalWidth !== 0;
+  }
+
+  function loaded(elm,options) {
+    var imgs = [];
+
+    options = options || {};
+
+    function addBackgroundImage (elm1) {
+
+      var reURL = /url\((['"])?(.*?)\1\)/gi;
+      var matches = reURL.exec( styler.css(elm1,"background-image"));
+      var url = matches && matches[2];
+      if ( url ) {
+        var img = new Image();
+        img.src = url;
+        imgs.push(img);
+      }
+    }
+
+    // filter siblings
+    if ( elm.nodeName == 'IMG' ) {
+      imgs.push( elm );
+    } else {
+      // find children
+      var childImgs = finder.findAll(elm,'img');
+      // concat childElems to filterFound array
+      for ( var i=0; i < childImgs.length; i++ ) {
+        imgs.push(childImgs[i]);
+      }
+
+      // get background image on element
+      if ( options.background === true ) {
+        addBackgroundImage(elm);
+      } else  if ( typeof options.background == 'string' ) {
+        var children = finder.findAll(elm, options.background );
+        for ( i=0; i < children.length; i++ ) {
+          addBackgroundImage( children[i] );
+        }
+      }
+    }
+
+    return watch(imgs);
+  }
+
+  function preload(urls,options) {
+      if (langx.isString(urls)) {
+        urls = [urls];
+      }
+      var images = [];
+
+      urls.forEach(function(url){
+        var img = new Image();
+        img.src = url;
+        images.push(img);
+      });
+
+      return watch(images);
+  }
+
+
+  $.fn.imagesLoaded = function( options ) {
+    return loaded(this,options);
+  };
+
+
+  function viewer(el,options) {
+    var img ,
+        style = {},
+        clientSize = geom.clientSize(el),
+        loadedCallback = options.loaded,
+        faileredCallback = options.failered;
+
+    function onload() {
+        styler.css(img,{//居中
+          top: (clientSize.height - img.offsetHeight) / 2 + "px",
+          left: (clientSize.width - img.offsetWidth) / 2 + "px"
+        });
+
+        transforms.reset(img);
+
+        styler.css(img,{
+          visibility: "visible"
+        });
+
+        if (loadedCallback) {
+          loadedCallback();
+        }
+    }
+
+    function onerror() {
+
+    }
+    function _init() {
+      style = styler.css(el,["position","overflow"]);
+      if (style.position != "relative" && style.position != "absolute") { 
+        styler.css(el,"position", "relative" );
+      }
+      styler.css(el,"overflow", "hidden" );
+
+      img = new Image();
+
+      styler.css(img,{
+        position: "absolute",
+        border: 0, padding: 0, margin: 0, width: "auto", height: "auto",
+        visibility: "hidden"
+      });
+
+      img.onload = onload;
+      img.onerror = onerror;
+
+      noder.append(el,img);
+
+      if (options.url) {
+        _load(options.url);
+      }
+    }
+
+    function _load(url) {
+        img.style.visibility = "hidden";
+        img.src = url;
+    }
+
+    function _dispose() {
+        noder.remove(img);
+        styler.css(el,style);
+        img = img.onload = img.onerror = null;
+    }
+
+    _init();
+
+    var ret =  {
+      load : _load,
+      dispose : _dispose
+    };
+
+    ["vertical","horizontal","rotate","left","right","scale","zoom","zoomin","zoomout","reset"].forEach(
+      function(name){
+        ret[name] = function() {
+          var args = langx.makeArray(arguments);
+          args.unshift(img);
+          transforms[name].apply(null,args);
+        }
+      }
+    );
+
+    return ret;
+  }
+
+  $.fn.imagesViewer = function( options ) {
+    return viewer(this,options);
+  };
+
+  function images() {
+    return images;
+  }
+
+  images.transform = function (el,options) {
+  };
+
+  ["vertical","horizontal","rotate","left","right","scale","zoom","zoomin","zoomout","reset"].forEach(
+    function(name){
+      images.transform[name] = transforms[name];
+    }
+  );
+
+
+  langx.mixin(images, {
+    isCompleted : isCompleted,
+
+    isLoaded : isLoaded,
+
+    loaded : loaded,
+
+    preload : preload,
+
+    viewer : viewer
+  });
+
+  return skylark.attach("domx.images" , images);
+});
+
+define('skylark-domx-images/main',[
+	"./images"
+],function(images){
+	return images;
+});
+define('skylark-domx-images', ['skylark-domx-images/main'], function (main) { return main; });
+
+define('skylark-utils-dom/images',[
+    "./dom",
+    "skylark-domx-images"
+], function(dom,images) {
+  return dom.images = images;
+});
+
+define('skylark-utils-dom/noder',[
+    "./dom",
+    "skylark-domx-noder"
+], function(dom, noder) {
+
+    return dom.noder = noder;
+});
+define('skylark-utils-dom/plugins',[
+    "./dom",
+    "skylark-domx-plugins"
+], function(dom, plugins) {
+    "use strict";
+
+
+    return dom.plugins = plugins;
+});
+define('skylark-utils-dom/styler',[
+    "./dom",
+    "skylark-domx-styler"
+], function(dom, styler) {
+
+    return dom.styler = styler;
+});
+define('skylark-utils-dom/transforms',[
+    "./dom",
+    "skylark-domx-transforms"
+], function(dom,transforms) {
+  return dom.transforms = transforms;
+});
+
+define('skylark-utils-dom/langx',[
+    "skylark-langx/langx"
+], function(langx) {
+    return langx;
+});
+
+define('skylark-utils-dom/elmx',[
+    "./dom",
+    "skylark-domx-velm"
+], function(dom, elmx) {
+     return dom.elmx = elmx;
+});
+define('skylark-utils-dom/main',[
+    "./dom",
+    "./browser",
+    "./css",
+    "./datax",
+    "./eventer",
+    "./finder",
+    "./fx",
+    "./geom",
+    "./images",
+    "./noder",
+    "./plugins",
+    "./query",
+    "./scripter",
+    "./styler",
+    "./transforms",
+    "./langx",
+    "./elmx"
+], function(dom) {
+    return dom;
+})
+;
+define('skylark-utils-dom', ['skylark-utils-dom/main'], function (main) { return main; });
+
 define('skylark-bootstrap3/bs3',[
-  "skylark-utils-dom/skylark",
+  "skylark-langx/skylark",
   "skylark-langx/langx",
-  "skylark-utils-dom/browser",
-  "skylark-utils-dom/eventer",
-  "skylark-utils-dom/noder",
-  "skylark-utils-dom/geom",
-  "skylark-utils-dom/query"
+  "skylark-domx-browser",
+  "skylark-domx-eventer",
+  "skylark-domx-noder",
+  "skylark-domx-geom",
+  "skylark-domx-query"
 ],function(skylark,langx,browser,eventer,noder,geom,$){
 	var ui = skylark.ui = skylark.ui || {}, 
 		bs3 = ui.bs3 = {};
@@ -15774,12 +15783,12 @@ define('skylark-bootstrap3/bs3',[
 
 define('skylark-bootstrap3/affix',[
   "skylark-langx/langx",
-  "skylark-utils-dom/browser",
-  "skylark-utils-dom/eventer",
-  "skylark-utils-dom/noder",
-  "skylark-utils-dom/geom",
-  "skylark-utils-dom/query",
-  "skylark-utils-dom/plugins",
+  "skylark-domx-browser",
+  "skylark-domx-eventer",
+  "skylark-domx-noder",
+  "skylark-domx-geom",
+  "skylark-domx-query",
+  "skylark-domx-plugins",
   "./bs3"
 ],function(langx,browser,eventer,noder,geom,$,plugins,bs3){
 
@@ -15944,12 +15953,12 @@ define('skylark-bootstrap3/affix',[
 
 define('skylark-bootstrap3/alert',[
   "skylark-langx/langx",
-  "skylark-utils-dom/browser",
-  "skylark-utils-dom/eventer",
-  "skylark-utils-dom/noder",
-  "skylark-utils-dom/geom",
-  "skylark-utils-dom/query",
-  "skylark-utils-dom/plugins",
+  "skylark-domx-browser",
+  "skylark-domx-eventer",
+  "skylark-domx-noder",
+  "skylark-domx-geom",
+  "skylark-domx-query",
+  "skylark-domx-plugins",
   "./bs3"
 ],function(langx,browser,eventer,noder,geom,$,plugins,bs3){
 
@@ -16068,12 +16077,12 @@ define('skylark-bootstrap3/alert',[
 
 define('skylark-bootstrap3/button',[
   "skylark-langx/langx",
-  "skylark-utils-dom/browser",
-  "skylark-utils-dom/eventer",
-  "skylark-utils-dom/noder",
-  "skylark-utils-dom/geom",
-  "skylark-utils-dom/query",
-  "skylark-utils-dom/plugins",
+  "skylark-domx-browser",
+  "skylark-domx-eventer",
+  "skylark-domx-noder",
+  "skylark-domx-geom",
+  "skylark-domx-query",
+  "skylark-domx-plugins",
   "./bs3"
 ],function(langx,browser,eventer,noder,geom,$,plugins,bs3){
 
@@ -16228,11 +16237,11 @@ define('skylark-bootstrap3/button',[
 
 define('skylark-bootstrap3/transition',[
   "skylark-langx/langx",
-  "skylark-utils-dom/browser",
-  "skylark-utils-dom/eventer",
-  "skylark-utils-dom/noder",
-  "skylark-utils-dom/geom",
-  "skylark-utils-dom/query",
+  "skylark-domx-browser",
+  "skylark-domx-eventer",
+  "skylark-domx-noder",
+  "skylark-domx-geom",
+  "skylark-domx-query",
   "./bs3"
 ],function(langx,browser,eventer,noder,geom,$,bs3){
 
@@ -16251,12 +16260,12 @@ define('skylark-bootstrap3/transition',[
 
 define('skylark-bootstrap3/carousel',[
     "skylark-langx/langx",
-    "skylark-utils-dom/browser",
-    "skylark-utils-dom/eventer",
-    "skylark-utils-dom/noder",
-    "skylark-utils-dom/geom",
-    "skylark-utils-dom/query",
-    "skylark-utils-dom/plugins",
+    "skylark-domx-browser",
+    "skylark-domx-eventer",
+    "skylark-domx-noder",
+    "skylark-domx-geom",
+    "skylark-domx-query",
+    "skylark-domx-plugins",
     "./bs3",
     "./transition"
 ], function(langx, browser, eventer, noder, geom, $, plugins, bs3) {
@@ -16533,12 +16542,12 @@ define('skylark-bootstrap3/carousel',[
 });
 define('skylark-bootstrap3/collapse',[
     "skylark-langx/langx",
-    "skylark-utils-dom/browser",
-    "skylark-utils-dom/eventer",
-    "skylark-utils-dom/noder",
-    "skylark-utils-dom/geom",
-    "skylark-utils-dom/query",
-    "skylark-utils-dom/plugins",
+    "skylark-domx-browser",
+    "skylark-domx-eventer",
+    "skylark-domx-noder",
+    "skylark-domx-geom",
+    "skylark-domx-query",
+    "skylark-domx-plugins",
     "./bs3",
     "./transition"
 ], function(langx, browser, eventer, noder, geom, $, plugins, bs3) {
@@ -16760,12 +16769,12 @@ define('skylark-bootstrap3/collapse',[
 
 define('skylark-bootstrap3/dropdown',[
   "skylark-langx/langx",
-  "skylark-utils-dom/browser",
-  "skylark-utils-dom/eventer",
-  "skylark-utils-dom/noder",
-  "skylark-utils-dom/geom",
-  "skylark-utils-dom/query",
-  "skylark-utils-dom/plugins",
+  "skylark-domx-browser",
+  "skylark-domx-eventer",
+  "skylark-domx-noder",
+  "skylark-domx-geom",
+  "skylark-domx-query",
+  "skylark-domx-plugins",
   "./bs3"
 ],function(langx,browser,eventer,noder,geom,$,plugins,bs3){
 
@@ -16949,12 +16958,12 @@ define('skylark-bootstrap3/dropdown',[
 
 define('skylark-bootstrap3/modal',[
   "skylark-langx/langx",
-  "skylark-utils-dom/browser",
-  "skylark-utils-dom/eventer",
-  "skylark-utils-dom/noder",
-  "skylark-utils-dom/geom",
-  "skylark-utils-dom/query",
-  "skylark-utils-dom/plugins",
+  "skylark-domx-browser",
+  "skylark-domx-eventer",
+  "skylark-domx-noder",
+  "skylark-domx-geom",
+  "skylark-domx-query",
+  "skylark-domx-plugins",
   "./bs3"
 ],function(langx,browser,eventer,noder,geom,$,plugins,bs3){
 
@@ -17311,12 +17320,12 @@ define('skylark-bootstrap3/modal',[
 
 define('skylark-bootstrap3/tooltip',[
   "skylark-langx/langx",
-  "skylark-utils-dom/browser",
-  "skylark-utils-dom/eventer",
-  "skylark-utils-dom/noder",
-  "skylark-utils-dom/geom",
-  "skylark-utils-dom/query",
-  "skylark-utils-dom/plugins",
+  "skylark-domx-browser",
+  "skylark-domx-eventer",
+  "skylark-domx-noder",
+  "skylark-domx-geom",
+  "skylark-domx-query",
+  "skylark-domx-plugins",
   "./bs3"
 ],function(langx,browser,eventer,noder,geom,$,plugins,bs3){
 
@@ -17855,11 +17864,11 @@ define('skylark-bootstrap3/tooltip',[
 });
 
 define('skylark-bootstrap3/popover',[
-  "skylark-utils-dom/browser",
+  "skylark-domx-browser",
   "skylark-langx/langx",
-  "skylark-utils-dom/eventer",
-  "skylark-utils-dom/query",
-  "skylark-utils-dom/plugins",
+  "skylark-domx-eventer",
+  "skylark-domx-query",
+  "skylark-domx-plugins",
   "./bs3",
   "./tooltip" 
 ],function(browser,langx,eventer,$,plugins,bs3,Tooltip){
@@ -17981,12 +17990,12 @@ define('skylark-bootstrap3/popover',[
 
 define('skylark-bootstrap3/scrollspy',[
   "skylark-langx/langx",
-  "skylark-utils-dom/browser",
-  "skylark-utils-dom/eventer",
-  "skylark-utils-dom/noder",
-  "skylark-utils-dom/geom",
-  "skylark-utils-dom/query",
-  "skylark-utils-dom/plugins",
+  "skylark-domx-browser",
+  "skylark-domx-eventer",
+  "skylark-domx-noder",
+  "skylark-domx-geom",
+  "skylark-domx-query",
+  "skylark-domx-plugins",
   "./bs3"
 ],function(langx,browser,eventer,noder,geom,$,plugins,bs3){
 
@@ -18167,12 +18176,12 @@ define('skylark-bootstrap3/scrollspy',[
 
 define('skylark-bootstrap3/tab',[
   "skylark-langx/langx",
-  "skylark-utils-dom/browser",
-  "skylark-utils-dom/eventer",
-  "skylark-utils-dom/noder",
-  "skylark-utils-dom/geom",
-  "skylark-utils-dom/query",
-  "skylark-utils-dom/plugins",
+  "skylark-domx-browser",
+  "skylark-domx-eventer",
+  "skylark-domx-noder",
+  "skylark-domx-geom",
+  "skylark-domx-query",
+  "skylark-domx-plugins",
   "./bs3"
 ],function(langx,browser,eventer,noder,geom,$,plugins,bs3){
 
@@ -18341,12 +18350,12 @@ define('skylark-bootstrap3/tab',[
 
 define('skylark-bootstrap3/taginput',[
   "skylark-langx/langx",
-  "skylark-utils-dom/browser",
-  "skylark-utils-dom/eventer",
-  "skylark-utils-dom/noder",
-  "skylark-utils-dom/geom",
-  "skylark-utils-dom/query",
-  "skylark-utils-dom/plugins",
+  "skylark-domx-browser",
+  "skylark-domx-eventer",
+  "skylark-domx-noder",
+  "skylark-domx-geom",
+  "skylark-domx-query",
+  "skylark-domx-plugins",
   "./bs3"
 ],function(langx,browser,eventer,noder,geom,$,plugins,bs3){
 
@@ -19038,7 +19047,7 @@ define('skylark-bootstrap3/taginput',[
 });
 define('skylark-bootstrap3/loadedInit',[
  	"skylark-langx/langx",
- 	"skylark-utils-dom/query",
+ 	"skylark-domx-query",
 	"./affix",
 	"./alert",
 	"./button",
@@ -19203,7 +19212,7 @@ define('skylark-bootstrap3/loadedInit',[
 });
 
 define('skylark-bootstrap3/main',[
-    "skylark-utils-dom/query",
+    "skylark-domx-query",
     "./affix",
     "./alert",
     "./button",
@@ -19223,13 +19232,78 @@ define('skylark-bootstrap3/main',[
 });
 define('skylark-bootstrap3', ['skylark-bootstrap3/main'], function (main) { return main; });
 
+define('skylark-widgets-swt/swt',[
+  "skylark-langx/skylark",
+  "skylark-langx/langx",
+  "skylark-domx-browser",
+  "skylark-domx-eventer",
+  "skylark-domx-noder",
+  "skylark-domx-geom",
+  "skylark-domx-query"
+],function(skylark,langx,browser,eventer,noder,geom,$){
+	var ui = skylark.ui = skylark.ui || {};
+		sbswt = ui.sbswt = {};
+
+	var CONST = {
+		BACKSPACE_KEYCODE: 8,
+		COMMA_KEYCODE: 188, // `,` & `<`
+		DELETE_KEYCODE: 46,
+		DOWN_ARROW_KEYCODE: 40,
+		ENTER_KEYCODE: 13,
+		TAB_KEYCODE: 9,
+		UP_ARROW_KEYCODE: 38
+	};
+
+	var isShiftHeld = function isShiftHeld (e) { return e.shiftKey === true; };
+
+	var isKey = function isKey (keyCode) {
+		return function compareKeycodes (e) {
+			return e.keyCode === keyCode;
+		};
+	};
+
+	var isBackspaceKey = isKey(CONST.BACKSPACE_KEYCODE);
+	var isDeleteKey = isKey(CONST.DELETE_KEYCODE);
+	var isTabKey = isKey(CONST.TAB_KEYCODE);
+	var isUpArrow = isKey(CONST.UP_ARROW_KEYCODE);
+	var isDownArrow = isKey(CONST.DOWN_ARROW_KEYCODE);
+
+	var ENCODED_REGEX = /&[^\s]*;/;
+	/*
+	 * to prevent double encoding decodes content in loop until content is encoding free
+	 */
+	var cleanInput = function cleanInput (questionableMarkup) {
+		// check for encoding and decode
+		while (ENCODED_REGEX.test(questionableMarkup)) {
+			questionableMarkup = $('<i>').html(questionableMarkup).text();
+		}
+
+		// string completely decoded now encode it
+		return $('<i>').text(questionableMarkup).html();
+	};
+
+	langx.mixin(ui, {
+		CONST: CONST,
+		cleanInput: cleanInput,
+		isBackspaceKey: isBackspaceKey,
+		isDeleteKey: isDeleteKey,
+		isShiftHeld: isShiftHeld,
+		isTabKey: isTabKey,
+		isUpArrow: isUpArrow,
+		isDownArrow: isDownArrow
+	});
+
+	return ui;
+
+});
+
 define('skylark-widgets-swt/Panel',[
   "skylark-langx/langx",
-  "skylark-utils-dom/browser",
-  "skylark-utils-dom/eventer",
-  "skylark-utils-dom/noder",
-  "skylark-utils-dom/geom",
-  "skylark-utils-dom/query",
+  "skylark-domx-browser",
+  "skylark-domx-eventer",
+  "skylark-domx-noder",
+  "skylark-domx-geom",
+  "skylark-domx-query",
   "skylark-bootstrap3/collapse",
   "./swt",
   "./Widget"
@@ -19309,11 +19383,11 @@ define('skylark-widgets-swt/Panel',[
 });
 define('skylark-widgets-swt/Accordion',[
   "skylark-langx/langx",
-  "skylark-utils-dom/browser",
-  "skylark-utils-dom/eventer",
-  "skylark-utils-dom/noder",
-  "skylark-utils-dom/geom",
-  "skylark-utils-dom/query",
+  "skylark-domx-browser",
+  "skylark-domx-eventer",
+  "skylark-domx-noder",
+  "skylark-domx-geom",
+  "skylark-domx-query",
   "skylark-bootstrap3/collapse",
   "./swt",
   "./Widget",
@@ -19358,12 +19432,6 @@ define('skylark-widgets-swt/Accordion',[
 
 
     addPanel : function() {
-      var $newPanel = $template.clone();
-      $newPanel.find(".collapse").removeClass("in");
-      $newPanel.find(".accordion-toggle").attr("href",  "#" + (++hash))
-               .text("Dynamic panel #" + hash);
-      $newPanel.find(".panel-collapse").attr("id", hash).addClass("collapse").removeClass("in");
-      $("#accordion").append($newPanel.fadeIn());
 
     },
 
@@ -19453,7 +19521,7 @@ define('skylark-widgets-swt/Accordion',[
 
 define('skylark-widgets-swt/Button',[
   "skylark-langx/langx",
-  "skylark-utils-dom/query",
+  "skylark-domx-query",
   "./swt",
   "./Widget"
 ],function(langx,$,swt,Widget){
@@ -19593,11 +19661,11 @@ define('skylark-widgets-swt/Button',[
 
 define('skylark-widgets-swt/Carousel',[
     "skylark-langx/langx",
-    "skylark-utils-dom/browser",
-    "skylark-utils-dom/eventer",
-    "skylark-utils-dom/noder",
-    "skylark-utils-dom/geom",
-    "skylark-utils-dom/query",
+    "skylark-domx-browser",
+    "skylark-domx-eventer",
+    "skylark-domx-noder",
+    "skylark-domx-geom",
+    "skylark-domx-query",
     "./swt",
     "./Widget",
     "skylark-bootstrap3/carousel"
@@ -19757,11 +19825,11 @@ define('skylark-widgets-swt/Carousel',[
 });
 define('skylark-widgets-swt/_Toggler',[
   "skylark-langx/langx",
-  "skylark-utils-dom/browser",
-  "skylark-utils-dom/eventer",
-  "skylark-utils-dom/noder",
-  "skylark-utils-dom/geom",
-  "skylark-utils-dom/query",
+  "skylark-domx-browser",
+  "skylark-domx-eventer",
+  "skylark-domx-noder",
+  "skylark-domx-geom",
+  "skylark-domx-query",
   "./swt",
   "./Widget"
 ],function(langx,browser,eventer,noder,geom,$,swt,Widget){
@@ -19805,11 +19873,11 @@ define('skylark-widgets-swt/_Toggler',[
 
 define('skylark-widgets-swt/CheckBox',[
   "skylark-langx/langx",
-  "skylark-utils-dom/browser",
-  "skylark-utils-dom/eventer",
-  "skylark-utils-dom/noder",
-  "skylark-utils-dom/geom",
-  "skylark-utils-dom/query",
+  "skylark-domx-browser",
+  "skylark-domx-eventer",
+  "skylark-domx-noder",
+  "skylark-domx-geom",
+  "skylark-domx-query",
   "./swt",
   "./_Toggler"
 ],function(langx,browser,eventer,noder,geom,$,swt,_Toggler){
@@ -19948,11 +20016,11 @@ define('skylark-widgets-swt/CheckBox',[
 
 define('skylark-widgets-swt/ComboBox',[
   "skylark-langx/langx",
-  "skylark-utils-dom/browser",
-  "skylark-utils-dom/eventer",
-  "skylark-utils-dom/noder",
-  "skylark-utils-dom/geom",
-  "skylark-utils-dom/query",
+  "skylark-domx-browser",
+  "skylark-domx-eventer",
+  "skylark-domx-noder",
+  "skylark-domx-geom",
+  "skylark-domx-query",
   "./swt",
   "./Widget",
   "skylark-bootstrap3/dropdown"
@@ -20276,13 +20344,13 @@ define('skylark-widgets-swt/ComboBox',[
 	return swt.ComboBox = ComboBox;
 });
 
-define('skylark-widgets-swt/InputBox',[
+define('skylark-widgets-swt/TextBox',[
   "skylark-langx/langx",
-  "skylark-utils-dom/browser",
-  "skylark-utils-dom/eventer",
-  "skylark-utils-dom/noder",
-  "skylark-utils-dom/geom",
-  "skylark-utils-dom/query",
+  "skylark-domx-browser",
+  "skylark-domx-eventer",
+  "skylark-domx-noder",
+  "skylark-domx-geom",
+  "skylark-domx-query",
   "./swt",
   "./Widget"
 ],function(langx,browser,eventer,noder,geom,$,swt,Widget){
@@ -20292,10 +20360,10 @@ define('skylark-widgets-swt/InputBox',[
     'max', 'step', 'list', 'pattern', 'placeholder', 'required', 'multiple'
   ];
 
-	var InputBox =  Widget.inherit({
-		klassName: "InputBox",
+	var TextBox =  swt.TextBox = Widget.inherit({
+		klassName: "TextBox",
 
-    pluginName: "lark.inputbox",
+    pluginName: "lark.textbox",
 
     /*
      * Parse options from attached dom element.
@@ -20377,33 +20445,78 @@ define('skylark-widgets-swt/InputBox',[
 
   });
 
-	return swt.InputBox = InputBox;
+	return TextBox;
 });
 
 
- define('skylark-widgets-swt/ListGroup',[
+ define('skylark-widgets-swt/Listing',[
   "skylark-langx/langx",
-  "skylark-utils-dom/query",
+  "skylark-domx-query",
   "./swt",
   "./Widget"
 ],function(langx,$,swt,Widget){
 
-    var ListGroup = Widget.inherit({
-        klassName : "ListGroup",
+    var Listing = Widget.inherit({
+        klassName : "Listing",
 
-        pluginName : "lark.listgroup",
+        pluginName : "lark.listing",
 
         options : {
         	multiSelect: false,
-          	multiTier : false,
-          	toggle : false,
-          	classes : {
-            	active : "active"
-          	},
-          	selectors : {
-            	item : ".list-group-item"
-          	},
-          	selected : 0
+        	//multiTier : false,
+
+          multiTier : {
+            mode   : "",  // "tree" or "accordion" or "popup"
+            levels : 2,
+            selectors :  {
+              children : "ul",  // "> .list-group"
+              hasChildren : ":has(ul)"
+            },
+            tree : {
+              classes : {
+                expandIcon: 'glyphicon-plus',    // "glyphicon-chevron-down", 'glyphicon-folder-open'
+                collapseIcon: 'glyphicon-minus', // "glyphicon-chevron-right", 'glyphicon-folder-close'
+                children : ""                              // "list-group children"
+              },
+              templates : {
+                treeIcon : "<i class=\"glyphicon\"></i>",
+                itemGroup: ""
+
+              },
+              selectors : {
+                treeIcon : " > i"
+              }
+            },
+
+            accordion : {
+              selectors : {
+                toggler : " > a"
+              }
+
+            }
+          },
+
+        	toggle : false,
+        	classes : {
+          	active : "active"
+        	},
+
+
+        	selectors : {
+          	item : "li",                   // ".list-group-item"
+
+        	},
+
+          item : {
+            template : "<span><i class=\"glyphicon\"></i><a href=\"javascript: void(0);\"></a> </span>",
+            checkable : false,
+            selectors : {
+              icon : " > span > i",
+              text : " > span > a"
+            }
+          },
+
+        	selected : 0
         },
 
         state : {
@@ -20436,44 +20549,74 @@ define('skylark-widgets-swt/InputBox',[
 
             var $this = velm,
                 $toggle = this.options.toggle,
+                multiTierMode = this.options.multiTier.mode,
+                hasChildrenSelector = this.options.multiTier.selectors.hasChildren,
+                childrenSelector = this.options.multiTier.selectors.children,
+                iconSelector = this.options.item.selectors.icon,
+                textSelector = this.options.item.selectors.text,
+                itemTemplate = this.options.item.template,                
                 obj = this;
 
-            //if (this.isIE() <= 9) {
-            //    $this.find("li.active").has("ul").children("ul").collapse("show");
-            //    $this.find("li").not(".active").has("ul").children("ul").collapse("hide");
-            //} else {
-                $this.query("li.active").has("ul").children("ul").addClass("collapse in");
-                $this.query("li").not(".active").has("ul").children("ul").addClass("collapse");
-            //}
 
-            //add the "doubleTapToGo" class to active items if needed
-            if (obj.options.doubleTapToGo) {
-                $this.query("li.active").has("ul").children("a").addClass("doubleTapToGo");
-            }
+            if (multiTierMode) {
+              if (multiTierMode == "tree") {
+                   var treeIconTemplate = this.options.multiTier.tree.templates.treeIcon,
+                       treeIconSelector = this.options.multiTier.tree.selectors.treeIcon,
+                       expandIconClass = this.options.multiTier.tree.classes.expandIcon,
+                       collapseIconClass = this.options.multiTier.tree.classes.collapseIcon;
 
-            $this.query("li").has("ul").children("a").on("click" + "." + this.pluginName, function(e) {
-                e.preventDefault();
+                   this._$items.each(function(){
+                     if($(this).is(hasChildrenSelector)) {
+                        var children = $(this).find(childrenSelector);
+                        $(children).remove();
+                        text = $(this).text().trim();
+                        $(this).html(treeIconTemplate+itemTemplate);
+                        $(this).find(treeIconSelector).addClass(expandIconClass).on("click" + "." + self.pluginName, function(e) {
+                            e.preventDefault();
 
-                //Do we need to enable the double tap
-                if (obj.options.doubleTapToGo) {
+                            $(this).toggleClass(expandIconClass).toggleClass(collapseIconClass);
 
-                    //if we hit a second time on the link and the href is valid, navigate to that url
-                    if (obj.doubleTapToGo($(this)) && $(this).attr("href") !== "#" && $(this).attr("href") !== "") {
-                        e.stopPropagation();
-                        document.location = $(this).attr("href");
-                        return;
+                            $(this).closest("li").toggleClass("active").children("ul").collapse("toggle");
+
+                            if ($toggle) {
+                                $(this).closest("li").siblings().removeClass("active").children("ul.in").collapse("hide");
+                            }
+                        });
+
+                        $(this).find(iconSelector).addClass('glyphicon-folder-open');
+                        $(this).find(textSelector).text(text);
+                        $(this).append(children);
+
+
+
+                      }  else {
+                        text = $(this).text().trim();
+                        $(this).html(treeIconTemplate+itemTemplate);
+                        $(this).find(iconSelector).addClass('glyphicon-file');
+                        $(this).find(textSelector).text(text);
                     }
-                }
 
-                $(this).parent("li").toggleClass("active").children("ul").collapse("toggle");
+                   });
+              } else if (multiTierMode == "accordion") {
+                var togglerSelector = self.options.multiTier.accordion.selectors.toggler;
 
-                if ($toggle) {
-                    $(this).parent("li").siblings().removeClass("active").children("ul.in").collapse("hide");
-                }
+                this._$items.has(childrenSelector).find(togglerSelector).on("click" + "." + this.pluginName, function(e) {
+                    e.preventDefault();
 
-            });
+                    $(this).closest(itemSelector).toggleClass("active").children(childrenSelector).collapse("toggle");
+
+                    if ($toggle) {
+                        $(this).closest(itemSelector).siblings().removeClass("active").children(childrenSelector+".in").collapse("hide");
+                    }
+                });
+              }
 
 
+             this._$items.filter(".active").has(childrenSelector).children(childrenSelector).addClass("collapse in");
+             this._$items.not(".active").has(childrenSelector).children(childrenSelector).addClass("collapse");
+
+              
+            }   
         },
 
         _refresh : function(updates) {
@@ -20510,397 +20653,20 @@ define('skylark-widgets-swt/InputBox',[
 
   });
 
-  return ListGroup;
+  return swt.Listing = Listing;
 
 });
 
 
 
-
-define('skylark-widgets-swt/Menu',[
-  "skylark-langx/langx",
-  "skylark-utils-dom/browser",
-  "skylark-utils-dom/eventer",
-  "skylark-utils-dom/noder",
-  "skylark-utils-dom/geom",
-  "skylark-utils-dom/query",
-  "./swt",
-  "./Widget"
-],function(langx,browser,eventer,noder,geom,$,swt,Widget){
-	
-	var popup = null;
-	var right_to_left ;
-
-	var Menu = swt.Menu = Widget.inherit({
-        klassName: "Menu",
-
-	    pluginName : "lark.menu",
-
-        init : function(elm,options) {
-        	if (!options) {
-        		options = elm;
-        		elm = null;
-        	}
-			var self = this,$el;
-
-			this._options = langx.mixin({
-					hide_onmouseleave	: 0,
-					icons				: true
-
-			},options);
-
-			if (!elm) {
-				$el = this.$el = $("<ul class='vakata-context'></ul>");
-			} else {
-				$el = this.$el = $(elm);
-			}
-
-			var to = false;
-			$el.on("mouseenter", "li", function (e) {
-					e.stopImmediatePropagation();
-
-					if(noder.contains(this, e.relatedTarget)) {
-						// премахнато заради delegate mouseleave по-долу
-						// $(this).find(".vakata-context-hover").removeClass("vakata-context-hover");
-						return;
-					}
-
-					if(to) { clearTimeout(to); }
-					$el.find(".vakata-context-hover").removeClass("vakata-context-hover").end();
-
-					$(this)
-						.siblings().find("ul").hide().end().end()
-						.parentsUntil(".vakata-context", "li").addBack().addClass("vakata-context-hover");
-					self._show_submenu(this);
-				})
-				// тестово - дали не натоварва?
-				.on("mouseleave", "li", function (e) {
-					if(noder.contains(this, e.relatedTarget)) { return; }
-					$(this).find(".vakata-context-hover").addBack().removeClass("vakata-context-hover");
-				})
-				.on("mouseleave", function (e) {
-					$(this).find(".vakata-context-hover").removeClass("vakata-context-hover");
-					if(self._options.hide_onmouseleave) {
-						to = setTimeout(
-							(function (t) {
-								return function () { self.hide(); };
-							}(this)), self._options.hide_onmouseleave);
-					}
-				})
-				.on("click", "a", function (e) {
-					e.preventDefault();
-				//})
-				//.on("mouseup", "a", function (e) {
-					if(!$(this).blur().parent().hasClass("vakata-context-disabled") && self._execute($(this).attr("rel")) !== false) {
-						self.hide();
-					}
-				})
-				.on('keydown', 'a', function (e) {
-						var o = null;
-						switch(e.which) {
-							case 13:
-							case 32:
-								e.type = "click";
-								e.preventDefault();
-								$(e.currentTarget).trigger(e);
-								break;
-							case 37:
-								self.$el.find(".vakata-context-hover").last().closest("li").first().find("ul").hide().find(".vakata-context-hover").removeClass("vakata-context-hover").end().end().children('a').focus();
-								e.stopImmediatePropagation();
-								e.preventDefault();
-								break;
-							case 38:
-								o = self.$el.find("ul:visible").addBack().last().children(".vakata-context-hover").removeClass("vakata-context-hover").prevAll("li:not(.vakata-context-separator)").first();
-								if(!o.length) { o = self.$el.find("ul:visible").addBack().last().children("li:not(.vakata-context-separator)").last(); }
-								o.addClass("vakata-context-hover").children('a').focus();
-								e.stopImmediatePropagation();
-								e.preventDefault();
-								break;
-							case 39:
-								self.$el.find(".vakata-context-hover").last().children("ul").show().children("li:not(.vakata-context-separator)").removeClass("vakata-context-hover").first().addClass("vakata-context-hover").children('a').focus();
-								e.stopImmediatePropagation();
-								e.preventDefault();
-								break;
-							case 40:
-								o = self.$el.find("ul:visible").addBack().last().children(".vakata-context-hover").removeClass("vakata-context-hover").nextAll("li:not(.vakata-context-separator)").first();
-								if(!o.length) { o = self.$el.find("ul:visible").addBack().last().children("li:not(.vakata-context-separator)").first(); }
-								o.addClass("vakata-context-hover").children('a').focus();
-								e.stopImmediatePropagation();
-								e.preventDefault();
-								break;
-							case 27:
-								self.hide();
-								e.preventDefault();
-								break;
-							default:
-								//console.log(e.which);
-								break;
-						}
-					})
-				.on('keydown', function (e) {
-					e.preventDefault();
-					var a = self.$el.find('.vakata-contextmenu-shortcut-' + e.which).parent();
-					if(a.parent().not('.vakata-context-disabled')) {
-						a.click();
-					}
-				});
-
-			this.render();
-        },
-
-        render : function() {
-        	var items = this._options.items;
-			if(this._parse(items)) {
-				this.$el.html(this.html);
-			}
-			this.$el.width('');
-        },
-
-		_trigger : function (event_name) {
-			$(document).trigger("context_" + event_name + ".sbswt", {
-				"reference"	: this.reference,
-				"element"	: this.$el,
-				"position"	: {
-					"x" : this.position_x,
-					"y" : this.position_y
-				}
-			});
-		},        
-
-		_execute : function (i) {
-			i = this.items[i];
-			return i && (!i._disabled || (langx.isFunction(i._disabled) && !i._disabled({ "item" : i, "reference" : this.reference, "element" : this.$el }))) && i.action ? i.action.call(null, {
-						"item"		: i,
-						"reference"	: this.reference,
-						"element"	: this.$el,
-						"position"	: {
-							"x" : this.position_x,
-							"y" : this.position_y
-						}
-					}) : false;
-		},
-		_parse : function (o, is_callback) {
-			var self = this,
-				reference = self._options.reference;
-
-			if(!o) { return false; }
-			if(!is_callback) {
-				self.html		= "";
-				self.items	= [];
-			}
-			var str = "",
-				sep = false,
-				tmp;
-
-			if(is_callback) { str += "<"+"ul>"; }
-			langx.each(o, function (i, val) {
-				if(!val) { return true; }
-				self.items.push(val);
-				if(!sep && val.separator_before) {
-					str += "<"+"li class='vakata-context-separator'><"+"a href='#' " + (self._options.icons ? '' : 'style="margin-left:0px;"') + ">&#160;<"+"/a><"+"/li>";
-				}
-				sep = false;
-				str += "<"+"li class='" + (val._class || "") + (val._disabled === true || (langx.isFunction(val._disabled) && val._disabled({ "item" : val, "reference" : reference, "element" : self.$el })) ? " vakata-contextmenu-disabled " : "") + "' "+(val.shortcut?" data-shortcut='"+val.shortcut+"' ":'')+">";
-				str += "<"+"a href='#' rel='" + (self.items.length - 1) + "' " + (val.title ? "title='" + val.title + "'" : "") + ">";
-				if(self._options.icons) {
-					str += "<"+"i ";
-					if(val.icon) {
-						if(val.icon.indexOf("/") !== -1 || val.icon.indexOf(".") !== -1) { str += " style='background:url(\"" + val.icon + "\") center center no-repeat' "; }
-						else { str += " class='" + val.icon + "' "; }
-					}
-					str += "><"+"/i><"+"span class='vakata-contextmenu-sep'>&#160;<"+"/span>";
-				}
-				str += (langx.isFunction(val.label) ? val.label({ "item" : i, "reference" : reference, "element" : self.$el }) : val.label) + (val.shortcut?' <span class="vakata-contextmenu-shortcut vakata-contextmenu-shortcut-'+val.shortcut+'">'+ (val.shortcut_label || '') +'</span>':'') + "<"+"/a>";
-				if(val.submenu) {
-					tmp = self._parse(val.submenu, true);
-					if(tmp) { str += tmp; }
-				}
-				str += "<"+"/li>";
-				if(val.separator_after) {
-					str += "<"+"li class='vakata-context-separator'><"+"a href='#' " + (self._options.icons ? '' : 'style="margin-left:0px;"') + ">&#160;<"+"/a><"+"/li>";
-					sep = true;
-				}
-			});
-			str  = str.replace(/<li class\='vakata-context-separator'\><\/li\>$/,"");
-			if(is_callback) { str += "</ul>"; }
-			/**
-			 * triggered on the document when the contextmenu is parsed (HTML is built)
-			 * @event
-			 * @plugin contextmenu
-			 * @name context_parse.vakata
-			 * @param {jQuery} reference the element that was right clicked
-			 * @param {jQuery} element the DOM element of the menu itself
-			 * @param {Object} position the x & y coordinates of the menu
-			 */
-			if(!is_callback) { self.html = str; self._trigger("parse"); }
-			return str.length > 10 ? str : false;
-		},
-		_show_submenu : function (o) {
-			o = $(o);
-			if(!o.length || !o.children("ul").length) { return; }
-			var e = o.children("ul"),
-				xl = o.offset().left,
-				x = xl + o.outerWidth(),
-				y = o.offset().top,
-				w = e.width(),
-				h = e.height(),
-				dw = $(window).width() + $(window).scrollLeft(),
-				dh = $(window).height() + $(window).scrollTop();
-			// може да се спести е една проверка - дали няма някой от класовете вече нагоре
-			if(right_to_left) {
-				o[x - (w + 10 + o.outerWidth()) < 0 ? "addClass" : "removeClass"]("vakata-context-left");
-			}
-			else {
-				o[x + w > dw  && xl > dw - x ? "addClass" : "removeClass"]("vakata-context-right");
-			}
-			if(y + h + 10 > dh) {
-				e.css("bottom","-1px");
-			}
-
-			//if does not fit - stick it to the side
-			if (o.hasClass('vakata-context-right')) {
-				if (xl < w) {
-					e.css("margin-right", xl - w);
-				}
-			} else {
-				if (dw - x < w) {
-					e.css("margin-left", dw - x - w);
-				}
-			}
-
-			e.show();
-		},
-		show : function (reference, position, data) {
-			var o, e, x, y, w, h, dw, dh, cond = true;
-			switch(cond) {
-				case (!position && !reference):
-					return false;
-				case (!!position && !!reference):
-					this.reference	= reference;
-					this.position_x	= position.x;
-					this.position_y	= position.y;
-					break;
-				case (!position && !!reference):
-					this.reference	= reference;
-					o = reference.offset();
-					this.position_x	= o.left + reference.outerHeight();
-					this.position_y	= o.top;
-					break;
-				case (!!position && !reference):
-					this.position_x	= position.x;
-					this.position_y	= position.y;
-					break;
-			}
-			if(!!reference && !data && $(reference).data('vakata_contextmenu')) {
-				data = $(reference).data('vakata_contextmenu');
-			}
-
-			if(this.items.length) {
-				this.$el.appendTo(document.body);
-				e = this.$el;
-				x = this.position_x;
-				y = this.position_y;
-				w = e.width();
-				h = e.height();
-				dw = $(window).width() + $(window).scrollLeft();
-				dh = $(window).height() + $(window).scrollTop();
-				if(right_to_left) {
-					x -= (e.outerWidth() - $(reference).outerWidth());
-					if(x < $(window).scrollLeft() + 20) {
-						x = $(window).scrollLeft() + 20;
-					}
-				}
-				if(x + w + 20 > dw) {
-					x = dw - (w + 20);
-				}
-				if(y + h + 20 > dh) {
-					y = dh - (h + 20);
-				}
-
-				this.$el
-					.css({ "left" : x, "top" : y })
-					.show()
-					.find('a').first().focus().parent().addClass("vakata-context-hover");
-				this.is_visible = true;
-
-				popup = this;
-
-				/**
-				 * triggered on the document when the contextmenu is shown
-				 * @event
-				 * @plugin contextmenu
-				 * @name context_show.vakata
-				 * @param {jQuery} reference the element that was right clicked
-				 * @param {jQuery} element the DOM element of the menu itself
-				 * @param {Object} position the x & y coordinates of the menu
-				 */
-				this._trigger("show");
-			}
-		},
-		hide : function () {
-			if(this.is_visible) {
-				this.$el.hide().find("ul").hide().end().find(':focus').blur().end().detach();
-				this.is_visible = false;
-				popup = null;
-				/**
-				 * triggered on the document when the contextmenu is hidden
-				 * @event
-				 * @plugin contextmenu
-				 * @name context_hide.vakata
-				 * @param {jQuery} reference the element that was right clicked
-				 * @param {jQuery} element the DOM element of the menu itself
-				 * @param {Object} position the x & y coordinates of the menu
-				 */
-				this._trigger("hide");
-			}
-		}
-
-    });	
-
-	$(function () {
-		right_to_left = $(document.body).css("direction") === "rtl";
-
-		$(document)
-			.on("mousedown.sbswt.popup", function (e) {
-				if(popup && popup.$el[0] !== e.target  && !noder.contains(popup.$el[0], e.target)) {
-					popup.hide();
-				}
-			})
-			.on("context_show.sbswt.popup", function (e, data) {
-				popup.$el.find("li:has(ul)").children("a").addClass("vakata-context-parent");
-				if(right_to_left) {
-					popup.$el.addClass("vakata-context-rtl").css("direction", "rtl");
-				}
-				// also apply a RTL class?
-				popup.$el.find("ul").hide().end();
-			});
-	});
-
-	Menu.popup = function (reference, position, data) {
-		var m = new Menu({
-			reference : reference,
-			items : data
-		});
-		m.show(reference,position);
-	};
-
-	Menu.hide = function() {
-		if (popup) {
-			popup.hide();
-		}
-	}
-
-	return Menu;
-
-});
 
 define('skylark-widgets-swt/Pagination',[
   "skylark-langx/langx",
-  "skylark-utils-dom/browser",
-  "skylark-utils-dom/eventer",
-  "skylark-utils-dom/noder",
-  "skylark-utils-dom/geom",
-  "skylark-utils-dom/query",
+  "skylark-domx-browser",
+  "skylark-domx-eventer",
+  "skylark-domx-noder",
+  "skylark-domx-geom",
+  "skylark-domx-query",
   "./swt",
   "./Widget"
 ],function(langx,browser,eventer,noder,geom,$,swt,Widget){
@@ -21130,11 +20896,11 @@ define('skylark-widgets-swt/Pagination',[
 });
 define('skylark-widgets-swt/Progress',[
   "skylark-langx/langx",
-  "skylark-utils-dom/browser",
-  "skylark-utils-dom/eventer",
-  "skylark-utils-dom/noder",
-  "skylark-utils-dom/geom",
-  "skylark-utils-dom/query",
+  "skylark-domx-browser",
+  "skylark-domx-eventer",
+  "skylark-domx-noder",
+  "skylark-domx-geom",
+  "skylark-domx-query",
   "./swt",
   "./Widget"
 ],function(langx,browser,eventer,noder,geom,$,swt,Widget){
@@ -21197,11 +20963,11 @@ define('skylark-widgets-swt/Progress',[
  });
 define('skylark-widgets-swt/Radio',[
   "skylark-langx/langx",
-  "skylark-utils-dom/browser",
-  "skylark-utils-dom/eventer",
-  "skylark-utils-dom/noder",
-  "skylark-utils-dom/geom",
-  "skylark-utils-dom/query",
+  "skylark-domx-browser",
+  "skylark-domx-eventer",
+  "skylark-domx-noder",
+  "skylark-domx-geom",
+  "skylark-domx-query",
   "./swt",
   "./_Toggler"
 ],function(langx,browser,eventer,noder,geom,$,swt,_Toggler){
@@ -21328,11 +21094,11 @@ define('skylark-widgets-swt/Radio',[
 
 define('skylark-widgets-swt/SearchBox',[
   "skylark-langx/langx",
-  "skylark-utils-dom/browser",
-  "skylark-utils-dom/eventer",
-  "skylark-utils-dom/noder",
-  "skylark-utils-dom/geom",
-  "skylark-utils-dom/query",
+  "skylark-domx-browser",
+  "skylark-domx-eventer",
+  "skylark-domx-noder",
+  "skylark-domx-geom",
+  "skylark-domx-query",
   "./swt",
   "./Widget",
   "skylark-bootstrap3/dropdown"
@@ -21483,11 +21249,11 @@ define('skylark-widgets-swt/SearchBox',[
 
 define('skylark-widgets-swt/SelectList',[
   "skylark-langx/langx",
-  "skylark-utils-dom/browser",
-  "skylark-utils-dom/eventer",
-  "skylark-utils-dom/noder",
-  "skylark-utils-dom/geom",
-  "skylark-utils-dom/query",
+  "skylark-domx-browser",
+  "skylark-domx-eventer",
+  "skylark-domx-noder",
+  "skylark-domx-geom",
+  "skylark-domx-query",
   "./swt",
   "./Widget",
   "skylark-bootstrap3/dropdown"
@@ -21713,15 +21479,14 @@ define('skylark-widgets-swt/SelectList',[
 
 define('skylark-widgets-swt/Tabular',[
   "skylark-langx/langx",
-  "skylark-utils-dom/browser",
-  "skylark-utils-dom/eventer",
-  "skylark-utils-dom/noder",
-  "skylark-utils-dom/geom",
-  "skylark-utils-dom/query",
+  "skylark-domx-browser",
+  "skylark-domx-eventer",
+  "skylark-domx-noder",
+  "skylark-domx-geom",
+  "skylark-domx-query",
   "./swt",
   "./Widget"
 ],function(langx,browser,eventer,noder,geom,$,swt,Widget){
-
 
     var Tabular = Widget.inherit({
         klassName : "Tabular",
@@ -23477,11 +23242,11 @@ define('skylark-widgets-swt/Tabular',[
 
 define('skylark-widgets-swt/TabStrip',[
     "skylark-langx/langx",
-    "skylark-utils-dom/browser",
-    "skylark-utils-dom/eventer",
-    "skylark-utils-dom/noder",
-    "skylark-utils-dom/geom",
-    "skylark-utils-dom/query",
+    "skylark-domx-browser",
+    "skylark-domx-eventer",
+    "skylark-domx-noder",
+    "skylark-domx-geom",
+    "skylark-domx-query",
     "./swt",
     "./Widget",
     "skylark-bootstrap3/tab",
@@ -23498,6 +23263,20 @@ define('skylark-widgets-swt/TabStrip',[
             tab : "[data-toggle=\"tab\"]",
             content : ".tab-content",
             tabpane : ".tab-pane"
+          },
+
+          droptabs : {
+            selectors : {
+              dropdown : "li.droptabs",
+              dropdownMenu    : "ul.dropdown-menu",
+              dropdownTabs    : "li",
+              dropdownCaret   : "b.caret",
+              visibleTabs     : ">li:not(.dropdown)",
+            },
+            auto              : true,
+            pullDropdownRight : true,
+
+
           }
         },
 
@@ -23518,6 +23297,135 @@ define('skylark-widgets-swt/TabStrip',[
 
         },
 
+        arrange : function () {
+
+          var dropdownTabsSelector = this.options.droptabs.selectors.dropdownTabs,
+              visibleTabsSelector = this.options.droptabs.selectors.visibleTabs;
+
+              $container = this.$header;
+          var dropdown = $container.find(this.options.droptabs.selectors.dropdown);
+          var dropdownMenu = dropdown.find(this.options.droptabs.selectors.dropdownMenu);
+          var dropdownLabel = $('>a', dropdown).clone();
+          var dropdownCaret = $(this.options.droptabs.selectors.dropdownCaret, dropdown);
+
+          // We only want the default label, strip the caret out
+          $(this.options.droptabs.selectors.dropdownCaret, dropdownLabel).remove();
+
+          if (this.options.droptabs.pullDropdownRight) {
+            $(dropdown).addClass('pull-right');
+          }
+
+          var $dropdownTabs = function () {
+            return $(dropdownTabsSelector, dropdownMenu);
+          }
+
+          var $visibleTabs = function () {
+            return $(visibleTabsSelector, $container);
+          }
+
+          function getFirstHiddenElementWidth() {
+            var tempElem=$dropdownTabs().first().clone().appendTo($container).css("position","fixed");
+            var hiddenElementWidth = $(tempElem).outerWidth();
+            $(tempElem).remove();
+            return hiddenElementWidth;
+          }
+
+          function getHiddenElementWidth(elem) {
+            var tempElem=$(elem).clone().appendTo($container).css("position","fixed");
+            var hiddenElementWidth = $(tempElem).outerWidth();
+            $(tempElem).remove();
+            return hiddenElementWidth;
+          }
+
+          function getDropdownLabel() {
+            var labelText = 'Dropdown';
+            if ($(dropdown).hasClass('active')) {
+              labelText = $('>li.active>a', dropdownMenu).html();
+            } else if (dropdownLabel.html().length > 0) {
+              labelText = dropdownLabel.html();
+            }
+
+            labelText = $.trim(labelText);
+
+            if (labelText.length > 10) {
+              labelText = labelText.substring(0, 10) + '...';
+            }
+
+            return labelText;
+          }
+
+          function renderDropdownLabel() {
+            $('>a', dropdown).html(getDropdownLabel() + ' ' + dropdownCaret.prop('outerHTML'));
+          }
+
+          function manageActive(elem) {
+            //fixes a bug where Bootstrap can't remove the 'active' class on elements after they've been hidden inside the dropdown
+            $('a', $(elem)).on('show.bs.tab', function (e) {
+              $(e.relatedTarget).parent().removeClass('active');
+            })
+            $('a', $(elem)).on('shown.bs.tab', function (e) {
+              renderDropdownLabel();
+            })
+
+          }
+
+          function checkDropdownSelection() {
+            if ($($dropdownTabs()).filter('.active').length > 0) {
+              $(dropdown).addClass('active');
+            } else {
+              $(dropdown).removeClass('active');
+            }
+
+            renderDropdownLabel();
+          }
+
+
+          var visibleTabsWidth = function () {
+            var visibleTabsWidth = 0;
+            $($visibleTabs()).each(function( index ) {
+              visibleTabsWidth += parseInt($(this).outerWidth(), 10);
+            });
+            visibleTabsWidth = visibleTabsWidth + parseInt($(dropdown).outerWidth(), 10);
+            return visibleTabsWidth;
+          }
+
+          var availableSpace = function () {
+            return $container.outerWidth()-visibleTabsWidth();
+          }
+
+          if (availableSpace()<0) {//we will hide tabs here
+            var x = availableSpace();
+            $($visibleTabs().get().reverse()).each(function( index ){
+              if (!($(this).hasClass('always-visible'))){
+                  $(this).prependTo(dropdownMenu);
+                  x=x+$(this).outerWidth();
+              }
+              if (x>=0) {return false;}
+            });
+          }
+
+          if (availableSpace()>getFirstHiddenElementWidth()) { //and here we bring the tabs out
+            var x = availableSpace();
+            $($dropdownTabs()).each(function( index ){
+              if (getHiddenElementWidth(this) < x && !($(this).hasClass('always-dropdown'))){
+                $(this).appendTo($container);
+                x = x-$(this).outerWidth();
+              } else {return false;}
+             });
+
+            if (!this.options.droptabs.pullDropdownRight && !$(dropdown).is(':last-child')) {
+              // If not pulling-right, keep the dropdown at the end of the container.
+              $(dropdown).detach().insertAfter($container.find('li:last-child'));
+            }
+          }
+
+          if ($dropdownTabs().length <= 0) {
+            dropdown.hide();
+          } else {
+            dropdown.show();
+          }
+        },
+
         add : function() {
           //TODO
         },
@@ -23527,2576 +23435,136 @@ define('skylark-widgets-swt/TabStrip',[
         }
     });
 
-    return TabStrip;
+
+
+
+
+    return swt.TabStrip = TabStrip;
 
 });
 define('skylark-widgets-swt/Toolbar',[
   "skylark-langx/langx",
-  "skylark-utils-dom/browser",
-  "skylark-utils-dom/eventer",
-  "skylark-utils-dom/noder",
-  "skylark-utils-dom/geom",
-  "skylark-utils-dom/query",
-  "./swt",
-  "./Widget"
-],function(langx,browser,eventer,noder,geom,$,swt,Widget){
-
-	var Toolbar = swt.Toolbar = Widget.inherit({
-        klassName: "Toolbar",
-
-	    pluginName : "lark.toolbar",
-
-        init : function(elm,options) {
-			var self = this;
-			this._options = langx.mixin({
-					autoredraw: true,
-					buttons: {},
-					context: {},
-					list: [],
-					show: true,
-			},options);
+  "skylark-domx-query",
+  "skylark-widgets-base/Widget"
+],function(langx,$,Widget){ 
 
 
-			this.$container = $('<nav class="navbar"/>');
-			this.$el = $(elm).append(this.$container);
 
-			this.$container.on('mousedown.bs.dropdown.data-api', '[data-toggle="dropdown"]',function(e) {
-				$(this).dropdown();
-			}); 
+  var Toolbar = Widget.inherit({
+    pluginName : "lark.toolbar",
 
-			this.render();
-        },
+    options : {
+      toolbarFloat: true,
+      toolbarHidden: false,
+      toolbarFloatOffset: 0,
+      template : '<div class="lark-toolbar"><ul></ul></div>',
+      separator : {
+        template :  '<li><span class="separator"></span></li>'
+      }
+    },
 
+    _init : function() {
+      var floatInitialized, initToolbarFloat, toolbarHeight;
+      //this.editor = editor;
 
-		render : function () {
-			function createToolbarItems(items,container) {
-				langx.each(items,function(i,item)  {
-					var type = item.type;
-					if (!type) {
-						type = "button";
-					}
-					switch (type) {
-						case "buttongroup":
-							// Create an element with the HTML
-							createButtonGroup(item,container);
-							break;
-						case "button":
-							createButton(item,container)
-							break;
-						case "dropdown":
-						case "dropup":
-							createDrop(item,container)
-							break;
-						case "input":
-							createInput(item,container)
-							break;
-						default:
-							throw "Wrong widget button type";
-					}
-				});
-
-			}
-
-			function createButtonGroup(item,container) {
-				var  group = $("<div/>", { class: "btn-group", role: "group" });
-				container.append(group);
-				createToolbarItems(item.items,group);
-				return group;
-			}
-
-			function createButton(item,container) {
-				// Create button
-				var button = $('<button type="button" class="btn btn-default"/>'),
-					attrs = langx.mixin({},item);
-
-				// If has icon
-				if ("icon" in item) {
-					button.append($("<span/>", { class: item.icon }));
-					delete attrs.icon;
-				}
-				// If has text
-				if ("text" in attrs) {
-					button.append(" " + item.text);
-					delete attrs.text;
-				}
-
-				button.attr(attrs);
-
-				// Add button to the group
-				container.append(button);
-
-			}
-
-			function createDrop(item,container) {
-				// Create button
-				var dropdown_group = $('<div class="btn-group" role="group"/>');
-				var dropdown_button = $('<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"/>');
-				var dropdown_list = $('<ul class="dropdown-menu"/>');
-
-				var	attrs = langx.mixin({},item);
-
-				if(item.type === "dropup") {
-					dropdown_group.addClass("dropup");
-				}
-
-				// If has icon
-				if ("icon" in item) {
-					dropdown_button.append($("<span/>", { class: item.icon }));
-					delete attrs.icon;
-				}
-				// If has text
-				if ("text" in item) {
-					dropdown_button.append(" " + item.text);
-					delete attrs.text;
-				}
-				// Add caret
-				dropdown_button.append(' <span class="caret"/>');
-
-				// Add list of options
-				for(var i in item.list) {
-					var dropdown_option = item.list[i];
-					var dropdown_option_li = $('<li/>');
-
-					// If has icon
-					if ("icon" in dropdown_option) {
-						dropdown_option_li.append($("<span/>", { class: dropdown_option.icon }));
-					}
-
-					// If has text
-					if ("text" in dropdown_option) {
-						dropdown_option_li.append(" " + dropdown_option.text);
-					}
-					// Set attributes
-					dropdown_option_li.attr(dropdown_option);
-
-					// Add to dropdown list
-					dropdown_list.append(dropdown_option_li);
-				}
-				
-				// Set attributes
-				dropdown_group.attr(attrs);
-
-				dropdown_group.append(dropdown_button);
-				dropdown_group.append(dropdown_list);
-				container.append(dropdown_group);
-
-			}
-
-			function createInput(item,container) {
-				var input_group = $('<div class="input-group"/>');
-				var input_element = $('<input class="form-control"/>');
-				
-				var	attrs = langx.mixin({},item);
-
-				// Add prefix addon
-				if("prefix" in item) {
-					var input_prefix = $('<span class="input-group-addon"/>');
-					input_prefix.html(item.prefix);
-					input_group.append(input_prefix);
-
-					delete attrs.prefix;
-				}
-				
-				// Add input
-				input_group.append(input_element);
-
-				// Add sufix addon
-				if("sufix" in item) {
-					var input_sufix = $('<span class="input-group-addon"/>');
-					input_sufix.html(item.sufix);
-					input_group.append(input_sufix);
-
-					delete attrs.sufix;
-				}
-
-				attrs.type = attrs.inputType;
-
-				delete attrs.inputType;
-
-				// Set attributes
-				input_element.attr(attrs);
-
-				container.append(input_group);
-
-			}
-
-			var items = this._options.items;
-			if (items) {
-				createToolbarItems(items,this.$container);
-			}
-		}
-
-	});
+      //this.opts = langx.extend({}, this.opts, opts);
+      this.opts = this.options;
 
 
-	$.fn.toolbar = function (options) {
-		options = options || {};
+      //if (!langx.isArray(this.opts.toolbar)) {
+      //  this.opts.toolbar = ['bold', 'italic', 'underline', 'strikethrough', '|', 'ol', 'ul', 'blockquote', 'code', '|', 'link', 'image', '|', 'indent', 'outdent'];
+      //}
 
-		return this.each(function () {
-			return new Toolbar(this, langx.mixin({}, options,true));
-		});
-	};
-
-	return Toolbar;
-
-});
-
-define('skylark-data-collection/List',[
-    "skylark-langx/arrays",
-    "./collections",
-    "./Collection"
-], function(arrays,collections, Collection) {
-
-    var List = collections.List = Collection.inherit({
-        
-        "klassName": "List",
-
-
-        _getInnerItems : function() {
-            return this._items;
-        },
-
-        _clear : function() {
-            this._items = [];
-        },
-
-        "contains": function( /*Object*/ item) {
-            //desc: "Determines whether an item is in the Collection.",
-            //result: {
-            //    type: Boolean,
-            //    desc: "true if item is found in the Collection; otherwise, false."
-            //},
-            //params: [{
-            //    name: "item",
-            //    type: Object,
-            //    desc: "The item to check."
-            //}],
-            var items = this._getInnerItems();
-            return items.indexOf(item) >= 0;
-        },
-
-        "count": function() {
-            //desc: "Gets the number of items actually contained in the Collection.",
-            //result: {
-            //    type: Number,
-            //    desc: "the number of items"
-            //},
-            //params: [],
-            var items = this._getInnerItems();
-            return items.length;
-        },
-
-        "getAll": function() {
-            //desc: "Returns all items.",
-            //result: {
-            //    type: Object,
-            //    desc: "all items"
-            //},
-            //params: [],
-            return this._getInnerItems();
-        },
-
-        "get": function(index) {
-            //desc: "Returns the item at the specified position in the List.",
-            //result: {
-            //    type: Object,
-            //    desc: "The item at the specified position."
-            //},
-            //params: [{
-            //    name: "index",
-            //    type: Number,
-            //    desc: "index of the element to return."
-            //}],
-            var items = this._getInnerItems();
-            if (index < 0 || index >= items.length) {
-                throw new Error("Not exist:" + index);
-            }
-            return items[index];
-        },
-
-        "getRange": function( /*Number*/ index, /*Number*/ count) {
-            //desc: "Returns an Array which represents a subset of the items in the source list.",
-            //result: {
-            //    type: Array,
-            //    desc: "An Array which represents a subset of the items in the source list."
-            //},
-            //params: [{
-            //    name: "index",
-            //    type: Number,
-            //    desc: "The zero-based list index at which the range starts."
-            //}, {
-            //    name: "count",
-            //    type: Number,
-            //    desc: "The number of items in the range."
-            //}],
-            var items = this._getInnerItems(),
-                a1 = [];
-            for (var i = Math.max(index, 0); i < count; i++) {
-                if (i >= items.length) {
-                    break;
-                }
-                a1.push(items[i]);
-            }
-            return a1;
-        },
-
-        "indexOf": function( /*Object*/ item) {
-            //desc: "Searches for the specified Object and returns the zero-based index of the first occurrence within the entire list.",
-            //result: {
-            //    type: Number,
-            //    desc: "The zero-based index of the first occurrence of value within the entire list,if found; otherwise, -1."
-            //},
-            //params: [{
-            //    name: "item",
-            //    type: Object,
-            //    desc: "The Object to locate in the list. The value can be null."
-            //}],
-            var items = this._getInnerItems();
-            return items.indexOf(item);
-        },
-
-        "iterator" : function() {
-            var i =0,
-                self = this;
-            return {
-                hasNext : function() {
-                    return i < self._items.length;
-                },
-                next : function() {
-                    return self._items[i++];
-                }
-            }
-        },
+      this.wrapper = $(this._elm);
+      this.list = this.wrapper.find('ul');
+      this.list.on('click', function(e) {
+        return false;
+      });
+      this.wrapper.on('mousedown', (function(_this) {
+        return function(e) {
+          return _this.list.find('.menu-on').removeClass('.menu-on');
+        };
+      })(this));
+      $(document).on('mousedown.toolbar', (function(_this) {
+        return function(e) {
+          return _this.list.find('.menu-on').removeClass('menu-on');
+        };
+      })(this));
+      if (!this.opts.toolbarHidden && this.opts.toolbarFloat) {
+        this.wrapper.css('top', this.opts.toolbarFloatOffset);
+        toolbarHeight = 0;
+        initToolbarFloat = (function(_this) {
+          return function() {
+            _this.wrapper.css('position', 'static');
+            _this.wrapper.width('auto');
+            _this.editor.editable.util.reflow(_this.wrapper);
+            _this.wrapper.width(_this.wrapper.outerWidth());
+            _this.wrapper.css('left', _this.editor.editable.util.os.mobile ? _this.wrapper.position().left : _this.wrapper.offset().left);
+            _this.wrapper.css('position', '');
+            toolbarHeight = _this.wrapper.outerHeight();
+            _this.editor.placeholderEl.css('top', toolbarHeight);
+            return true;
+          };
+        })(this);
+        floatInitialized = null;
 
         /*
-         *@params {Object}args
-         *  a plain object for the initialize arguments.
-         */
-        init :  function(/*Array*/data){
-            if (data) {
-                this._items = arrays.makeArray(data);
+        $(window).on('resize.richeditor-' + this.editor.id, function(e) {
+          return floatInitialized = initToolbarFloat();
+        });
+        $(window).on('scroll.richeditor-' + this.editor.id, (function(_this) {
+          return function(e) {
+            var bottomEdge, scrollTop, topEdge;
+            if (!_this.wrapper.is(':visible')) {
+              return;
+            }
+            topEdge = _this.editor.wrapper.offset().top;
+            bottomEdge = topEdge + _this.editor.wrapper.outerHeight() - 80;
+            scrollTop = $(document).scrollTop() + _this.opts.toolbarFloatOffset;
+            if (scrollTop <= topEdge || scrollTop >= bottomEdge) {
+              _this.editor.wrapper.removeClass('toolbar-floating').css('padding-top', '');
+              if (_this.editor.editable.util.os.mobile) {
+                return _this.wrapper.css('top', _this.opts.toolbarFloatOffset);
+              }
             } else {
-                this._items =  [];
+              floatInitialized || (floatInitialized = initToolbarFloat());
+              _this.editor.wrapper.addClass('toolbar-floating').css('padding-top', toolbarHeight);
+              if (_this.editor.editable.util.os.mobile) {
+                return _this.wrapper.css('top', scrollTop - topEdge + _this.opts.toolbarFloatOffset);
+              }
             }
-        }
-    });
+          };
+        })(this));
+        */
+      }
 
-    return List;
-});
-
-define('skylark-data-collection/ArrayList',[
-    "./collections",
-    "./List"
-], function(collections, List) {
-
-    var ArrayList = collections.ArrayList = List.inherit({
-        
-        "klassName": "ArrayList",
-
-        "add": function(item) {
-            //desc: "Adds an item to the end of the List.",
-            //result: {
-            //    type: List,
-            //    desc: "this instance for chain call"
-            //},
-            //params: [{
-            //    name: "item",
-            //    type: Object,
-            //    desc: "The item to be added to the end of the List. \nThe item can be null."
-            //}],
-
-            var items = this._getInnerItems();
-            items.push(item);
-            this.trigger("changed:add",{
-                "data" :  [
-                    { "item" : item, "index": items.length - 1, isSingle: true}
-                ]
-            });
-            return this;
-        },
-
-        "addRange": function( /*Collection*/ c) {
-            //desc: "Adds the items of a collection into the List at the specified index.",
-            //result: {
-            //    type: List,
-            //    desc: "this instance for chain call"
-            //},
-            //params: [{
-            //    name: "c",
-            //    type: [Collection, Array],
-            //    desc: "The Collection whose items should be added into the List.\nThe collection itself cannot be null, but it can contain items that are null."
-            //}],
-            var items = this._getInnerItems();
-            var a1 = c.toArray ? c.toArray() : c,
-                toAdd = [];
-            for (var i = 0; i < a1.length; i++) {
-                items.push(a1[i]);
-                toAdd.push({
-                    "item" : a1[i],
-                    "index" : items.length-1
-                });
-            }
-            this.trigger("changed:add",{
-                "data" :  toAdd
-            });
-            return this;
-        },
-
-
-        "clone": function() {
-            //desc: "Returns a shallow copy of this ArrayList instance. (The items themselves are not copied.)",
-            //result: {
-            //    type: ArrayList,
-            //   desc: "a clone of this ArrayList instance."
-            //},
-            //params: [],
-
-           return new ArrayList({
-                "items": this._.items
-            });
-        },
-
-        "insert": function( /*Number*/ index, /*Object*/ item) {
-            //desc: "Inserts an item into the list at the specified index.",
-            //result: {
-            //    type: List,
-            //    desc: "this instance for chain call."
-            //},
-            //params: [{
-            //    name: "index",
-            //    type: Number,
-            //    desc: "The zero-based index at which the new item should be inserted."
-            //}, {
-            //    name: "item",
-            //    type: Object,
-            //    desc: "The item to insert. The value can be null."
-            //}],
-            var items = this._getInnerItems();
-            if (index < 0 || index > items.length) {
-                throw new Error("invalid parameter!");
-            }
-            items.splice(index, 0, item);
-            this.trigger("changed",{
-                "data" :  [
-                    { "item" : item, "index" : index}
-                ]
-            });
-            return this;
-        },
-
-        "insertRange": function( /*Number*/ index, /*Collection*/ c) {
-            //desc: "Inserts the items of a collection into the list at the specified index.",
-            //result: {
-            //    type: List,
-            //    desc: "this instance for chain call."
-            //},
-            //params: [{
-            //    name: "index",
-            //    type: Number,
-            //    desc: "The zero-based index at which the new item should be inserted."
-            //}, {
-            //    name: "c",
-            //    type: Collection,
-            //    desc: "The Collection whose items should be inserted into the ArrayList. \nThe collection itself cannot be null, but it can contain items that are null. "
-            //}],
-            var items = this._getInnerItems(),
-                toAdd = [];
-            if (index < 0 || index >= items.length) {
-                throw new Error("invalid parameter!");
-            }
-            var a1 = c.toArray();
-            for (var i = 0; i<a1.length - 1; i++) {
-                items.splice(index+i, 0, a1[i]);
-                toAdd.push({
-                    "item" : a1[i],
-                    "index" : index+i
-                });
-            }
-            this.trigger("changed:insert",{
-                "data" :  toAdd
-            });
-            return this;
-        },
-
-        "removeFirstMatch": function( /*Object*/ item) {
-            //desc: "Removes the first occurrence of a specific item from the list.",
-            //result: {
-            //    type: List,
-            //    desc: "this instance for chain call."
-            //},
-            //params: [{
-            //    name: "item",
-            //    type: Object,
-            //    desc: "The item to remove from the list. The value can be null."
-            //}],
-            var items = this._getInnerItems();
-            for (var i = 0, len = items.length; i < len; i++) {
-                if (items[i] === item) {
-                    this.removeAt(i);
-                    break;
-                }
-            }
-            return this;
-        },
-
-        "remove": function( /*Object*/ item) {
-            //desc: "Removes the all occurrence of a specific item from the list.",
-            //result: {
-            //    type: List,
-            //    desc: "this instance for chain call."
-            //},
-            //params: [{
-            //    name: "item",
-            //    type: Object,
-            //    desc: "The item to remove from the list. The value can be null."
-            //}],
-            var items = this._getInnerItems(),
-                toRemove = [];
-            for (var i = 0, len = items.length; i < len; i++) {
-                if (items[i] === item) {
-                    Array.removeAt(items, i);
-                    toRemove.push({
-                        "item" : item,
-                        "index" : i
-                    });
-                }
-            }
-            this.trigger("changed:remove",{
-                "data" :  toRemove
-            });
-            return this;
-        },
-
-        "removeAt": function(index) {
-            //desc: "Removes the item at the specified index of the list.",
-            //result: {
-            //    type: List,
-            //    desc: "this instance for chain call."
-            //},
-            //params: [{
-            //    name: "index",
-            //    type: Number,
-            //    desc: "The zero-based index of the item to remove."
-            //}],
-            var items = this._getInnerItems(),
-                item = items.splice(index, 1)[0];
-            this.trigger("changed:remove",{
-                "data" :  [
-                    { "item" : item, "index" : index}
-                ]
-            });
-            return this;
-        },
-
-        "removeRange": function( /*Number*/ index, /*Number*/ count) {
-            //desc: "Removes a range of items from the list.",
-            //result: {
-            //    type: List,
-            //    desc: "this instance for chain call."
-            //},
-            //params: [{
-            //    name: "index",
-            //    type: Number,
-            //    desc: "The zero-based index of the item to remove."
-            //}, {
-            //    name: "count",
-            //    type: Number,
-            //    desc: "The number of items to remove."
-            //}],
-            var items = this._getInnerItems(),
-                toRemove = [];
-
-            for (var i = index; i<index+count;i++) {
-                toRemove.push({
-                    "item" : items[i],
-                    "index" : i
-                });
-            }
-            items.splice(index, count);
-
-            this.trigger("changed:remove",{
-                "data" : {
-                    "removed" : toRemove
-                }
-            });
-            return this;
-        },
-
-        "setByIndex": function( /*Number*/ index, /*Item*/ item) {
-            //desc: "Replaces the item at the specified position in the list with the specified item.",
-            //result: {
-            //    type: List,
-            //    desc: "this instance for chain call."
-            //},
-            //params: [{
-            //    name: "index",
-            //    type: Number,
-            //    desc: "index of the item to replace."
-            //}, {
-            //    name: "item",
-            //    type: Object,
-            //    desc: "item to be stored at the specified position."
-            //}],
-            var items = this._getInnerItems();
-            if (index < 0 || index >= items.length) throw new Error("" + i);
-            var old = items[index];
-            items[i] = item;
-
-            this.trigger("changed:update",{
-                "data" : [
-                    { "item" : item, "index" : index,"oldItem":old}
-                ]
-            });
-            return this;
-        },
-
-        "reset": function(newItems) {
-            //desc: "Reset the internal array.",
-            //result: {
-            //    type: List,
-            //    desc: "this instance for chain call."
-            //},
-            //params: [],
-            var items = this._getInnerItems();
-            items.length = 0;
-            for (var i=0;i<newItems.length;i++){
-                items.push(newItems[i]);
-            }
-            this.trigger("changed:reset");
-
-            return this;
-        },
-        
-        "reverse": function() {
-            //desc: "Reverse the internal array.",
-            //result: {
-            //    type: List,
-            //    desc: "this instance for chain call."
-            //},
-            //params: [],
-            var items = this._getInnerItems();
-            items.reverse();
-
-            this.trigger("changed:reverse");
-            return this;
-        },
-
-        "sort": function( /*Function?*/ fn) {
-            //desc: "sort the internal array.",
-            //result: {
-            //    type: List,
-            //    desc: "this instance for chain call."
-            //},
-            //params: [{
-            //    name: "fn",
-            //    type: Function,
-            //    desc: "The function for sort"
-            //}],
-            var items = this._getInnerItems();
-            if (fn) {
-                items.sort(fn);
-            } else {
-                items.sort();
-            }
-            this.trigger("changed:sort");
-            return this;
-        }
-
-    });
-
-    return ArrayList;
-});
-
-define('skylark-storages-diskfs/diskfs',[
-    "skylark-langx/skylark"
-], function(skylark) {
-
-    function dataURLtoBlob(dataurl) {
-        var arr = dataurl.split(','),
-            mime = arr[0].match(/:(.*?);/)[1],
-            bstr = atob(arr[1]),
-            n = bstr.length,
-            u8arr = new Uint8Array(n);
-        while (n--) {
-            u8arr[n] = bstr.charCodeAt(n);
-        }
-        return new Blob([u8arr], { type: mime });
-    }
-
-
-    var diskfs = function() {
-        return diskfs;
-    };
-
-    return skylark.attach("storages.diskfs", diskfs);
-});
- define('skylark-storages-diskfs/webentry',[
-    "skylark-langx/arrays",
-    "skylark-langx/Deferred",
-    "./diskfs"
-],function(arrays,Deferred, diskfs){
-    var concat = Array.prototype.concat;
-    var webentry = (function() {
-        function one(entry, path) {
-            var d = new Deferred(),
-                onError = function(e) {
-                    d.reject(e);
-                };
-
-            path = path || '';
-            if (entry.isFile) {
-                entry.file(function(file) {
-                    file.relativePath = path;
-                    d.resolve(file);
-                }, onError);
-            } else if (entry.isDirectory) {
-                var dirReader = entry.createReader();
-                dirReader.readEntries(function(entries) {
-                    all(
-                        entries,
-                        path + entry.name + '/'
-                    ).then(function(files) {
-                        d.resolve(files);
-                    }).catch(onError);
-                }, onError);
-            } else {
-                // Return an empy list for file system items
-                // other than files or directories:
-                d.resolve([]);
-            }
-            return d.promise;
-        }
-
-        function all(entries, path) {
-            return Deferred.all(
-                arrays.map(entries, function(entry) {
-                    return one(entry, path);
-                })
-            ).then(function() {
-                return concat.apply([], arguments);
-            });
-        }
-
-        return {
-            one: one,
-            all: all
+      /*
+      this.editor.on('destroy', (function(_this) {
+        return function() {
+          return _this.buttons.length = 0;
         };
-    })();
+      })(this));
+      */
 
-    return diskfs.webentry = webentry;
-});
-  define('skylark-storages-diskfs/dropzone',[
-    "skylark-langx/arrays",
-    "skylark-langx/Deferred",
-    "skylark-utils-dom/styler",
-    "skylark-utils-dom/eventer",
-    "./diskfs",
-    "./webentry"
-],function(arrays,Deferred, styler, eventer, diskfs, webentry){  /*
-     * Make the specified element to could accept HTML5 file drag and drop.
-     * @param {HTMLElement} elm
-     * @param {PlainObject} params
-     */
-    function dropzone(elm, params) {
-        params = params || {};
-        var hoverClass = params.hoverClass || "dropzone",
-            droppedCallback = params.dropped;
+      
+    },
 
-        var enterdCount = 0;
-        eventer.on(elm, "dragenter", function(e) {
-            if (e.dataTransfer && e.dataTransfer.types.indexOf("Files") > -1) {
-                eventer.stop(e);
-                enterdCount++;
-                styler.addClass(elm, hoverClass)
-            }
-        });
+    addToolItem : function(itemWidget) {
+      $(itemWidget._elm).appendTo(this.list);
+      return this;
+    },
 
-        eventer.on(elm, "dragover", function(e) {
-            if (e.dataTransfer && e.dataTransfer.types.indexOf("Files") > -1) {
-                eventer.stop(e);
-            }
-        });
-
-        eventer.on(elm, "dragleave", function(e) {
-            if (e.dataTransfer && e.dataTransfer.types.indexOf("Files") > -1) {
-                enterdCount--
-                if (enterdCount == 0) {
-                    styler.removeClass(elm, hoverClass);
-                }
-            }
-        });
-
-        eventer.on(elm, "drop", function(e) {
-            if (e.dataTransfer && e.dataTransfer.types.indexOf("Files") > -1) {
-                styler.removeClass(elm, hoverClass)
-                eventer.stop(e);
-                if (droppedCallback) {
-                    var items = e.dataTransfer.items;
-                    if (items && items.length && (items[0].webkitGetAsEntry ||
-                            items[0].getAsEntry)) {
-                        webentry.all(
-                            arrays.map(items, function(item) {
-                                if (item.webkitGetAsEntry) {
-                                    return item.webkitGetAsEntry();
-                                }
-                                return item.getAsEntry();
-                            })
-                        ).then(droppedCallback);
-                    } else {
-                        droppedCallback(e.dataTransfer.files);
-                    }
-                }
-            }
-        });
-
-        return this;
+    addSeparator : function() {
+      $(this.options.separator.template).appendTo(this.list);
+      return this;
     }
 
-     return diskfs.dropzone = dropzone;
-});
-define('skylark-storages-diskfs/pastezone',[
-    "skylark-langx/objects",
-    "skylark-utils-dom/eventer",
-    "./diskfs"
-],function(objects, eventer, diskfs){
-    function pastezone(elm, params) {
-        params = params || {};
-        var hoverClass = params.hoverClass || "pastezone",
-            pastedCallback = params.pasted;
+  });
 
-        eventer.on(elm, "paste", function(e) {
-            var items = e.originalEvent && e.originalEvent.clipboardData &&
-                e.originalEvent.clipboardData.items,
-                files = [];
-            if (items && items.length) {
-                objects.each(items, function(index, item) {
-                    var file = item.getAsFile && item.getAsFile();
-                    if (file) {
-                        files.push(file);
-                    }
-                });
-            }
-            if (pastedCallback && files.length) {
-                pastedCallback(files);
-            }
-        });
 
-        return this;
-    }
-
-    return diskfs.pastezone = pastezone;
+  return Toolbar;
 
 });
-
-define('skylark-storages-diskfs/select',[
-    "./diskfs"
-],function(diskfs){
-    var fileInput,
-        fileInputForm,
-        fileSelected,
-        maxFileSize = 1 / 0;
-
-    function select(params) {
-        params = params || {};
-        var directory = params.directory || false,
-            multiple = params.multiple || false,
-            fileSelected = params.picked;
-        if (!fileInput) {
-            var input = fileInput = document.createElement("input");
-
-            function selectFiles(pickedFiles) {
-                for (var i = pickedFiles.length; i--;) {
-                    if (pickedFiles[i].size > maxFileSize) {
-                        pickedFiles.splice(i, 1);
-                    }
-                }
-                fileSelected(pickedFiles);
-            }
-
-            input.type = "file";
-            input.style.position = "fixed";
-            input.style.left = 0;
-            input.style.top = 0;
-            input.style.opacity = .001;
-            document.body.appendChild(input);
-
-            input.onchange = function(e) {
-                var entries = e.target.webkitEntries || e.target.entries;
-
-                if (entries && entries.length) {
-                    webentry.all(entries).then(function(files) {
-                        selectFiles(files);
-                    });
-                } else {
-                    selectFiles(Array.prototype.slice.call(e.target.files));
-                }
-                // reset to "", so selecting the same file next time still trigger the change handler
-                input.value = "";
-            };
-        }
-        fileInput.multiple = multiple;
-        fileInput.webkitdirectory = directory;
-        fileInput.click();
-    }
-
-    return diskfs.select = select;
-});
-
-
-define('skylark-storages-diskfs/picker',[
-    "skylark-langx/objects",
-    "skylark-utils-dom/eventer",
-    "./diskfs",
-    "./select",
-],function(objects, eventer, diskfs, select){
-    /*
-     * Make the specified element to pop-up the file selection dialog box when clicked , and read the contents the files selected from client file system by user.
-     * @param {HTMLElement} elm
-     * @param {PlainObject} params
-     */
-    function picker(elm, params) {
-        eventer.on(elm, "click", function(e) {
-            e.preventDefault();
-            select(params);
-        });
-        return this;
-    }
-
-    return diskfs.picker = picker;
-
-});
-
-
-
-define('skylark-storages-diskfs/upload',[
-	"skylark-langx/types",
-	"skylark-langx/objects",
-	"skylark-langx/arrays",
-    "skylark-langx/Deferred",
-	"skylark-langx/Xhr",
-	"./diskfs"
-],function(types, objects, arrays, Deferred,Xhr, diskfs){
-
-    function upload(params) {
-        var xoptions = objects.mixin({
-            contentRange: null, //
-
-            // The parameter name for the file form data (the request argument name).
-            // If undefined or empty, the name property of the file input field is
-            // used, or "files[]" if the file input name property is also empty,
-            // can be a string or an array of strings:
-            paramName: undefined,
-            // By default, each file of a selection is uploaded using an individual
-            // request for XHR type uploads. Set to false to upload file
-            // selections in one request each:
-            singleFileUploads: true,
-            // To limit the number of files uploaded with one XHR request,
-            // set the following option to an integer greater than 0:
-            limitMultiFileUploads: undefined,
-            // The following option limits the number of files uploaded with one
-            // XHR request to keep the request size under or equal to the defined
-            // limit in bytes:
-            limitMultiFileUploadSize: undefined,
-            // Multipart file uploads add a number of bytes to each uploaded file,
-            // therefore the following option adds an overhead for each file used
-            // in the limitMultiFileUploadSize configuration:
-            limitMultiFileUploadSizeOverhead: 512,
-            // Set the following option to true to issue all file upload requests
-            // in a sequential order:
-            sequentialUploads: false,
-            // To limit the number of concurrent uploads,
-            // set the following option to an integer greater than 0:
-            limitConcurrentUploads: undefined,
-            // By default, XHR file uploads are sent as multipart/form-data.
-            // The iframe transport is always using multipart/form-data.
-            // Set to false to enable non-multipart XHR uploads:
-            multipart: true,
-            // To upload large files in smaller chunks, set the following option
-            // to a preferred maximum chunk size. If set to 0, null or undefined,
-            // or the browser does not support the required Blob API, files will
-            // be uploaded as a whole.
-            maxChunkSize: undefined,
-            // When a non-multipart upload or a chunked multipart upload has been
-            // aborted, this option can be used to resume the upload by setting
-            // it to the size of the already uploaded bytes. This option is most
-            // useful when modifying the options object inside of the "add" or
-            // "send" callbacks, as the options are cloned for each file upload.
-            uploadedBytes: undefined,
-            // By default, failed (abort or error) file uploads are removed from the
-            // global progress calculation. Set the following option to false to
-            // prevent recalculating the global progress data:
-            recalculateProgress: true,
-            // Interval in milliseconds to calculate and trigger progress events:
-            progressInterval: 100,
-            // Interval in milliseconds to calculate progress bitrate:
-            bitrateInterval: 500,
-            // By default, uploads are started automatically when adding files:
-            autoUpload: true,
-
-            // Error and info messages:
-            messages: {
-                uploadedBytes: 'Uploaded bytes exceed file size'
-            },
-
-            // Translation function, gets the message key to be translated
-            // and an object with context specific data as arguments:
-            i18n: function(message, context) {
-                message = this.messages[message] || message.toString();
-                if (context) {
-                    objects.each(context, function(key, value) {
-                        message = message.replace('{' + key + '}', value);
-                    });
-                }
-                return message;
-            },
-
-            // Additional form data to be sent along with the file uploads can be set
-            // using this option, which accepts an array of objects with name and
-            // value properties, a function returning such an array, a FormData
-            // object (for XHR file uploads), or a simple object.
-            // The form of the first fileInput is given as parameter to the function:
-            formData: function(form) {
-                return form.serializeArray();
-            },
-
-            // The add callback is invoked as soon as files are added to the fileupload
-            // widget (via file input selection, drag & drop, paste or add API call).
-            // If the singleFileUploads option is enabled, this callback will be
-            // called once for each file in the selection for XHR file uploads, else
-            // once for each file selection.
-            //
-            // The upload starts when the submit method is invoked on the data parameter.
-            // The data object contains a files property holding the added files
-            // and allows you to override plugin options as well as define ajax settings.
-            //
-            // Listeners for this callback can also be bound the following way:
-            // .bind('fileuploadadd', func);
-            //
-            // data.submit() returns a Promise object and allows to attach additional
-            // handlers using jQuery's Deferred callbacks:
-            // data.submit().done(func).fail(func).always(func);
-            add: function(e, data) {
-                if (e.isDefaultPrevented()) {
-                    return false;
-                }
-                if (data.autoUpload || (data.autoUpload !== false &&
-                        $(this).fileupload('option', 'autoUpload'))) {
-                    data.process().done(function() {
-                        data.submit();
-                    });
-                }
-            },
-
-            // Other callbacks:
-
-            // Callback for the submit event of each file upload:
-            // submit: function (e, data) {}, // .bind('fileuploadsubmit', func);
-
-            // Callback for the start of each file upload request:
-            // send: function (e, data) {}, // .bind('fileuploadsend', func);
-
-            // Callback for successful uploads:
-            // done: function (e, data) {}, // .bind('fileuploaddone', func);
-
-            // Callback for failed (abort or error) uploads:
-            // fail: function (e, data) {}, // .bind('fileuploadfail', func);
-
-            // Callback for completed (success, abort or error) requests:
-            // always: function (e, data) {}, // .bind('fileuploadalways', func);
-
-            // Callback for upload progress events:
-            // progress: function (e, data) {}, // .bind('fileuploadprogress', func);
-
-            // Callback for global upload progress events:
-            // progressall: function (e, data) {}, // .bind('fileuploadprogressall', func);
-
-            // Callback for uploads start, equivalent to the global ajaxStart event:
-            // start: function (e) {}, // .bind('fileuploadstart', func);
-
-            // Callback for uploads stop, equivalent to the global ajaxStop event:
-            // stop: function (e) {}, // .bind('fileuploadstop', func);
-
-            // Callback for change events of the fileInput(s):
-            // change: function (e, data) {}, // .bind('fileuploadchange', func);
-
-            // Callback for paste events to the pasteZone(s):
-            // paste: function (e, data) {}, // .bind('fileuploadpaste', func);
-
-            // Callback for drop events of the dropZone(s):
-            // drop: function (e, data) {}, // .bind('fileuploaddrop', func);
-
-            // Callback for dragover events of the dropZone(s):
-            // dragover: function (e) {}, // .bind('fileuploaddragover', func);
-
-            // Callback for the start of each chunk upload request:
-            // chunksend: function (e, data) {}, // .bind('fileuploadchunksend', func);
-
-            // Callback for successful chunk uploads:
-            // chunkdone: function (e, data) {}, // .bind('fileuploadchunkdone', func);
-
-            // Callback for failed (abort or error) chunk uploads:
-            // chunkfail: function (e, data) {}, // .bind('fileuploadchunkfail', func);
-
-            // Callback for completed (success, abort or error) chunk upload requests:
-            // chunkalways: function (e, data) {}, // .bind('fileuploadchunkalways', func);
-
-            // The plugin options are used as settings object for the ajax calls.
-            // The following are jQuery ajax settings required for the file uploads:
-            processData: false,
-            contentType: false,
-            cache: false
-        }, params);
-
-        var blobSlice = function() {
-                var slice = Blob.prototype.slice || Blob.prototype.webkitSlice || Blob.prototype.mozSlice;
-  	            return slice.apply(this, arguments);
-            },
-            ajax = function(data) {
-                return Xhr.request(data.url, data);
-            };
-
-        function initDataSettings(o) {
-            o.type = o.type || "POST";
-
-            if (!chunkedUpload(o, true)) {
-                if (!o.data) {
-                    initXHRData(o);
-                }
-                //initProgressListener(o);
-            }
-        }
-
-        function initXHRData(o) {
-            var that = this,
-                formData,
-                file = o.files[0],
-                // Ignore non-multipart setting if not supported:
-                multipart = o.multipart,
-                paramName = types.type(o.paramName) === 'array' ?
-                o.paramName[0] : o.paramName;
-
-            o.headers = objects.mixin({}, o.headers);
-            if (o.contentRange) {
-                o.headers['Content-Range'] = o.contentRange;
-            }
-            if (!multipart) {
-                o.headers['Content-Disposition'] = 'attachment; filename="' +
-                    encodeURI(file.name) + '"';
-                o.contentType = file.type || 'application/octet-stream';
-                o.data = o.blob || file;
-            } else {
-                formData = new FormData();
-                if (o.blob) {
-                    formData.append(paramName, o.blob, file.name);
-                } else {
-                    objects.each(o.files, function(index, file) {
-                        // This check allows the tests to run with
-                        // dummy objects:
-                        formData.append(
-                            (types.type(o.paramName) === 'array' &&
-                                o.paramName[index]) || paramName,
-                            file,
-                            file.uploadName || file.name
-                        );
-                    });
-                }
-                o.data = formData;
-            }
-            // Blob reference is not needed anymore, free memory:
-            o.blob = null;
-        }
-
-        function getTotal(files) {
-            var total = 0;
-            objects.each(files, function(index, file) {
-                total += file.size || 1;
-            });
-            return total;
-        }
-
-        function getUploadedBytes(jqXHR) {
-            var range = jqXHR.getResponseHeader('Range'),
-                parts = range && range.split('-'),
-                upperBytesPos = parts && parts.length > 1 &&
-                parseInt(parts[1], 10);
-            return upperBytesPos && upperBytesPos + 1;
-        }
-
-        function initProgressObject(obj) {
-            var progress = {
-                loaded: 0,
-                total: 0,
-                bitrate: 0
-            };
-            if (obj._progress) {
-                objects.mixin(obj._progress, progress);
-            } else {
-                obj._progress = progress;
-            }
-        }
-
-        function BitrateTimer() {
-            this.timestamp = ((Date.now) ? Date.now() : (new Date()).getTime());
-            this.loaded = 0;
-            this.bitrate = 0;
-            this.getBitrate = function(now, loaded, interval) {
-                var timeDiff = now - this.timestamp;
-                if (!this.bitrate || !interval || timeDiff > interval) {
-                    this.bitrate = (loaded - this.loaded) * (1000 / timeDiff) * 8;
-                    this.loaded = loaded;
-                    this.timestamp = now;
-                }
-                return this.bitrate;
-            };
-        }
-
-        function chunkedUpload(options, testOnly) {
-            options.uploadedBytes = options.uploadedBytes || 0;
-            var that = this,
-                file = options.files[0],
-                fs = file.size,
-                ub = options.uploadedBytes,
-                mcs = options.maxChunkSize || fs,
-                slice = blobSlice,
-                dfd = new Deferred(),
-                promise = dfd.promise,
-                jqXHR,
-                upload;
-            if (!(slice && (ub || mcs < fs)) ||
-                options.data) {
-                return false;
-            }
-            if (testOnly) {
-                return true;
-            }
-            if (ub >= fs) {
-                file.error = options.i18n('uploadedBytes');
-                return this._getXHRPromise(
-                    false,
-                    options.context, [null, 'error', file.error]
-                );
-            }
-            // The chunk upload method:
-            upload = function() {
-                // Clone the options object for each chunk upload:
-                var o = objects.mixin({}, options),
-                    currentLoaded = o._progress.loaded;
-                o.blob = slice.call(
-                    file,
-                    ub,
-                    ub + mcs,
-                    file.type
-                );
-                // Store the current chunk size, as the blob itself
-                // will be dereferenced after data processing:
-                o.chunkSize = o.blob.size;
-                // Expose the chunk bytes position range:
-                o.contentRange = 'bytes ' + ub + '-' +
-                    (ub + o.chunkSize - 1) + '/' + fs;
-                // Process the upload data (the blob and potential form data):
-                initXHRData(o);
-                // Add progress listeners for this chunk upload:
-                //initProgressListener(o);
-                jqXHR = ajax(o).done(function(result, textStatus, jqXHR) {
-                        ub = getUploadedBytes(jqXHR) ||
-                            (ub + o.chunkSize);
-                        // Create a progress event if no final progress event
-                        // with loaded equaling total has been triggered
-                        // for this chunk:
-                        if (currentLoaded + o.chunkSize - o._progress.loaded) {
-                            dfd.progress({
-                                lengthComputable: true,
-                                loaded: ub - o.uploadedBytes,
-                                total: ub - o.uploadedBytes
-                            });
-                        }
-                        options.uploadedBytes = o.uploadedBytes = ub;
-                        o.result = result;
-                        o.textStatus = textStatus;
-                        o.jqXHR = jqXHR;
-                        //that._trigger('chunkdone', null, o);
-                        //that._trigger('chunkalways', null, o);
-                        if (ub < fs) {
-                            // File upload not yet complete,
-                            // continue with the next chunk:
-                            upload();
-                        } else {
-                            dfd.resolveWith(
-                                o.context, [result, textStatus, jqXHR]
-                            );
-                        }
-                    })
-                    .fail(function(jqXHR, textStatus, errorThrown) {
-                        o.jqXHR = jqXHR;
-                        o.textStatus = textStatus;
-                        o.errorThrown = errorThrown;
-                        //that._trigger('chunkfail', null, o);
-                        //that._trigger('chunkalways', null, o);
-                        dfd.rejectWith(
-                            o.context, [jqXHR, textStatus, errorThrown]
-                        );
-                    });
-            };
-            //this._enhancePromise(promise);
-            promise.abort = function() {
-                return jqXHR.abort();
-            };
-            upload();
-            return promise;
-        }
-
-        initDataSettings(xoptions);
-
-        xoptions._bitrateTimer = new BitrateTimer();
-
-        var jqXhr = chunkedUpload(xoptions) || ajax(xoptions);
-
-        jqXhr.options = xoptions;
-
-        return jqXhr;
-    }
-
-	return diskfs.upload = upload;	
-});
-define('skylark-storages-diskfs/uploader',[
-    "skylark-langx/langx",
-    "skylark-utils-dom/eventer",
-    "skylark-utils-dom/query",
-    "./diskfs",
-    "./dropzone",
-    "./pastezone",
-    "./picker",
-    "./upload"
-],function (langx,eventer,$,diskfs,dropzone,pastezone,picker,upload) {
-    'use strict';
-
-    var Deferred = langx.Deferred;
-
-
-    // The fileupload widget listens for change events on file input fields defined
-    // via fileInput setting and paste or drop events of the given dropZone.
-    // In addition to the default jQuery Widget methods, the fileupload widget
-    // exposes the "add" and "send" methods, to add or directly send files using
-    // the fileupload API.
-    // By default, files added via file input selection, paste, drag & drop or
-    // "add" method are uploaded immediately, but it is possible to override
-    // the "add" callback option to queue file uploads.
-
-    var FileUploader = langx.Evented.inherit( {
-
-        options: {
-            // The drop target element(s), by the default the complete document.
-            // Set to null to disable drag & drop support:
-            dropZone: $(document),
-
-            // The paste target element(s), by the default the complete document.
-            // Set to null to disable paste support:
-            pasteZone: $(document),
-
-            // The file input field(s), that are listened to for change events.
-            // If undefined, it is set to the file input fields inside
-            // of the widget element on plugin initialization.
-            // Set to null to disable the change listener.
-            picker: undefined,
-
-
-            // The parameter name for the file form data (the request argument name).
-            // If undefined or empty, the name property of the file input field is
-            // used, or "files[]" if the file input name property is also empty,
-            // can be a string or an array of strings:
-            paramName: undefined,
-            
-            // By default, each file of a selection is uploaded using an individual
-            // request for XHR type uploads. Set to false to upload file
-            // selections in one request each:
-            singleFileUploads: true,
-            
-            // To limit the number of files uploaded with one XHR request,
-            // set the following option to an integer greater than 0:
-            limitMultiFileUploads: undefined,
-            
-            // The following option limits the number of files uploaded with one
-            // XHR request to keep the request size under or equal to the defined
-            // limit in bytes:
-            limitMultiFileUploadSize: undefined,
-
-            // Multipart file uploads add a number of bytes to each uploaded file,
-            // therefore the following option adds an overhead for each file used
-            // in the limitMultiFileUploadSize configuration:
-            limitMultiFileUploadSizeOverhead: 512,
-
-            // Set the following option to true to issue all file upload requests
-            // in a sequential order:
-            sequentialUploads: false,
-            
-            // To limit the number of concurrent uploads,
-            // set the following option to an integer greater than 0:
-            limitConcurrentUploads: undefined,
-
-            // Set the following option to the location of a postMessage window,
-            // to enable postMessage transport uploads:
-            postMessage: undefined,
- 
-            // By default, XHR file uploads are sent as multipart/form-data.
-            // The iframe transport is always using multipart/form-data.
-            // Set to false to enable non-multipart XHR uploads:
-            multipart: true,
- 
-            // To upload large files in smaller chunks, set the following option
-            // to a preferred maximum chunk size. If set to 0, null or undefined,
-            // or the browser does not support the required Blob API, files will
-            // be uploaded as a whole.
-            maxChunkSize: undefined,
- 
-            // When a non-multipart upload or a chunked multipart upload has been
-            // aborted, this option can be used to resume the upload by setting
-            // it to the size of the already uploaded bytes. This option is most
-            // useful when modifying the options object inside of the "add" or
-            // "send" callbacks, as the options are cloned for each file upload.
-            uploadedBytes: undefined,
- 
-            // By default, failed (abort or error) file uploads are removed from the
-            // global progress calculation. Set the following option to false to
-            // prevent recalculating the global progress data:
-            recalculateProgress: true,
- 
-            // Interval in milliseconds to calculate and trigger progress events:
-            progressInterval: 100,
- 
-            // Interval in milliseconds to calculate progress bitrate:
-            bitrateInterval: 500,
- 
-            // By default, uploads are started automatically when adding files:
-            autoUpload: false,
-
-            // Error and info messages:
-            messages: {
-                uploadedBytes: 'Uploaded bytes exceed file size'
-            },
-
-            // Translation function, gets the message key to be translated
-            // and an object with context specific data as arguments:
-            i18n: function (message, context) {
-                message = this.messages[message] || message.toString();
-                if (context) {
-                    langx.each(context, function (key, value) {
-                        message = message.replace('{' + key + '}', value);
-                    });
-                }
-                return message;
-            },
-
-            // Additional form data to be sent along with the file uploads can be set
-            // using this option, which accepts an array of objects with name and
-            // value properties, a function returning such an array, a FormData
-            // object (for XHR file uploads), or a simple object.
-            // The form of the first fileInput is given as parameter to the function:
-            formData: function (form) {
-                return form.serializeArray();
-            },
-
-            // The add callback is invoked as soon as files are added to the fileupload
-            // widget (via file input selection, drag & drop, paste or add API call).
-            // If the singleFileUploads option is enabled, this callback will be
-            // called once for each file in the selection for XHR file uploads, else
-            // once for each file selection.
-            //
-            // The upload starts when the submit method is invoked on the data parameter.
-            // The data object contains a files property holding the added files
-            // and allows you to override plugin options as well as define ajax settings.
-            //
-            // Listeners for this callback can also be bound the following way:
-            // .bind('fileuploadadd', func);
-            //
-            // data.submit() returns a Promise object and allows to attach additional
-            // handlers using jQuery's Deferred callbacks:
-            // data.submit().done(func).fail(func).always(func);
-            add: function (e, data) {
-                if (e.isDefaultPrevented()) {
-                    return false;
-                }
-                if (data.autoUpload || (data.autoUpload !== false && $(this).fileupload("instance").option('autoUpload') )) {
-                    data.process().done(function () {
-                        data.submit();
-                    });
-                }
-            },
-
-            // Other callbacks:
-
-            // Callback for the submit event of each file upload:
-            // submit: function (e, data) {}, // .bind('fileuploadsubmit', func);
-
-            // Callback for the start of each file upload request:
-            // send: function (e, data) {}, // .bind('fileuploadsend', func);
-
-            // Callback for successful uploads:
-            // done: function (e, data) {}, // .bind('fileuploaddone', func);
-
-            // Callback for failed (abort or error) uploads:
-            // fail: function (e, data) {}, // .bind('fileuploadfail', func);
-
-            // Callback for completed (success, abort or error) requests:
-            // always: function (e, data) {}, // .bind('fileuploadalways', func);
-
-            // Callback for upload progress events:
-            // progress: function (e, data) {}, // .bind('fileuploadprogress', func);
-
-            // Callback for global upload progress events:
-            // progressall: function (e, data) {}, // .bind('fileuploadprogressall', func);
-
-            // Callback for uploads start, equivalent to the global ajaxStart event:
-            // start: function (e) {}, // .bind('fileuploadstart', func);
-
-            // Callback for uploads stop, equivalent to the global ajaxStop event:
-            // stop: function (e) {}, // .bind('fileuploadstop', func);
-
-            // Callback for change events of the fileInput(s):
-            // change: function (e, data) {}, // .bind('fileuploadchange', func);
-
-            // Callback for paste events to the pasteZone(s):
-            // paste: function (e, data) {}, // .bind('fileuploadpaste', func);
-
-            // Callback for drop events of the dropZone(s):
-            // drop: function (e, data) {}, // .bind('fileuploaddrop', func);
-
-            // Callback for dragover events of the dropZone(s):
-            // dragover: function (e) {}, // .bind('fileuploaddragover', func);
-
-            // Callback for the start of each chunk upload request:
-            // chunksend: function (e, data) {}, // .bind('fileuploadchunksend', func);
-
-            // Callback for successful chunk uploads:
-            // chunkdone: function (e, data) {}, // .bind('fileuploadchunkdone', func);
-
-            // Callback for failed (abort or error) chunk uploads:
-            // chunkfail: function (e, data) {}, // .bind('fileuploadchunkfail', func);
-
-            // Callback for completed (success, abort or error) chunk upload requests:
-            // chunkalways: function (e, data) {}, // .bind('fileuploadchunkalways', func);
-
-            // The plugin options are used as settings object for the ajax calls.
-            // The following are jQuery ajax settings required for the file uploads:
-            processData: false,
-            contentType: false,
-            cache: false
-        },
-
-        // A list of options that require reinitializing event listeners and/or
-        // special initialization code:
-        _specialOptions: [
-            'picker',
-            'dropZone',
-            'pasteZone',
-            'multipart',
-            'filesContainer',
-            'uploadTemplateId',
-            'downloadTemplateId'            
-        ],
-
-        _BitrateTimer: function () {
-            this.timestamp = ((Date.now) ? Date.now() : (new Date()).getTime());
-            this.loaded = 0;
-            this.bitrate = 0;
-            this.getBitrate = function (now, loaded, interval) {
-                var timeDiff = now - this.timestamp;
-                if (!this.bitrate || !interval || timeDiff > interval) {
-                    this.bitrate = (loaded - this.loaded) * (1000 / timeDiff) * 8;
-                    this.loaded = loaded;
-                    this.timestamp = now;
-                }
-                return this.bitrate;
-            };
-        },
-
-        _getTotal: function (files) {
-            var total = 0;
-            langx.each(files, function (index, file) {
-                total += file.size || 1;
-            });
-            return total;
-        },
-
-        _initProgressObject: function (obj) {
-            var progress = {
-                loaded: 0,
-                total: 0,
-                bitrate: 0
-            };
-            if (obj._progress) {
-                langx.extend(obj._progress, progress);
-            } else {
-                obj._progress = progress;
-            }
-        },
-
-        _initResponseObject: function (obj) {
-            var prop;
-            if (obj._response) {
-                for (prop in obj._response) {
-                    if (obj._response.hasOwnProperty(prop)) {
-                        delete obj._response[prop];
-                    }
-                }
-            } else {
-                obj._response = {};
-            }
-        },
-
-        _onProgress: function (e, data) {
-            if (e.lengthComputable) {
-                var now = ((Date.now) ? Date.now() : (new Date()).getTime()),
-                    loaded;
-                if (data._time && data.progressInterval &&
-                        (now - data._time < data.progressInterval) &&
-                        e.loaded !== e.total) {
-                    return;
-                }
-                data._time = now;
-                loaded = Math.floor(
-                    e.loaded / e.total * (data.chunkSize || data._progress.total)
-                ) + (data.uploadedBytes || 0);
-                // Add the difference from the previously loaded state
-                // to the global loaded counter:
-                this._progress.loaded += (loaded - data._progress.loaded);
-                this._progress.bitrate = this._bitrateTimer.getBitrate(
-                    now,
-                    this._progress.loaded,
-                    data.bitrateInterval
-                );
-                data._progress.loaded = data.loaded = loaded;
-                data._progress.bitrate = data.bitrate = data._bitrateTimer.getBitrate(
-                    now,
-                    loaded,
-                    data.bitrateInterval
-                );
-                // Trigger a custom progress event with a total data property set
-                // to the file size(s) of the current upload and a loaded data
-                // property calculated accordingly:
-                this._trigger(
-                    'progress',
-                    eventer.create('progress', {delegatedEvent: e}),
-                    data
-                );
-                // Trigger a global progress event for all current file uploads,
-                // including ajax calls queued for sequential file uploads:
-                this._trigger(
-                    'progressall',
-                    eventer.create('progressall', {delegatedEvent: e}),
-                    this._progress
-                );
-            }
-        },
-
-        _getParamName: function (options) {
-            var picker = $(options.picker),
-                paramName = options.paramName;
-            //if (!paramName) {
-            //    paramName = [fileInput.prop('name') || 'files[]'];
-            // } else if (!langx.isArray(paramName)) {
-
-            if (!langx.isArray(paramName)) {
-                paramName = [paramName];
-            }
-            return paramName;
-        },
-
-
-        // jQuery 1.6 doesn't provide .state(),
-        // while jQuery 1.8+ removed .isRejected() and .isResolved():
-        _getDeferredState: function (deferred) {
-            if (deferred.state) {
-                return deferred.state();
-            }
-            if (deferred.isResolved()) {
-                return 'resolved';
-            }
-            if (deferred.isRejected()) {
-                return 'rejected';
-            }
-            return 'pending';
-        },
-
-        // Maps jqXHR callbacks to the equivalent
-        // methods of the given Promise object:
-        _enhancePromise: function (promise) {
-            promise.success = promise.done;
-            promise.error = promise.fail;
-            promise.complete = promise.always;
-            return promise;
-        },
-
-        // Creates and returns a Promise object enhanced with
-        // the jqXHR methods abort, success, error and complete:
-        _getXHRPromise: function (resolveOrReject, context, args) {
-            var dfd = new Deferred(),
-                promise = dfd.promise;
-            context = context || this.options.context || promise;
-            if (resolveOrReject === true) {
-                dfd.resolveWith(context, args);
-            } else if (resolveOrReject === false) {
-                dfd.rejectWith(context, args);
-            }
-            promise.abort = dfd.promise;
-            return this._enhancePromise(promise);
-        },
-
-        // Adds convenience methods to the data callback argument:
-        _addConvenienceMethods: function (e, data) {
-            var that = this,
-                getPromise = function (args) {
-                    return new Deferred().resolveWith(that, args).promise;
-                };
-            data.process = function (resolveFunc, rejectFunc) {
-                if (resolveFunc || rejectFunc) {
-                    data._processQueue = this._processQueue =
-                        (this._processQueue || getPromise([this])).pipe(
-                            function () {
-                                if (data.errorThrown) {
-                                    return new Deferred()
-                                        .rejectWith(that, [data]).promise;
-                                }
-                                return getPromise(arguments);
-                            }
-                        ).pipe(resolveFunc, rejectFunc);
-                }
-                return this._processQueue || getPromise([this]);
-            };
-            data.submit = function () {
-                if (this.state() !== 'pending') {
-                    data.jqXHR = this.jqXHR =
-                        (that._trigger(
-                            'submit',
-                            eventer.create('submit', {delegatedEvent: e}),
-                            this
-                        ) !== false) && that._onSend(e, this);
-                }
-                return this.jqXHR || that._getXHRPromise();
-            };
-            data.abort = function () {
-                if (this.jqXHR) {
-                    return this.jqXHR.abort();
-                }
-                this.errorThrown = 'abort';
-                that._trigger('fail', null, this);
-                return that._getXHRPromise(false);
-            };
-            data.state = function () {
-                if (this.jqXHR) {
-                    return that._getDeferredState(this.jqXHR);
-                }
-                if (this._processQueue) {
-                    return that._getDeferredState(this._processQueue);
-                }
-            };
-            data.processing = function () {
-                return !this.jqXHR && this._processQueue && that
-                    ._getDeferredState(this._processQueue) === 'pending';
-            };
-            data.progress = function () {
-                return this._progress;
-            };
-            data.response = function () {
-                return this._response;
-            };
-        },
-
-        _beforeSend: function (e, data) {
-            if (this._active === 0) {
-                // the start callback is triggered when an upload starts
-                // and no other uploads are currently running,
-                // equivalent to the global ajaxStart event:
-                this._trigger('start');
-                // Set timer for global bitrate progress calculation:
-                this._bitrateTimer = new this._BitrateTimer();
-                // Reset the global progress values:
-                this._progress.loaded = this._progress.total = 0;
-                this._progress.bitrate = 0;
-            }
-            // Make sure the container objects for the .response() and
-            // .progress() methods on the data object are available
-            // and reset to their initial state:
-            this._initResponseObject(data);
-            this._initProgressObject(data);
-            data._progress.loaded = data.loaded = data.uploadedBytes || 0;
-            data._progress.total = data.total = this._getTotal(data.files) || 1;
-            data._progress.bitrate = data.bitrate = 0;
-            this._active += 1;
-            // Initialize the global progress values:
-            this._progress.loaded += data.loaded;
-            this._progress.total += data.total;
-        },
-
-        _onDone: function (result, textStatus, jqXHR, options) {
-            var total = options._progress.total,
-                response = options._response;
-            if (options._progress.loaded < total) {
-                // Create a progress event if no final progress event
-                // with loaded equaling total has been triggered:
-                this._onProgress(eventer.create('progress', {
-                    lengthComputable: true,
-                    loaded: total,
-                    total: total
-                }), options);
-            }
-            response.result = options.result = result;
-            response.textStatus = options.textStatus = textStatus;
-            response.jqXHR = options.jqXHR = jqXHR;
-            this._trigger('done', null, options);
-        },
-
-        _onFail: function (jqXHR, textStatus, errorThrown, options) {
-            var response = options._response;
-            if (options.recalculateProgress) {
-                // Remove the failed (error or abort) file upload from
-                // the global progress calculation:
-                this._progress.loaded -= options._progress.loaded;
-                this._progress.total -= options._progress.total;
-            }
-            response.jqXHR = options.jqXHR = jqXHR;
-            response.textStatus = options.textStatus = textStatus;
-            response.errorThrown = options.errorThrown = errorThrown;
-            this._trigger('fail', null, options);
-        },
-
-        _trigger : function(type,event,data) {
-            var e = eventer.proxy(event);
-            e.type = type;
-            e.data =data;
-            return this.trigger(e,data);
-        },
-
-        _onAlways: function (jqXHRorResult, textStatus, jqXHRorError, options) {
-            // jqXHRorResult, textStatus and jqXHRorError are added to the
-            // options object via done and fail callbacks
-            this._trigger('always', null, options);
-        },
-
-        _onSend: function (e, data) {
-            if (!data.submit) {
-                this._addConvenienceMethods(e, data);
-            }
-            var that = this,
-                jqXHR,
-                aborted,
-                slot,
-                pipe,
-                send = function () {
-                    that._sending += 1;
-                    data.url = that.options.url;
-                    data.dataType = that.options.dataType;
-                    data.xhrFields = that.options.xhrFields;
-
-                    jqXHR = upload(data);
-
-                    jqXHR.progress(function(e){
-                        //var oe = e.originalEvent;
-                        // Make sure the progress event properties get copied over:
-                        //e.lengthComputable = oe.lengthComputable;
-                        //e.loaded = oe.loaded;
-                        //e.total = oe.total;
-                        that._onProgress(e, jqXHR.options);
-
-                    }).done(function (result, textStatus) {
-                        that._onDone(result, textStatus, jqXHR, jqXHR.options);
-                    }).fail(function (e, textStatus) {
-                        that._onFail(jqXHR, textStatus,e, jqXHR.options);
-                    }).always(function () {
-                        that._sending -= 1;
-                        that._active -= 1;
-                        that._trigger('stop');
-                    });
-                    return jqXHR;
-                };
-            this._beforeSend(e, data);
-
-            return send();
-        },
-        _onAdd: function (e, data) {
-            var that = this,
-                result = true,
-                options = langx.extend({}, this.options, data),
-                files = data.files,
-                filesLength = files.length,
-                limit = options.limitMultiFileUploads,
-                limitSize = options.limitMultiFileUploadSize,
-                overhead = options.limitMultiFileUploadSizeOverhead,
-                batchSize = 0,
-                paramName = this._getParamName(options),
-                paramNameSet,
-                paramNameSlice,
-                fileSet,
-                i,
-                j = 0;
-            if (limitSize && (!filesLength || files[0].size === undefined)) {
-                limitSize = undefined;
-            }
-            if (!(options.singleFileUploads || limit || limitSize)) {
-                fileSet = [files];
-                paramNameSet = [paramName];
-            } else if (!(options.singleFileUploads || limitSize) && limit) {
-                fileSet = [];
-                paramNameSet = [];
-                for (i = 0; i < filesLength; i += limit) {
-                    fileSet.push(files.slice(i, i + limit));
-                    paramNameSlice = paramName.slice(i, i + limit);
-                    if (!paramNameSlice.length) {
-                        paramNameSlice = paramName;
-                    }
-                    paramNameSet.push(paramNameSlice);
-                }
-            } else if (!options.singleFileUploads && limitSize) {
-                fileSet = [];
-                paramNameSet = [];
-                for (i = 0; i < filesLength; i = i + 1) {
-                    batchSize += files[i].size + overhead;
-                    if (i + 1 === filesLength ||
-                            ((batchSize + files[i + 1].size + overhead) > limitSize) ||
-                            (limit && i + 1 - j >= limit)) {
-                        fileSet.push(files.slice(j, i + 1));
-                        paramNameSlice = paramName.slice(j, i + 1);
-                        if (!paramNameSlice.length) {
-                            paramNameSlice = paramName;
-                        }
-                        paramNameSet.push(paramNameSlice);
-                        j = i + 1;
-                        batchSize = 0;
-                    }
-                }
-            } else {
-                paramNameSet = paramName;
-            }
-            data.originalFiles = files;
-            langx.each(fileSet || files, function (index, element) {
-                var newData = langx.extend({}, data);
-                newData.files = fileSet ? element : [element];
-                newData.paramName = paramNameSet[index];
-                that._initResponseObject(newData);
-                that._initProgressObject(newData);
-                that._addConvenienceMethods(e, newData);
-                result = that._trigger(
-                    'add',
-                    eventer.create('add', {delegatedEvent: e}),
-                    newData
-                );
-                return result;
-            });
-            return result;
-        },
-
-        _initEventHandlers: function () {
-            var that = this;
-
-            dropzone(this.options.dropZone[0],{
-                dropped : function (files) {
-                    var data = {};
-                    data.files = files;
-                    that._onAdd(null, data);
-                }
-            });
-
-            pastezone(this.options.pasteZone[0],{
-                pasted : function (files) {
-                    var data = {};
-                    data.files = files;
-                    that._onAdd(null, data);
-                }
-            });
-
-            picker(this.options.picker[0],{
-                multiple: true,
-                picked : function (files) {
-                    var data = {};
-                    data.files = files;
-                    that._onAdd(null, data);
-                }
-            });
-        },
-
-        _destroyEventHandlers: function () {
-            //this._off(this.options.dropZone, 'dragover drop');
-            //this._off(this.options.pasteZone, 'paste');
-            //this._off(this.options.picker, 'change');
-        },
-
-        _setOption: function (key, value) {
-            var reinit = langx.inArray(key, this._specialOptions) !== -1;
-            if (reinit) {
-                this._destroyEventHandlers();
-            }
-            this._super(key, value);
-            if (reinit) {
-                this._initSpecialOptions();
-                this._initEventHandlers();
-            }
-        },
-
-        _initSpecialOptions: function () {
-            var options = this.options;
-            //if (options.fileInput === undefined) {
-            //    //options.fileInput = this.element.is('input[type="file"]') ?
-            //    //        this.element : this.element.find('input[type="file"]');
-            //    options.fileInput = this.element.find('.fileinput-button');
-            
-            if (options.picker) {
-                if (!(options.picker instanceof $)) {
-                    options.picker = $(options.picker,this._elm);
-                }                
-            }
-
-            if (options.dropZone) {
-                if (!(options.dropZone instanceof $)) {
-                    options.dropZone = $(options.dropZone,this._elm);
-                }
-            }
-
-            if (options.pasteZone) {
-                if (!(options.pasteZone instanceof $)) {
-                    options.pasteZone = $(options.pasteZone,this._elm);
-                }                
-            }
-        },
-
-        _getRegExp: function (str) {
-            var parts = str.split('/'),
-                modifiers = parts.pop();
-            parts.shift();
-            return new RegExp(parts.join('/'), modifiers);
-        },
-
-        _isRegExpOption: function (key, value) {
-            return key !== 'url' && langx.type(value) === 'string' &&
-                /^\/.*\/[igm]{0,3}$/.test(value);
-        },
-
-        _construct: function (elm,options) {
-            this._elm = elm;
-            this.options = langx.mixin({},this.options,options);
-            this._initSpecialOptions();
-            this._slots = [];
-            this._sequence = this._getXHRPromise(true);
-            this._sending = this._active = 0;
-            this._initProgressObject(this);
-            this._initEventHandlers();
-        },
-
-        // This method is exposed to the widget API and allows to query
-        // the number of active uploads:
-        active: function () {
-            return this._active;
-        },
-
-        // This method is exposed to the widget API and allows to query
-        // the widget upload progress.
-        // It returns an object with loaded, total and bitrate properties
-        // for the running uploads:
-        progress: function () {
-            return this._progress;
-        },
-
-        // This method is exposed to the widget API and allows adding files
-        // using the fileupload API. The data parameter accepts an object which
-        // must have a files property and can contain additional options:
-        // .fileupload('add', {files: filesList});
-        add: function (data) {
-            var that = this;
-            if (!data || this.options.disabled) {
-                return;
-            }
-            data.files = langx.makeArray(data.files);
-            this._onAdd(null, data);
-        },
-
-        // This method is exposed to the widget API and allows sending files
-        // using the fileupload API. The data parameter accepts an object which
-        // must have a files or fileInput property and can contain additional options:
-        // .fileupload('send', {files: filesList});
-        // The method returns a Promise object for the file upload call.
-        send: function (data) {
-            if (data && !this.options.disabled) {
-                data.files = langx.makeArray(data.files);
-                if (data.files.length) {
-                    return this._onSend(null, data);
-                }
-            }
-            return this._getXHRPromise(false, data && data.context);
-        }
-
-    });
-
-
-    function uploader(elm,options) {
-        var fuInst = new FileUploader(elm,options);
-        fuInst.on("all",function(evt,data){
-            var typ = evt.type;
-            if (langx.isFunction(options[typ])) {
-                options[typ].call(fuInst._elm,evt,data);
-            }
-        });
-        return fuInst;
-    }
-
-    return diskfs.uploader = uploader;
-
-});
-
-define('skylark-widgets-swt/Uploader',[
-  "skylark-langx/langx",
-  "skylark-utils-dom/browser",
-  "skylark-utils-dom/eventer",
-  "skylark-utils-dom/noder",
-  "skylark-utils-dom/geom",
-  "skylark-utils-dom/query",
-  "skylark-data-collection/ArrayList",
-  "skylark-storages-diskfs/uploader",
-  "./swt",
-  "./Widget"
-],function(langx,browser,eventer,noder,geom,$,ArrayList,uploader,swt,Widget){
-
-    /**
-     * This model represents a file.
-     *
-     */
-    var FileItem = langx.Stateful.inherit({
-        state: "pending",
-
-        /**
-         * Start upload.
-         *
-         */
-        start: function ()  {
-            if (this.isPending()) {
-                this.get('processor').submit();
-                this.state = "running";
-
-                // Dispatch event
-                this.trigger('filestarted', this);
-            }
-        },
-
-        /**
-         * Cancel a file upload.
-         *
-         */
-        cancel: function () {
-            this.get('processor').abort();
-            this.destroy();
-
-            // Dispatch event
-            this.state = "canceled";
-            this.trigger('filecanceled', this);
-        },
-
-        /**
-         * Notify file that progress updated.
-         *
-         */
-        progress: function (data)  {
-            // Dispatch event
-            this.trigger('fileprogress', this.get('processor').progress());
-        },
-
-        /**
-         * Notify file that upload failed.
-         *
-         */
-        fail: function (error)  {
-            // Dispatch event
-            this.state = "error";
-            this.trigger('filefailed', error);
-        },
-
-        /**
-         * Notify file that upload is done.
-         *
-         */
-        done: function (result)  {
-            // Dispatch event
-            this.state = "error";
-            this.trigger('filedone', result);
-        },
-
-        /**
-         * Is this file pending to be uploaded ?
-         *
-         */
-        isPending: function ()  {
-            return this.getState() == "pending";
-        },
-
-        /**
-         * Is this file currently uploading ?
-         *
-         */
-        isRunning: function () {
-            return this.getState() == "running";
-        },
-
-        /**
-         * Is this file uploaded ?
-         *
-         */
-        isDone: function () {
-            return this.getState() == "done";
-        },
-
-        /**
-         * Is this upload in error ?
-         *
-         */
-        isError: function () {
-            return this.getState() == "error" || this.getState == "canceled";
-        },
-
-        /**
-         * Get the file state.
-         *
-         */
-        getState: function () {
-            return this.state;
-        }
-    });
-
-    /**
-     * This is a file collection, used to manage the selected
-     * and processing files.
-     *
-     */
-    var FileItemCollection = ArrayList.inherit({
-        item: FileItem
-    });
-
-    /**
-     * A file view, which is the view that manage a single file
-     * process in the upload manager.
-     *
-     */
-    var FileItemWidget = Widget.inherit({
-        className: 'upload-manager-file row',
-
-        options : {
-          selectors : {
-            fileName : ".name",
-            fileSize : ".size",
-            cancel : ".cancel",
-            clear : ".clear",
-            progress : ".progress",
-            message : ".message"
-          }
-        },
-
-        state : {
-          fileName : String,
-          fileSize : Number
-        },
-
-        _init: function () {
-            this.processUploadMsg = this.options.processUploadMsg;
-            this.doneMsg = this.options.doneMsg;
-
-            this.fileName(this.options.fileName);
-            this.fileSize(this.options.fileSize);
-
-            // Bind model events
-            this.model.on('destroy', this.close, this);
-            this.model.on('fileprogress', this.updateProgress, this);
-            this.model.on('filefailed', this.hasFailed, this);
-            this.model.on('filedone', this.hasDone, this);
-
-            // In each case, update view
-            this.model.on('all', this.update, this);
-
-            // Bind events
-            this.bindEvents();
-
-            // Update elements
-            this.update();            
-        },
-
-        _refresh : function(updates) {
-
-        },
-
-        /**
-         * Update upload progress.
-         *
-         */
-        updateProgress: function (progress) {
-            var percent = parseInt(progress.loaded / progress.total * 100, 10);
-            var progressHTML = this.getHelpers().displaySize(progress.loaded)+' of '+this.getHelpers().displaySize(progress.total);
-            if (percent >= 100 && this.processUploadMsg) { progressHTML = this.processUploadMsg; }
-
-            $('.progress', this.el)
-                .find('.bar')
-                .css('width', percent+'%')
-                .parent()
-                .find('.progress-label')
-                .html(progressHTML);
-        },
-
-        /**
-         * File upload has failed.
-         *
-         */
-        hasFailed: function (error){
-            $('.message', this.el).html('<i class="icon-error"></i> '+error);
-        },
-
-        /**
-         * File upload is done.
-         *
-         */
-        hasDone: function (result){
-            $('.message', this.el).html('<i class="icon-success"></i> ' + (this.doneMsg || 'Uploaded'));
-        },
-
-        /**
-         * Update view without complete rendering.
-         *
-         */
-        update: function () {
-            var selectors = this.options.selectors,
-                when_pending = this._velm.$(selectors.size + "," + selectors.cancel),
-                when_running = this._velm.$(selectors.progress + "," + selectors.cancel),
-                when_done = this._velm.$(selectors.message + "," + selectors.clear);
-
-            if (this.model.isPending()) {
-                when_running.add(when_done).addClass('hidden');
-                when_pending.removeClass('hidden');
-            } else if (this.model.isRunning()) {
-                when_pending.add(when_done).addClass('hidden');
-                when_running.removeClass('hidden');
-            } else if (this.model.isDone() || this.model.isError()) {
-                when_pending.add(when_running).addClass('hidden');
-                when_done.removeClass('hidden');
-            }
-        },
-
-        /**
-         * Startup widget with binding events
-         * @override
-         *
-         */
-        _startup: function () {
-            var self = this;
-
-            // DOM events
-            this._velm.$(this.options.selectors.cancel).click(function(){
-                self.model.cancel();
-                self.collection.remove(self.model);
-            });
-            this._velm.$(this.options.selectors.clear).click(function(){
-                self.model.destroy();
-                self.collection.remove(self.model);
-            });
-        },
-
-        /**
-         * Compute data to be passed to the view.
-         *
-         */
-        computeData: function () {
-            return $.extend(this.getHelpers(), this.model.get('data'));
-        }
-    });
-
-
-    var Uploader =  Widget.inherit({
-        klassName : "Uploader",
-        pluginName : "lark.uploader",
-
-        options: {
-
-            uploadUrl: '/upload',
-            autoUpload: false,
-            selectors : {
-              fileList : '.file-list',
-              nodata : ".file-list .no-data",
-              pickFiles: '.file-picker',
-              startUploads: '.start-uploads',
-              cancelUploads: '.cancel-uploads',
-            },
-
-            dataType: 'json',
-
-            fileItem : {
-            	selectors : {
-
-            	},
-
-            	template : null
-            }
-        },
-
-        state : {
-          files : FileItemCollection
-        },
-
-        /**
-         * Render the main part of upload manager.
-         *
-         */
-        _init: function () {
-            var self = this;
-
-
-            // Create the file list
-            var files = this.files(new FileItemCollection());
-
-            // Add add files handler
-            var filePicker = this._velm.$(this.options.selectors.pickFiles), self = this;
-
-            this.uploadProcess =  uploader(this._elm,{  //$.$(this.el).fileupload({
-                dataType: this.options.dataType,
-                url: this.options.uploadUrl,
-                formData: this.options.formData,
-                autoUpload: this.options.autoUpload,
-                singleFileUploads: true,
-                picker : filePicker,
-
-                'add' : function (e, data) {
-                    // Create an array in which the file objects
-                    // will be stored.
-                    data.uploadManagerFiles = [];
-
-                    // A file is added, process for each file.
-                    // Note: every times, the data.files array length is 1 because
-                    //       of "singleFileUploads" option.
-                    langx.each(data.files, function (index, file_data) {
-                        // Create the file object
-                        file_data.id = self.file_id++;
-                        var file = new FileItem({
-                            data: file_data,
-                            processor: data
-                        });
-
-                        // Add file in data
-                        data.uploadManagerFiles.push(file);
-
-                        // Trigger event
-                        //self.trigger('fileadd', file);
-                        // Add it to current list
-                        self.files.add(file);
-
-                        // Create the view
-                        self.renderFile(file);
-
-
-                    });
-                },
-                'progress' : function (e, data) {
-                    langx.each(data.uploadManagerFiles, function (index, file) {
-                        //self.trigger('fileprogress', file, data);
-
-                        file.progress(progress);
-                    });
-                },
-
-                'fail' : function (e, data) {
-                    langx.each(data.uploadManagerFiles, function (index, file) {
-                        var error = "Unknown error";
-                        if (typeof data.errorThrown == "string") {
-                            error = data.errorThrown;
-                        } else if (typeof data.errorThrown == "object") {
-                            error = data.errorThrown.message;
-                        } else if (data.result) {
-                            if (data.result.error) {
-                                error = data.result.error;
-                            } else if (data.result.files && data.result.files[index] && data.result.files[index].error) {
-                                error = data.result.files[index].error;
-                            } else {
-                                error = "Unknown remote error";
-                            }
-                        }
-
-                        //self.trigger('filefail', file, error);
-                        file.fail(error);
-                    });
-                },
-
-                'done' : function (e, data) {
-                    langx.each(data.uploadManagerFiles, function (index, file) {
-                        //self.trigger('filedone', file, data);
-                        file.done(data.result);
-                    });
-                }
-
-            });
-
-            // Add upload process events handlers
-            this.bindProcessEvents();
-
-            // Add cancel all handler
-            this._velm.$(this.options.selectors.cancelUploads).click(function(){
-                while (self.files.length) {
-                    self.files.at(0).cancel();
-                }
-            });
-
-            // Add start uploads handler
-            this._velm.$(this.options.selectors.startUploads).click(function(){
-                self.files.forEach(function(file){
-                    file.start();
-                });
-            });
-
-            // Render current files
-            /*
-            this.files.forEach(function (file) {
-                self.renderFile(file);
-            });
-            */
-
-            this._refresh({files:true});
-        
-        },
-
-        _refresh : function(updates) {
-            var self = this;
-            function updateFileList()  {
-                var selectors = self.options.selectors,
-                    files = self.files();
-                var with_files_elements = self._velm.$(selectors.cancelUploads + ',' + selectors.startUploads);
-                var without_files_elements = self._velm.$(selectors.nodata);
-                if (files.length > 0) {
-                    with_files_elements.removeClass('hidden');
-                    without_files_elements.addClass('hidden');
-                } else {
-                    with_files_elements.addClass('hidden');
-                    without_files_elements.removeClass('hidden');
-                }
-            }
-
-            if (updates["files"]) {
-              updateFileList();
-            }
-
-        },
-
-        /**
-         * Render a file.
-         *
-         */
-        renderFile: function (file) {
-            var file_view = new FileItemWidget(langx.mixin({},this.options, {
-              model: file,
-              template : this.options.fileItem.template
-            }));
-            //this._velm.$(this.options.selectors.fileList).append(file_view.render());
-            file_view.attach(this._velm.$(this.options.selectors.fileList));
-        },
-
-        /**
-         * Bind events on the upload processor.
-         *
-         */
-        bindProcessEvents: function () {
-        }
-    });
-
-    return swt.Uploader = Uploader;
-});
-
 define('skylark-widgets-swt/main',[
     "./swt",
     "./Widget",
@@ -26105,9 +23573,8 @@ define('skylark-widgets-swt/main',[
     "./Carousel",
     "./CheckBox",
     "./ComboBox",
-    "./InputBox",
-    "./ListGroup",
-    "./Menu",
+    "./TextBox",
+    "./Listing",
     "./Pagination",
     "./Progress",
     "./Radio",
@@ -26115,8 +23582,8 @@ define('skylark-widgets-swt/main',[
     "./SelectList",
     "./Tabular",
     "./TabStrip",
-    "./Toolbar",
-    "./Uploader"
+    "./TextBox",
+    "./Toolbar"
 ], function(swt) {
     return swt;
 });
@@ -28846,7 +26313,6 @@ define('skylark-slax-runtime/main',[
 	"./slax",
 	"./cache",
 	"skylark-langx",
-	"skylark-utils-dom",
 	"skylark-widgets-shells",
 	"skylark-jquery",
 	"skylark-ajaxfy-spa"

@@ -26,7 +26,6 @@
     "skylark-jquery": "git+https://github.com/skylark-integration/skylark-jquery.git#master",
     "skylark-langx": "git+https://github.com/skylarklangx/skylark-langx.git#master",
     "skylark-storages-cache": "git+https://github.com/skylark-storages/skylark-storages-cache.git#master",
-    "skylark-utils-dom": "git+https://github.com/skylarkutils/skylark-utils-dom.git#master",
     "skylark-widgets-shells": "git+https://github.com/skylark-widgets/skylark-widgets-shells.git#master"
   },
   "engines": {
