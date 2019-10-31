@@ -91,8 +91,8 @@ define('skylark-slax-runtime/slax',[
 	"skylark-langx-objects",
 	"skylark-langx-hoster",
 	"skylark-langx-async",
-	"skylark-langx-xhr",
-	"skylark-utils-dom/eventer"
+	"skylark-net-http/Xhr",
+	"skylark-domx-eventer"
 ],function(skylark, objects, hoster, async, Xhr, eventer){
 
     var _config = {
