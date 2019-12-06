@@ -11839,50 +11839,6 @@ define('skylark-domx-plugins/plugins',[
         return pluginInstance;
     }
 
-    function shortcutter(pluginName,extfn) {
-       /*
-        * Create or get or destory a plugin instance assocated with the element,
-        * and also you can execute the plugin method directory;
-        */
-        return function (elm,options) {
-            var  plugin = instantiate(elm, pluginName,"instance");
-            if ( options === "instance" ) {
-              return plugin || null;
-            }
-            if (!plugin) {
-                plugin = instantiate(elm, pluginName,typeof options == 'object' && options || {});
-                return this;
-            } else  if (options) {
-                var args = slice.call(arguments,1); //2
-                if (extfn) {
-                    var ret =  extfn.apply(plugin,args);
-                    if (ret === undefined) {
-                        ret = this;
-                    }
-                    return ret;
-                } else {
-                    if (typeof options == 'string') {
-                        var methodName = options;
-
-                        if ( !plugin ) {
-                            throw new Error( "cannot call methods on " + pluginName +
-                                " prior to initialization; " +
-                                "attempted to call method '" + methodName + "'" );
-                        }
-
-                        if ( !langx.isFunction( plugin[ methodName ] ) || methodName.charAt( 0 ) === "_" ) {
-                            throw new Error( "no such method '" + methodName + "' for " + pluginName +
-                                " plugin instance" );
-                        }
-
-                        return plugin[methodName].apply(plugin,args);
-                    }                
-                }                
-            }
-
-        }
-
-    }
 
     function shortcutter(pluginName,extfn) {
        /*
@@ -11894,9 +11850,14 @@ define('skylark-domx-plugins/plugins',[
             if ( options === "instance" ) {
               return plugin || null;
             }
+
             if (!plugin) {
                 plugin = instantiate(elm, pluginName,typeof options == 'object' && options || {});
-            } else  if (options) {
+                if (typeof options != "string") {
+                  return this;
+                }
+            } 
+            if (options) {
                 var args = slice.call(arguments,1); //2
                 if (extfn) {
                     return extfn.apply(plugin,args);
@@ -15080,7 +15041,7 @@ define('skylark-widgets-shells/Shell',[
 	"skylark-widgets-swt/Widget",
 	"skylark-nprogress",
 	"skylark-bootbox4",
-  "skylark-visibility",
+    "skylark-visibility",
   "skylark-tinycon",
 	"./shells"
 ],function(langx, css, scripter, finder,$,Widget,nprogress,bootbox,Visibility, Tinycon,shells){
@@ -18957,8 +18918,7 @@ define('skylark-widgets-swt/swt',[
   "skylark-domx-geom",
   "skylark-domx-query"
 ],function(skylark,langx,browser,eventer,noder,geom,$){
-	var ui = skylark.ui = skylark.ui || {};
-		sbswt = ui.sbswt = {};
+	var swt = {};
 
 	var CONST = {
 		BACKSPACE_KEYCODE: 8,
@@ -18998,7 +18958,7 @@ define('skylark-widgets-swt/swt',[
 		return $('<i>').text(questionableMarkup).html();
 	};
 
-	langx.mixin(ui, {
+	langx.mixin(swt, {
 		CONST: CONST,
 		cleanInput: cleanInput,
 		isBackspaceKey: isBackspaceKey,
@@ -19009,7 +18969,7 @@ define('skylark-widgets-swt/swt',[
 		isDownArrow: isDownArrow
 	});
 
-	return ui;
+	return skylark.attach("widgets.swt",swt);
 
 });
 
@@ -23325,7 +23285,6 @@ define('skylark-widgets-swt', ['skylark-widgets-swt/main'], function (main) { re
 define('skylark-widgets-shells/main',[
 	"./shells",
 	"./Shell",
-	"skylark-langx",
 	"skylark-bootstrap3",
 	"skylark-widgets-swt",
 	"skylark-visibility"
