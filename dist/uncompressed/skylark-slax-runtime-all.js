@@ -65943,12 +65943,12 @@ define('skylark-domx-contents/Keystroke',[
           return true;
         }
         $blockEl = _this.editable.selection.blockNodes().last();
-        if ($blockEl.is('.' + this.opts.classPrefix + 'resize-handle') && $rootBlock.is('.' + this.opts.classPrefix + 'table')) {
+        if ($blockEl.is('.' + _this.opts.classPrefix + 'resize-handle') && $rootBlock.is('.' + _this.opts.classPrefix + 'table')) {
           e.preventDefault();
           $rootBlock.remove();
           _this.editable.selection.setRangeAtEndOf($prevBlockEl);
         }
-        if ($prevBlockEl.is('.' + this.opts.classPrefix + 'table') && !$blockEl.is('table') && _this.editable.util.isEmptyNode($blockEl)) {
+        if ($prevBlockEl.is('.' + _this.opts.classPrefix + 'table') && !$blockEl.is('table') && _this.editable.util.isEmptyNode($blockEl)) {
           e.preventDefault();
           $blockEl.remove();
           _this.editable.selection.setRangeAtEndOf($prevBlockEl);
@@ -65965,9 +65965,9 @@ define('skylark-domx-contents/Keystroke',[
     this.add('enter', 'div', (function(_this) {
       return function(e, $node) {
         var $blockEl, $p;
-        if ($node.is('.' + this.opts.classPrefix + 'table')) {
+        if ($node.is('.' + _this.opts.classPrefix + 'table')) {
           $blockEl = _this.editable.selection.blockNodes().last();
-          if ($blockEl.is('.' + this.opts.classPrefix + 'resize-handle')) {
+          if ($blockEl.is('.' + _this.opts.classPrefix + 'resize-handle')) {
             e.preventDefault();
             $p = $('<p/>').append(_this.editable.util.phBr).insertAfter($node);
             return _this.editable.selection.setRangeAtStartOf($p);
@@ -67356,6 +67356,9 @@ define('skylark-domx-contents/Editable',[
 
 	// toggle
 	title : function(param,disableTag) {
+		document.execCommand('formatBlock', false, param);
+
+		/*
 	    var $rootNodes;
 	    $rootNodes = this.selection.rootNodes();
 	    this.selection.save();
@@ -67370,6 +67373,7 @@ define('skylark-domx-contents/Editable',[
 	      };
 	    })(this));
 	    this.selection.restore();
+	    */
 	    return this.trigger('valuechanged');
 
 	}
@@ -67660,7 +67664,11 @@ define('skylark-widgets-wordpad/ToolButton',[
 
     iconClassOf : function(icon) {
       if (icon) {
-        return "wordpad-icon wordpad-icon-" + icon;
+        if (this.editor.options.classes.icons[icon]) {
+          return this.editor.options.classes.icons[icon];
+        } else {
+          return "wordpad-icon wordpad-icon-" + icon;
+        }
       } else {
         return '';
       }
@@ -68140,6 +68148,43 @@ define('skylark-widgets-wordpad/Wordpad',[
 
   var Wordpad = Widget.inherit({
       options : {
+        classes : {
+          icons : {
+            html : "fa fa-html5",
+            
+            header: "fa fa-header",
+
+            bold : "fa fa-bold",
+            italic : "fa fa-italic",
+            underline: "fa fa-underline",
+            strikethrough : "fa fa-strikethrough",
+            fontScale: "fa fa-text-height",
+            fontColor: "fa fa-font",
+            mark : "fa fa-pencil",
+
+            blockquote: "fa fa-quote-right",
+            listul : "fa fa-list-ul",
+            listol : "fa fa-list-ol",
+            code: "fa fa-code",
+            table : "fa fa-table",
+
+            fullscreen : "fa fa-expand",
+
+            emoji: "fa fa-smile-o",
+            link : "fa fa-link",
+            image: "fa fa-picture-o",
+            video: "fa fa-video-camera",
+            hr: "fa fa-minus",
+
+            indent: "fa fa-indent",
+            outdent: "fa fa-dedent",
+            alignLeft: "fa fa-align-left",
+            alignCenter: "fa fa-align-center",
+            alignRight: "fa fa-align-right",
+            alignJustify: "fa fa-align-justify",
+
+          }
+        },
         srcNodeRef: null,
         placeholder: '',
         defaultImage: 'images/image.png',
@@ -68747,7 +68792,7 @@ define('skylark-widgets-wordpad/addons/actions/AlignmentAction',[
   var AlignmentAction = Action.inherit({
     name : "alignment",
 
-    icon : 'align-left',
+    icon : 'alignLeft',
     
     htmlTag : 'p, h1, h2, h3, h4, td, th',
 
@@ -68757,17 +68802,17 @@ define('skylark-widgets-wordpad/addons/actions/AlignmentAction',[
           {
             name: 'left',
             text: i18n.translate('alignLeft'),
-            icon: 'align-left',
+            icon: 'alignLeft',
             param: 'left'
           }, {
             name: 'center',
             text: i18n.translate('alignCenter'),
-            icon: 'align-center',
+            icon: 'alignCenter',
             param: 'center'
           }, {
             name: 'right',
             text: i18n.translate('alignRight'),
-            icon: 'align-right',
+            icon: 'alignRight',
             param: 'right'
           }
       ] ;    
@@ -68810,7 +68855,7 @@ define('skylark-widgets-wordpad/addons/actions/BlockquoteAction',[
    var BlockquoteAction = Action.inherit({
       name : 'blockquote',
 
-      icon : 'quote-left',
+      icon : 'blockquote',
 
       htmlTag : 'blockquote',
 
@@ -69116,7 +69161,7 @@ define('skylark-widgets-wordpad/addons/actions/ColorAction',[
    var ColorAction = Action.inherit({
     name : 'color',
 
-    icon : 'tint',
+    icon : 'fontColor',
 
     disableTag : 'pre',
 
@@ -69139,7 +69184,7 @@ define('skylark-widgets-wordpad/addons/actions/EmojiAction',[
   var EmojiAction = Action.inherit({
     name : 'emoji',
 
-    icon : 'smile-o',
+    icon : 'emoji',
 
     menu : true,
 
@@ -69166,7 +69211,7 @@ define('skylark-widgets-wordpad/addons/actions/FontScaleAction',[
   var FontScaleAction = Action.inherit({
     name : 'fontScale',
 
-    icon : 'font',
+    icon : 'fontScale',
 
     htmlTag : 'span',
 
@@ -69233,6 +69278,8 @@ define('skylark-widgets-wordpad/addons/actions/FullScreenAction',[
   var FullScrennAction = Action.inherit({
     name : 'fullscreen',
 
+    icon : "fullscreen",
+
     needFocus : false,
 
     _init : function() {
@@ -69241,10 +69288,6 @@ define('skylark-widgets-wordpad/addons/actions/FullScreenAction',[
       this.window = $(window);
       this.body = $('body');
       this.editable = this.editor.body;
-    },
-
-    iconClassOf : function() {
-      return 'icon-fullscreen';
     },
 
 
@@ -69261,7 +69304,7 @@ define('skylark-widgets-wordpad/addons/actions/FullScreenAction',[
         this.window.on("resize.wordpad-fullscreen-" + this.editor.id, (function(_this) {
           return function() {
             return _this._resize({
-              height: _this.window.height() - _this.editor.toolbar.outerHeight() - editablePadding
+              height: _this.window.height() - $(_this.editor.toolbar._elm).outerHeight() - editablePadding
             });
           };
         })(this)).resize();
@@ -69303,7 +69346,7 @@ define('skylark-widgets-wordpad/addons/actions/HrAction',[
 
 	  name : 'hr',
 
-	  icon : 'minus',
+	  icon : 'hr',
 
 	  htmlTag : 'hr',
 
@@ -69332,7 +69375,7 @@ define('skylark-widgets-wordpad/addons/actions/HtmlAction',[
    var HtmlAction = Action.inherit({
     name : 'html',
 
-    icon : 'html5',
+    icon : 'html',
 
     needFocus : false,
 
@@ -69422,7 +69465,7 @@ define('skylark-widgets-wordpad/addons/actions/ImagePopover',[
 
   ImagePopover.prototype.render = function() {
     var tpl;
-    tpl = "<div class=\"link-settings\">\n  <div class=\"settings-field\">\n    <label>" + (this._t('imageUrl')) + "</label>\n    <input class=\"image-src\" type=\"text\" tabindex=\"1\" />\n    <a class=\"btn-upload\" href=\"javascript:;\"\n      title=\"" + (this._t('uploadImage')) + "\" tabindex=\"-1\">\n      <span class=\"wordpad-icon wordpad-icon-upload\"></span>\n    </a>\n  </div>\n  <div class='settings-field'>\n    <label>" + (this._t('imageAlt')) + "</label>\n    <input class=\"image-alt\" id=\"image-alt\" type=\"text\" tabindex=\"1\" />\n  </div>\n  <div class=\"settings-field\">\n    <label>" + (this._t('imageSize')) + "</label>\n    <input class=\"image-size\" id=\"image-width\" type=\"text\" tabindex=\"2\" />\n    <span class=\"times\">×</span>\n    <input class=\"image-size\" id=\"image-height\" type=\"text\" tabindex=\"3\" />\n    <a class=\"btn-restore\" href=\"javascript:;\"\n      title=\"" + (this._t('restoreImageSize')) + "\" tabindex=\"-1\">\n      <span class=\"wordpad-icon wordpad-icon-undo\"></span>\n    </a>\n  </div>\n</div>";
+    tpl = "<div class=\"link-settings\">\n  <div class=\"settings-field\">\n    <label>" + (this._t('imageUrl')) + "</label>\n    <input class=\"image-src\" type=\"text\" tabindex=\"1\" />\n    <a class=\"btn-upload\" href=\"javascript:;\"\n      title=\"" + (this._t('uploadImage')) + "\" tabindex=\"-1\">\n      <span class=\"fa fa-upload\"></span>\n    </a>\n  </div>\n  <div class='settings-field'>\n    <label>" + (this._t('imageAlt')) + "</label>\n    <input class=\"image-alt\" id=\"image-alt\" type=\"text\" tabindex=\"1\" />\n  </div>\n  <div class=\"settings-field\">\n    <label>" + (this._t('imageSize')) + "</label>\n    <input class=\"image-size\" id=\"image-width\" type=\"text\" tabindex=\"2\" />\n    <span class=\"times\">×</span>\n    <input class=\"image-size\" id=\"image-height\" type=\"text\" tabindex=\"3\" />\n    <a class=\"btn-restore\" href=\"javascript:;\"\n      title=\"" + (this._t('restoreImageSize')) + "\" tabindex=\"-1\">\n      <span class=\"fa fa-undo\"></span>\n    </a>\n  </div>\n</div>";
     this.el.addClass('image-popover').append(tpl);
     this.srcEl = this.el.find('.image-src');
     this.widthEl = this.el.find('#image-width');
@@ -69661,7 +69704,7 @@ define('skylark-widgets-wordpad/addons/actions/ImageAction',[
    var ImageAction = Action.inherit({
       name : 'image',
 
-      icon : 'picture-o',
+      icon : 'image',
 
       htmlTag : 'img',
 
@@ -69769,7 +69812,17 @@ define('skylark-widgets-wordpad/addons/actions/ImageAction',[
             });
           };
         })(this));
+
+        this.popover = new ImagePopover({
+          action: this
+        });
+        if (this.editor.opts.imageAction === 'upload') {
+          return this._initUploader(this.el);
+        }
+
         return Action.prototype._init.call(this);
+
+
       },
 
       render : function() {
@@ -69777,7 +69830,7 @@ define('skylark-widgets-wordpad/addons/actions/ImageAction',[
         args = 1 <= arguments.length ? Array.prototype.slice.call(arguments, 0) : [];
         Action.prototype.render.apply(this, args);
         this.popover = new ImagePopover({
-          Action: this
+          action: this
         });
         if (this.editor.opts.imageAction === 'upload') {
           return this._initUploader(this.el);
@@ -70165,7 +70218,7 @@ define('skylark-widgets-wordpad/addons/actions/LinkPopover',[
   var LinkPopover = Popover.inherit({
     render : function() {
       var tpl;
-      tpl = "<div class=\"link-settings\">\n  <div class=\"settings-field\">\n    <label>" + (this._t('linkText')) + "</label>\n    <input class=\"link-text\" type=\"text\"/>\n    <a class=\"btn-unlink\" href=\"javascript:;\" title=\"" + (this._t('removeLink')) + "\"\n      tabindex=\"-1\">\n      <span class=\"wordpad-icon wordpad-icon-unlink\"></span>\n    </a>\n  </div>\n  <div class=\"settings-field\">\n    <label>" + (this._t('linkUrl')) + "</label>\n    <input class=\"link-url\" type=\"text\"/>\n  </div>\n  <div class=\"settings-field\">\n    <label>" + (this._t('linkTarget')) + "</label>\n    <select class=\"link-target\">\n      <option value=\"_blank\">" + (this._t('openLinkInNewWindow')) + " (_blank)</option>\n      <option value=\"_self\">" + (this._t('openLinkInCurrentWindow')) + " (_self)</option>\n    </select>\n  </div>\n</div>";
+      tpl = "<div class=\"link-settings\">\n  <div class=\"settings-field\">\n    <label>" + (this._t('linkText')) + "</label>\n    <input class=\"link-text\" type=\"text\"/>\n    <a class=\"btn-unlink\" href=\"javascript:;\" title=\"" + (this._t('removeLink')) + "\"\n      tabindex=\"-1\">\n      <span class=\"fa fa-unlink\"></span>\n    </a>\n  </div>\n  <div class=\"settings-field\">\n    <label>" + (this._t('linkUrl')) + "</label>\n    <input class=\"link-url\" type=\"text\"/>\n  </div>\n  <div class=\"settings-field\">\n    <label>" + (this._t('linkTarget')) + "</label>\n    <select class=\"link-target\">\n      <option value=\"_blank\">" + (this._t('openLinkInNewWindow')) + " (_blank)</option>\n      <option value=\"_self\">" + (this._t('openLinkInCurrentWindow')) + " (_self)</option>\n    </select>\n  </div>\n</div>";
       this.el.addClass('link-popover').append(tpl);
       this.textEl = this.el.find('.link-text');
       this.urlEl = this.el.find('.link-url');
@@ -70417,7 +70470,7 @@ define('skylark-widgets-wordpad/addons/actions/OrderListAction',[
 
     name : 'ol',
 
-    icon : 'list-ol',
+    icon : 'listol',
 
     htmlTag : 'ol',
 
@@ -71190,6 +71243,8 @@ define('skylark-widgets-wordpad/addons/actions/TitleAction',[
 
     htmlTag : 'h1, h2, h3, h4, h5',
 
+    icon : "header",
+
     disableTag : 'pre, table',
 
     _init : function() {
@@ -71296,7 +71351,7 @@ define('skylark-widgets-wordpad/addons/actions/UnorderListAction',[
 
       name : 'ul',
 
-      icon : 'list-ul',
+      icon : 'listul',
 
       htmlTag : 'ul',
 
@@ -71321,22 +71376,23 @@ define('skylark-widgets-wordpad/addons/actions/UnorderListAction',[
 
 });
 define('skylark-widgets-wordpad/addons/toolbar/items/AlignmentButton',[
+  "skylark-langx/langx",
   "skylark-domx-query",
   "../../../ToolButton",
   "../../../i18n",
   "../../../addons"
-],function($,ToolButton,i18n,addons){ 
+],function(langx,$,ToolButton,i18n,addons){ 
 
  var AlignmentButton = ToolButton.inherit({
     _doActive : function(align) {
 
       ToolButton.prototype._doActive.call(this, !!align);
 
-      this.el.removeClass('align-left align-center align-right');
+      this.el.removeClass('alignLeft alignCenter alignRight');
       if (align) {
-        this.el.addClass('align-' + align);
+        this.el.addClass('align' + langx.upperFirst(align));
       }
-      this.setIcon('align-' + align);
+      this.setIcon('align' + langx.upperFirst(align));
       return this.menuEl.find('.menu-item').show().end().find('.menu-item-' + align).hide();
 
     }
