@@ -40917,415 +40917,425 @@ define('skylark-data-zip/main',[
 
 define('skylark-data-zip', ['skylark-data-zip/main'], function (main) { return main; });
 
-define('skylark-net-http/Restful',[
-    "skylark-langx-objects",
-    "skylark-langx-strings",
-    "skylark-langx-emitter/Evented",    
-    "./Xhr"
-],function(objects,strings,Evented,Xhr){
-    var mixin = objects.mixin,
-        substitute = strings.substitute;
+define('skylark-domx-transforms/transforms',[
+    "skylark-langx/skylark",
+    "skylark-langx/langx",
+    "skylark-domx-browser",
+    "skylark-domx-data",
+    "skylark-domx-styler"
+], function(skylark,langx,browser,datax,styler) {
+  var css3Transform = browser.normalizeCssProperty("transform");
 
-    var Restful = Evented.inherit({
-        "klassName" : "Restful",
+  function getMatrix(radian, x, y) {
+    var Cos = Math.cos(radian), Sin = Math.sin(radian);
+    return {
+      M11: Cos * x, 
+      M12: -Sin * y,
+      M21: Sin * x, 
+      M22: Cos * y
+    };
+  }
 
-        "idAttribute": "id",
-        
-        getBaseUrl : function(args) {
-            //$$baseEndpoint : "/files/${fileId}/comments",
-            var baseEndpoint = substitute(this.baseEndpoint,args),
-                baseUrl = this.server + this.basePath + baseEndpoint;
-            if (args[this.idAttribute]!==undefined) {
-                baseUrl = baseUrl + "/" + args[this.idAttribute]; 
-            }
-            return baseUrl;
-        },
-        _head : function(args) {
-            //get resource metadata .
-            //args : id and other info for the resource ,ex
-            //{
-            //  "id" : 234,  // the own id, required
-            //  "fileId"   : 2 // the parent resource id, option by resource
-            //}
-        },
-        _get : function(args) {
-            //get resource ,one or list .
-            //args : id and other info for the resource ,ex
-            //{
-            //  "id" : 234,  // the own id, null if list
-            //  "fileId"   : 2 // the parent resource id, option by resource
-            //}
-            return Xhr.get(this.getBaseUrl(args),args);
-        },
-        _post  : function(args,verb) {
-            //create or move resource .
-            //args : id and other info for the resource ,ex
-            //{
-            //  "id" : 234,  // the own id, required
-            //  "data" : body // the own data,required
-            //  "fileId"   : 2 // the parent resource id, option by resource
-            //}
-            //verb : the verb ,ex: copy,touch,trash,untrash,watch
-            var url = this.getBaseUrl(args);
-            if (verb) {
-                url = url + "/" + verb;
-            }
-            return Xhr.post(url, args);
-        },
+  function getZoom(scale, zoom) {
+      return scale > 0 && scale > -zoom ? zoom :
+        scale < 0 && scale < zoom ? -zoom : 0;
+  }
 
-        _put  : function(args,verb) {
-            //update resource .
-            //args : id and other info for the resource ,ex
-            //{
-            //  "id" : 234,  // the own id, required
-            //  "data" : body // the own data,required
-            //  "fileId"   : 2 // the parent resource id, option by resource
-            //}
-            //verb : the verb ,ex: copy,touch,trash,untrash,watch
-            var url = this.getBaseUrl(args);
-            if (verb) {
-                url = url + "/" + verb;
-            }
-            return Xhr.put(url, args);
-        },
+    function change(el,d) {
+      var matrix = getMatrix(d.radian, d.y, d.x);
+      styler.css(el,css3Transform, "matrix("
+        + matrix.M11.toFixed(16) + "," + matrix.M21.toFixed(16) + ","
+        + matrix.M12.toFixed(16) + "," + matrix.M22.toFixed(16) + ", 0, 0)"
+      );      
+  }
 
-        _delete : function(args) {
-            //delete resource . 
-            //args : id and other info for the resource ,ex
-            //{
-            //  "id" : 234,  // the own id, required
-            //  "fileId"   : 2 // the parent resource id, option by resource
-            //}         
+  function transformData(el,d) {
+    if (d) {
+      datax.data(el,"transform",d);
+    } else {
+      d = datax.data(el,"transform") || {};
+      d.radian = d.radian || 0;
+      d.x = d.x || 1;
+      d.y = d.y || 1;
+      d.zoom = d.zoom || 1;
+      return d;     
+    }
+  }
 
-            // HTTP request : DELETE http://center.utilhub.com/registry/v1/apps/{appid}
-            var url = this.getBaseUrl(args);
-            return Xhr.del(url);
-        },
+  var calcs = {
+    //Vertical flip
+    vertical : function (d) {
+        d.radian = Math.PI - d.radian; 
+        d.y *= -1;
+    },
 
-        _patch : function(args){
-            //update resource metadata. 
-            //args : id and other info for the resource ,ex
-            //{
-            //  "id" : 234,  // the own id, required
-            //  "data" : body // the own data,required
-            //  "fileId"   : 2 // the parent resource id, option by resource
-            //}
-            var url = this.getBaseUrl(args);
-            return Xhr.patch(url, args);
-        },
-        query: function(params) {
-            
-            return this._post(params);
-        },
+   //Horizontal flip
+    horizontal : function (d) {
+        d.radian = Math.PI - d.radian; 
+        d.x *= -1;
+    },
 
-        retrieve: function(params) {
-            return this._get(params);
-        },
+    //Rotate according to angle
+    rotate : function (d,degress) {
+        d.radian = degress * Math.PI / 180;; 
+    },
 
-        create: function(params) {
-            return this._post(params);
-        },
+    //Turn left 90 degrees
+    left : function (d) {
+        d.radian -= Math.PI / 2; 
+    },
 
-        update: function(params) {
-            return this._put(params);
-        },
-
-        delete: function(params) {
-            // HTTP request : DELETE http://center.utilhub.com/registry/v1/apps/{appid}
-            return this._delete(params);
-        },
-
-        patch: function(params) {
-           // HTTP request : PATCH http://center.utilhub.com/registry/v1/apps/{appid}
-            return this._patch(params);
-        },
-        init: function(params) {
-            mixin(this,params);
- //           this._xhr = XHRx();
-       }
-    });
-
-    return Restful;
-});
-define('skylark-net-http/Upload',[
-    "skylark-langx-types",
-    "skylark-langx-objects",
-    "skylark-langx-arrays",
-    "skylark-langx-async/Deferred",
-    "skylark-langx-emitter/Evented",    
-    "./Xhr",
-    "./http"
-],function(types, objects, arrays, Deferred, Evented,Xhr, http){
-
-    var blobSlice = Blob.prototype.slice || Blob.prototype.webkitSlice || Blob.prototype.mozSlice;
-
-
-    /*
-     *Class for uploading files using xhr.
-     */
-    var Upload = Evented.inherit({
-        klassName : "Upload",
-
-        _construct : function(options) {
-            this._options = objects.mixin({
-                debug: false,
-                url: '/upload',
-                // maximum number of concurrent uploads
-                maxConnections: 999,
-                // To upload large files in smaller chunks, set the following option
-                // to a preferred maximum chunk size. If set to 0, null or undefined,
-                // or the browser does not support the required Blob API, files will
-                // be uploaded as a whole.
-                maxChunkSize: undefined,
-
-                onProgress: function(id, fileName, loaded, total){
-                },
-                onComplete: function(id, fileName){
-                },
-                onCancel: function(id, fileName){
-                },
-                onFailure : function(id,fileName,e) {                    
-                }
-            },options);
-
-            this._queue = [];
-            // params for files in queue
-            this._params = [];
-
-            this._files = [];
-            this._xhrs = [];
-
-            // current loaded size in bytes for each file
-            this._loaded = [];
-
-        },
-
-        /**
-         * Adds file to the queue
-         * Returns id to use with upload, cancel
-         **/
-        add: function(file){
-            return this._files.push(file) - 1;
-        },
-
-        /**
-         * Sends the file identified by id and additional query params to the server.
-         */
-        send: function(id, params){
-            if (!this._files[id]) {
-                // Already sended or canceled
-                return ;
-            }
-            if (this._queue.indexOf(id)>-1) {
-                // Already in the queue
-                return;
-            }
-            var len = this._queue.push(id);
-
-            var copy = objects.clone(params);
-
-            this._params[id] = copy;
-
-            // if too many active uploads, wait...
-            if (len <= this._options.maxConnections){
-                this._send(id, this._params[id]);
-            }     
-        },
-
-        /**
-         * Sends all files  and additional query params to the server.
-         */
-        sendAll: function(params){
-           for( var id = 0; id <this._files.length; id++) {
-                this.send(id,params);
-            }
-        },
-
-        /**
-         * Cancels file upload by id
-         */
-        cancel: function(id){
-            this._cancel(id);
-            this._dequeue(id);
-        },
-
-        /**
-         * Cancells all uploads
-         */
-        cancelAll: function(){
-            for (var i=0; i<this._queue.length; i++){
-                this._cancel(this._queue[i]);
-            }
-            this._queue = [];
-        },
-
-        getName: function(id){
-            var file = this._files[id];
-            return file.fileName != null ? file.fileName : file.name;
-        },
-
-        getSize: function(id){
-            var file = this._files[id];
-            return file.fileSize != null ? file.fileSize : file.size;
-        },
-
-        /**
-         * Returns uploaded bytes for file identified by id
-         */
-        getLoaded: function(id){
-            return this._loaded[id] || 0;
-        },
-
-
-        /**
-         * Sends the file identified by id and additional query params to the server
-         * @param {Object} params name-value string pairs
-         */
-        _send: function(id, params){
-            var options = this._options,
-                name = this.getName(id),
-                size = this.getSize(id),
-                chunkSize = options.maxChunkSize || 0,
-                curUploadingSize,
-                curLoadedSize = 0,
-                file = this._files[id],
-                args = {
-                    headers : {
-                    }                    
-                };
-
-            this._loaded[id] = this._loaded[id] || 0;
-
-            var xhr = this._xhrs[id] = new Xhr({
-                url : options.url
-            });
-
-            if (chunkSize)  {
-
-                args.data = blobSlice.call(
-                    file,
-                    this._loaded[id],
-                    this._loaded[id] + chunkSize,
-                    file.type
-                );
-                // Store the current chunk size, as the blob itself
-                // will be dereferenced after data processing:
-                curUploadingSize = args.data.size;
-                // Expose the chunk bytes position range:
-                args.headers["content-range"] = 'bytes ' + this._loaded[id] + '-' +
-                    (this._loaded[id] + curUploadingSize - 1) + '/' + size;
-                args.headers["Content-Type"] = "application/octet-stream";
-            }  else {
-                curUploadingSize = size;
-                var formParamName =  params.formParamName,
-                    formData = params.formData;
-
-                if (formParamName) {
-                    if (!formData) {
-                        formData = new FormData();
-                    }
-                    formData.append(formParamName,file);
-                    args.data = formData;
-    
-                } else {
-                    args.headers["Content-Type"] = file.type || "application/octet-stream";
-                    args.data = file;
-                }
-            }
-
-
-            var self = this;
-            xhr.post(
-                args
-            ).progress(function(e){
-                if (e.lengthComputable){
-                    curLoadedSize = curLoadedSize + e.loaded;
-                    self._loaded[id] = self._loaded[id] + e.loaded;
-                    self._options.onProgress(id, name, self._loaded[id], size);
-                }
-            }).then(function(){
-                if (!self._files[id]) {
-                    // the request was aborted/cancelled
-                    return;
-                }
-
-                if (curLoadedSize < curUploadingSize) {
-                    // Create a progress event if no final progress event
-                    // with loaded equaling total has been triggered
-                    // for this chunk:
-                    self._loaded[id] = self._loaded[id] + curUploadingSize - curLoadedSize;
-                    self._options.onProgress(id, name, self._loaded[id], size);                    
-                }
-
-                if (self._loaded[id] <size) {
-                    // File upload not yet complete,
-                    // continue with the next chunk:
-                    self._send(id,params);
-                } else {
-                    self._options.onComplete(id,name);
-
-                    self._files[id] = null;
-                    self._xhrs[id] = null;
-                    self._dequeue(id);
-                }
-
-
-            }).catch(function(e){
-                self._options.onFailure(id,name,e);
-
-                self._files[id] = null;
-                self._xhrs[id] = null;
-                self._dequeue(id);
-            });
-        },
-
-        _cancel: function(id){
-            this._options.onCancel(id, this.getName(id));
-
-            this._files[id] = null;
-
-            if (this._xhrs[id]){
-                this._xhrs[id].abort();
-                this._xhrs[id] = null;
-            }
-        },
-
-        /**
-         * Returns id of files being uploaded or
-         * waiting for their turn
-         */
-        getQueue: function(){
-            return this._queue;
-        },
-
-
-        /**
-         * Removes element from queue, starts upload of next
-         */
-        _dequeue: function(id){
-            var i = arrays.inArray(id,this._queue);
-            this._queue.splice(i, 1);
-
-            var max = this._options.maxConnections;
-
-            if (this._queue.length >= max && i < max){
-                var nextId = this._queue[max-1];
-                this._send(nextId, this._params[nextId]);
-            }
+    //Turn right 90 degrees
+    right : function (d) {
+        d.radian += Math.PI / 2; 
+    },
+ 
+    //zoom
+    scale: function (d,zoom) {
+        var hZoom = getZoom(d.y, zoom), vZoom = getZoom(d.x, zoom);
+        if (hZoom && vZoom) {
+          d.y += hZoom; 
+          d.x += vZoom;
         }
-    });
+    }, 
 
-    return http.Upload = Upload;    
+    //zoom in
+    zoomin: function (d) { 
+      calcs.scale(d,0.1); 
+    },
+    
+    //zoom out
+    zoomout: function (d) { 
+      calcs.scale(d,-0.1); 
+    }
+
+  };
+  
+  
+  function _createApiMethod(calcFunc) {
+    return function() {
+      var args = langx.makeArray(arguments),
+        el = args.shift(),
+          d = transformData(el);
+        args.unshift(d);
+        calcFunc.apply(this,args)
+        change(el,d);
+        transformData(el,d);
+    }
+  }
+  
+  function transforms() {
+    return transforms;
+  }
+
+  ["vertical","horizontal","rotate","left","right","scale","zoom","zoomin","zoomout"].forEach(function(name){
+    transforms[name] = _createApiMethod(calcs[name]);
+  });
+
+  langx.mixin(transforms, {
+    reset : function(el) {
+      var d = {
+        x : 1,
+        y : 1,
+        radian : 0,
+      }
+      change(el,d);
+      transformData(el,d);
+    }
+  });
+
+
+  return skylark.attach("domx.transforms", transforms);
 });
-define('skylark-net-http/main',[
-	"./http",
-	"./Restful",
-	"./Xhr",
-	"./Upload"
-],function(http){
-	return http;
+
+define('skylark-domx-transforms/main',[
+	"./transforms"
+],function(transforms){
+	return transforms;
 });
-define('skylark-net-http', ['skylark-net-http/main'], function (main) { return main; });
+define('skylark-domx-transforms', ['skylark-domx-transforms/main'], function (main) { return main; });
+
+define('skylark-domx-images/images',[
+    "skylark-langx/skylark",
+    "skylark-langx/langx",
+    "skylark-domx-eventer",
+    "skylark-domx-noder",
+    "skylark-domx-finder",
+    "skylark-domx-geom",
+    "skylark-domx-styler",
+    "skylark-domx-data",
+    "skylark-domx-transforms",
+    "skylark-domx-query"
+], function(skylark,langx,eventer,noder,finder,geom,styler,datax,transforms,$) {
+
+  function watch(imgs) {
+    if (!langx.isArray(imgs)) {
+      imgs = [imgs];
+    }
+    var totalCount = imgs.length,
+        progressedCount = 0,
+        successedCount = 0,
+        faileredCount = 0,
+        d = new langx.Deferred();
+
+
+    function complete() {
+
+      d.resolve({
+        "total" : totalCount,
+        "successed" : successedCount,
+        "failered" : faileredCount,
+        "imgs" : imgs 
+      });
+    }
+
+    function progress(img,isLoaded) {
+
+      progressedCount++;
+      if (isLoaded) {
+        successedCount ++ ; 
+      } else {
+        faileredCount ++ ;
+      }
+
+      // progress event
+      d.progress({
+        "img" : img,
+        "isLoaded" : isLoaded,
+        "progressed" : progressedCount,
+        "total" : totalCount,
+        "imgs" : imgs 
+      });
+
+      // check if completed
+      if ( progressedCount == totalCount ) {
+        complete();
+      }
+    }
+
+    function check() {
+      if (!imgs.length ) {
+        complete();
+        return;
+      }
+
+      imgs.forEach(function(img) {
+        if (isCompleted(img)) {
+          progress(img,isLoaded(img));
+        } else {
+          eventer.on(img,{
+            "load" : function() {
+              progress(img,true);
+            },
+
+            "error" : function() {
+              progress(img,false);
+            }
+          });      
+        }
+      });
+    }
+
+    langx.defer(check);
+
+    d.promise.totalCount = totalCount;
+    return d.promise;
+  }
+
+
+  function isCompleted(img) {
+     return img.complete && img.naturalWidth !== undefined;
+  }
+
+  function isLoaded(img) {
+    return img.complete && img.naturalWidth !== 0;
+  }
+
+  function loaded(elm,options) {
+    var imgs = [];
+
+    options = options || {};
+
+    function addBackgroundImage (elm1) {
+
+      var reURL = /url\((['"])?(.*?)\1\)/gi;
+      var matches = reURL.exec( styler.css(elm1,"background-image"));
+      var url = matches && matches[2];
+      if ( url ) {
+        var img = new Image();
+        img.src = url;
+        imgs.push(img);
+      }
+    }
+
+    // filter siblings
+    if ( elm.nodeName == 'IMG' ) {
+      imgs.push( elm );
+    } else {
+      // find children
+      var childImgs = finder.findAll(elm,'img');
+      // concat childElems to filterFound array
+      for ( var i=0; i < childImgs.length; i++ ) {
+        imgs.push(childImgs[i]);
+      }
+
+      // get background image on element
+      if ( options.background === true ) {
+        addBackgroundImage(elm);
+      } else  if ( typeof options.background == 'string' ) {
+        var children = finder.findAll(elm, options.background );
+        for ( i=0; i < children.length; i++ ) {
+          addBackgroundImage( children[i] );
+        }
+      }
+    }
+
+    return watch(imgs);
+  }
+
+  function preload(urls,options) {
+      if (langx.isString(urls)) {
+        urls = [urls];
+      }
+      var images = [];
+
+      urls.forEach(function(url){
+        var img = new Image();
+        img.src = url;
+        images.push(img);
+      });
+
+      return watch(images);
+  }
+
+
+  $.fn.imagesLoaded = function( options ) {
+    return loaded(this,options);
+  };
+
+
+  function viewer(el,options) {
+    var img ,
+        style = {},
+        clientSize = geom.clientSize(el),
+        loadedCallback = options.loaded,
+        faileredCallback = options.failered;
+
+    function onload() {
+        styler.css(img,{//居中
+          top: (clientSize.height - img.offsetHeight) / 2 + "px",
+          left: (clientSize.width - img.offsetWidth) / 2 + "px"
+        });
+
+        transforms.reset(img);
+
+        styler.css(img,{
+          visibility: "visible"
+        });
+
+        if (loadedCallback) {
+          loadedCallback();
+        }
+    }
+
+    function onerror() {
+
+    }
+    function _init() {
+      style = styler.css(el,["position","overflow"]);
+      if (style.position != "relative" && style.position != "absolute") { 
+        styler.css(el,"position", "relative" );
+      }
+      styler.css(el,"overflow", "hidden" );
+
+      img = new Image();
+
+      styler.css(img,{
+        position: "absolute",
+        border: 0, padding: 0, margin: 0, width: "auto", height: "auto",
+        visibility: "hidden"
+      });
+
+      img.onload = onload;
+      img.onerror = onerror;
+
+      noder.append(el,img);
+
+      if (options.url) {
+        _load(options.url);
+      }
+    }
+
+    function _load(url) {
+        img.style.visibility = "hidden";
+        img.src = url;
+    }
+
+    function _dispose() {
+        noder.remove(img);
+        styler.css(el,style);
+        img = img.onload = img.onerror = null;
+    }
+
+    _init();
+
+    var ret =  {
+      load : _load,
+      dispose : _dispose
+    };
+
+    ["vertical","horizontal","rotate","left","right","scale","zoom","zoomin","zoomout","reset"].forEach(
+      function(name){
+        ret[name] = function() {
+          var args = langx.makeArray(arguments);
+          args.unshift(img);
+          transforms[name].apply(null,args);
+        }
+      }
+    );
+
+    return ret;
+  }
+
+  $.fn.imagesViewer = function( options ) {
+    return viewer(this,options);
+  };
+
+  function images() {
+    return images;
+  }
+
+  images.transform = function (el,options) {
+  };
+
+  ["vertical","horizontal","rotate","left","right","scale","zoom","zoomin","zoomout","reset"].forEach(
+    function(name){
+      images.transform[name] = transforms[name];
+    }
+  );
+
+
+  langx.mixin(images, {
+    isCompleted : isCompleted,
+
+    isLoaded : isLoaded,
+
+    loaded : loaded,
+
+    preload : preload,
+
+    viewer : viewer
+  });
+
+  return skylark.attach("domx.images" , images);
+});
+
+define('skylark-domx-images/main',[
+	"./images"
+],function(images){
+	return images;
+});
+define('skylark-domx-images', ['skylark-domx-images/main'], function (main) { return main; });
 
 define('skylark-data-color/colors',[
     "skylark-langx/skylark",
@@ -63866,6 +63876,276 @@ define('skylark-widgets-uploads/uploads',[
 ],function(skylark){
 	return skylark.attach("widgets.updates",{});
 });
+define('skylark-net-http/Upload',[
+    "skylark-langx-types",
+    "skylark-langx-objects",
+    "skylark-langx-arrays",
+    "skylark-langx-async/Deferred",
+    "skylark-langx-emitter/Evented",    
+    "./Xhr",
+    "./http"
+],function(types, objects, arrays, Deferred, Evented,Xhr, http){
+
+    var blobSlice = Blob.prototype.slice || Blob.prototype.webkitSlice || Blob.prototype.mozSlice;
+
+
+    /*
+     *Class for uploading files using xhr.
+     */
+    var Upload = Evented.inherit({
+        klassName : "Upload",
+
+        _construct : function(options) {
+            this._options = objects.mixin({
+                debug: false,
+                url: '/upload',
+                // maximum number of concurrent uploads
+                maxConnections: 999,
+                // To upload large files in smaller chunks, set the following option
+                // to a preferred maximum chunk size. If set to 0, null or undefined,
+                // or the browser does not support the required Blob API, files will
+                // be uploaded as a whole.
+                maxChunkSize: undefined,
+
+                onProgress: function(id, fileName, loaded, total){
+                },
+                onComplete: function(id, fileName){
+                },
+                onCancel: function(id, fileName){
+                },
+                onFailure : function(id,fileName,e) {                    
+                }
+            },options);
+
+            this._queue = [];
+            // params for files in queue
+            this._params = [];
+
+            this._files = [];
+            this._xhrs = [];
+
+            // current loaded size in bytes for each file
+            this._loaded = [];
+
+        },
+
+        /**
+         * Adds file to the queue
+         * Returns id to use with upload, cancel
+         **/
+        add: function(file){
+            return this._files.push(file) - 1;
+        },
+
+        /**
+         * Sends the file identified by id and additional query params to the server.
+         */
+        send: function(id, params){
+            if (!this._files[id]) {
+                // Already sended or canceled
+                return ;
+            }
+            if (this._queue.indexOf(id)>-1) {
+                // Already in the queue
+                return;
+            }
+            var len = this._queue.push(id);
+
+            var copy = objects.clone(params);
+
+            this._params[id] = copy;
+
+            // if too many active uploads, wait...
+            if (len <= this._options.maxConnections){
+                this._send(id, this._params[id]);
+            }     
+        },
+
+        /**
+         * Sends all files  and additional query params to the server.
+         */
+        sendAll: function(params){
+           for( var id = 0; id <this._files.length; id++) {
+                this.send(id,params);
+            }
+        },
+
+        /**
+         * Cancels file upload by id
+         */
+        cancel: function(id){
+            this._cancel(id);
+            this._dequeue(id);
+        },
+
+        /**
+         * Cancells all uploads
+         */
+        cancelAll: function(){
+            for (var i=0; i<this._queue.length; i++){
+                this._cancel(this._queue[i]);
+            }
+            this._queue = [];
+        },
+
+        getName: function(id){
+            var file = this._files[id];
+            return file.fileName != null ? file.fileName : file.name;
+        },
+
+        getSize: function(id){
+            var file = this._files[id];
+            return file.fileSize != null ? file.fileSize : file.size;
+        },
+
+        /**
+         * Returns uploaded bytes for file identified by id
+         */
+        getLoaded: function(id){
+            return this._loaded[id] || 0;
+        },
+
+
+        /**
+         * Sends the file identified by id and additional query params to the server
+         * @param {Object} params name-value string pairs
+         */
+        _send: function(id, params){
+            var options = this._options,
+                name = this.getName(id),
+                size = this.getSize(id),
+                chunkSize = options.maxChunkSize || 0,
+                curUploadingSize,
+                curLoadedSize = 0,
+                file = this._files[id],
+                args = {
+                    headers : {
+                    }                    
+                };
+
+            this._loaded[id] = this._loaded[id] || 0;
+
+            var xhr = this._xhrs[id] = new Xhr({
+                url : options.url
+            });
+
+            if (chunkSize)  {
+
+                args.data = blobSlice.call(
+                    file,
+                    this._loaded[id],
+                    this._loaded[id] + chunkSize,
+                    file.type
+                );
+                // Store the current chunk size, as the blob itself
+                // will be dereferenced after data processing:
+                curUploadingSize = args.data.size;
+                // Expose the chunk bytes position range:
+                args.headers["content-range"] = 'bytes ' + this._loaded[id] + '-' +
+                    (this._loaded[id] + curUploadingSize - 1) + '/' + size;
+                args.headers["Content-Type"] = "application/octet-stream";
+            }  else {
+                curUploadingSize = size;
+                var formParamName =  params.formParamName,
+                    formData = params.formData;
+
+                if (formParamName) {
+                    if (!formData) {
+                        formData = new FormData();
+                    }
+                    formData.append(formParamName,file);
+                    args.data = formData;
+    
+                } else {
+                    args.headers["Content-Type"] = file.type || "application/octet-stream";
+                    args.data = file;
+                }
+            }
+
+
+            var self = this;
+            xhr.post(
+                args
+            ).progress(function(e){
+                if (e.lengthComputable){
+                    curLoadedSize = curLoadedSize + e.loaded;
+                    self._loaded[id] = self._loaded[id] + e.loaded;
+                    self._options.onProgress(id, name, self._loaded[id], size);
+                }
+            }).then(function(){
+                if (!self._files[id]) {
+                    // the request was aborted/cancelled
+                    return;
+                }
+
+                if (curLoadedSize < curUploadingSize) {
+                    // Create a progress event if no final progress event
+                    // with loaded equaling total has been triggered
+                    // for this chunk:
+                    self._loaded[id] = self._loaded[id] + curUploadingSize - curLoadedSize;
+                    self._options.onProgress(id, name, self._loaded[id], size);                    
+                }
+
+                if (self._loaded[id] <size) {
+                    // File upload not yet complete,
+                    // continue with the next chunk:
+                    self._send(id,params);
+                } else {
+                    self._options.onComplete(id,name);
+
+                    self._files[id] = null;
+                    self._xhrs[id] = null;
+                    self._dequeue(id);
+                }
+
+
+            }).catch(function(e){
+                self._options.onFailure(id,name,e);
+
+                self._files[id] = null;
+                self._xhrs[id] = null;
+                self._dequeue(id);
+            });
+        },
+
+        _cancel: function(id){
+            this._options.onCancel(id, this.getName(id));
+
+            this._files[id] = null;
+
+            if (this._xhrs[id]){
+                this._xhrs[id].abort();
+                this._xhrs[id] = null;
+            }
+        },
+
+        /**
+         * Returns id of files being uploaded or
+         * waiting for their turn
+         */
+        getQueue: function(){
+            return this._queue;
+        },
+
+
+        /**
+         * Removes element from queue, starts upload of next
+         */
+        _dequeue: function(id){
+            var i = arrays.inArray(id,this._queue);
+            this._queue.splice(i, 1);
+
+            var max = this._options.maxConnections;
+
+            if (this._queue.length >= max && i < max){
+                var nextId = this._queue[max-1];
+                this._send(nextId, this._params[nextId]);
+            }
+        }
+    });
+
+    return http.Upload = Upload;    
+});
 define('skylark-widgets-uploads/MultiUploader',[
   "skylark-langx/skylark",
   "skylark-langx/langx",
@@ -72270,7 +72550,8 @@ define('skylark-slax-runtime/main',[
 	"skylark-data-entities",
 	"skylark-data-streams",
 	"skylark-data-zip",
-	"skylark-net-http",
+	"skylark-data-zip",
+	"skylark-domx-images",
 	"skylark-widgets-colorpicker",
 	"skylark-widgets-gradienter",
 	"skylark-widgets-hierarchy",
