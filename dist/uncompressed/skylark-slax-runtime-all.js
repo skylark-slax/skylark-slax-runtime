@@ -9832,6 +9832,8 @@ define('skylark-storages-diskfs/select',[
         params = params || {};
         var directory = params.directory || false,
             multiple = params.multiple || false,
+            accept = params.accept || "", //'image/gif,image/jpeg,image/jpg,image/png,image/svg'
+            title = params.title || "",
             fileSelected = params.picked;
         if (!fileInput) {
             var input = fileInput = document.createElement("input");
@@ -9867,6 +9869,9 @@ define('skylark-storages-diskfs/select',[
             };
         }
         fileInput.multiple = multiple;
+        fileInput.accept = accept;
+        fileInput.title = title;
+
         fileInput.webkitdirectory = directory;
         fileInput.click();
     }
@@ -65670,7 +65675,7 @@ define('skylark-domx-contents/UndoManager',[
     if (this._index < 1 || this._stack.length < 2) {
       return;
     }
-    this.editable.hidePopover();
+    //this.editable.hidePopover();
     this._index -= 1;
     state = this._stack[this._index];
     this.editable.body.get(0).innerHTML = state.html;
@@ -65685,7 +65690,7 @@ define('skylark-domx-contents/UndoManager',[
     if (this._index < 0 || this._stack.length < this._index + 2) {
       return;
     }
-    this.editable.hidePopover();
+    //this.editable.hidePopover();
     this._index += 1;
     state = this._stack[this._index];
     this.editable.body.get(0).innerHTML = state.html;
@@ -66773,7 +66778,7 @@ define('skylark-domx-contents/Clipboard',[
     return setTimeout((function(_this) {
       return function() {
         var pasteContent;
-        _this.editable.hidePopover();
+        //_this.editable.hidePopover();
         _this.editable.body.get(0).innerHTML = state.html;
         _this.editable.undoManager.caretPosition(state.caret);
         _this.editable.body.focus();
@@ -67486,7 +67491,11 @@ define('skylark-widgets-wordpad/i18n',[
         'fontScaleLarge': '大号字体',
         'fontScaleNormal': '正常大小',
         'fontScaleSmall': '小号字体',
-        'fontScaleXSmall': '超小字体'
+        'fontScaleXSmall': '超小字体',
+        "video": "视屏",
+        "videoSize" : "尺寸",
+        "uploadVideoBtn" : "插入",
+        "videoPlaceholder": "视频嵌入代码"
       },
       'en-US': {
         'blockquote': 'Block Quote',
@@ -67539,7 +67548,69 @@ define('skylark-widgets-wordpad/i18n',[
         'fontScaleLarge': 'Large Size',
         'fontScaleNormal': 'Normal Size',
         'fontScaleSmall': 'Small Size',
-        'fontScaleXSmall': 'X Small Size'
+        'fontScaleXSmall': 'X Small Size',
+        "video": "Video",
+        "videoSize" : "Size",
+        "uploadVideoBtn" : "Insert",
+        "videoPlaceholder": "Video Embed Code"
+      },
+
+      'ja' : {
+        'blockquote': 'ブロック引用文',
+        'bold': '太字',
+        'code': 'コードを挿入',
+        'color': 'フォントの色',
+        'coloredText': 'カラー文字',
+        'hr': '水平線',
+        'image': 'イメージを挿入',
+        'externalImage': '外部イメージ',
+        'uploadImage': 'イメージファイルをアップロード',
+        'uploadFailed': 'アップロードが失敗しまいた',
+        'uploadError': 'アップロードエラー',
+        'imageUrl': 'イメージのURL',
+        'imageSize': 'イメージのサイズ',
+        'imageAlt': 'イメージの説明文',
+        'restoreImageSize': 'イメージのサイズを元に戻す',
+        'uploading': 'アップロード中',
+        'indent': 'インデントを増やす',
+        'outdent': 'インデントを減らす',
+        'italic': '斜体',
+        'link': 'リンクを挿入',
+        'linkText': 'リンクテキスト',
+        'linkUrl': 'リンクURL',
+        'linkTarget': 'リンクの表示先を指定',
+        'openLinkInCurrentWindow': '同じウィンドウで開く',
+        'openLinkInNewWindow': '新規ウインドウで開く',
+        'removeLink': 'リンクを削除',
+        'ol': '段落番号',
+        'ul': '箇条書き',
+        'strikethrough': '取消線',
+        'table': 'テーブル',
+        'deleteRow': '行を削除',
+        'insertRowAbove': '上に行を挿入',
+        'insertRowBelow': '下に行を挿入',
+        'deleteColumn': '列を削除',
+        'insertColumnLeft': '左に列を挿入',
+        'insertColumnRight': '右に列を挿入',
+        'deleteTable': 'テーブルを削除',
+        'title': 'タイトル',
+        'normalText': '標準',
+        'underline': '下線',
+        'alignment': '位置',
+        'alignCenter': '中央揃え',
+        'alignLeft': '左揃え',
+        'alignRight': '右揃え',
+        'selectLanguage': '言語を選択',
+        'fontScale': 'フォントのサイズ',
+        'fontScaleXLarge': '超大きいサイズ',
+        'fontScaleLarge': '大きいサイズ',
+        'fontScaleNormal': '通常サイズ',
+        'fontScaleSmall': '小さいサイズ',
+        'fontScaleXSmall': '超小さいサイズ',
+        "video": "ビデオ",
+        "videoSize" : "サイズ",
+        "uploadVideoBtn" : "挿入",
+        "videoPlaceholder": "ビデオ埋め込みコード"
       },
 
       translate : function() {
@@ -67895,25 +67966,28 @@ define('skylark-widgets-wordpad/Toolbar',[
 });
 define('skylark-widgets-wordpad/uploader',[
   "skylark-langx/langx",
-  "skylark-domx-query"
-],function(langx,$){ 
+  "skylark-domx-query",
+  "skylark-net-http/Xhr"
+],function(langx,$,Xhr){ 
 
   var Uploader = langx.Evented.inherit({
-    init : function() {
+    init : function(options){
+      this.options = langx.mixin({},this.options,options);
+
       this.files = [];
       this.queue = [];
       this.id = ++Uploader.count;
       this.on('uploadcomplete', (function(_this) {
         return function(e, file) {
           _this.files.splice(langx.inArray(file, _this.files), 1);
-          if (_this.queue.length > 0 && _this.files.length < _this.opts.connectionCount) {
+          if (_this.queue.length > 0 && _this.files.length < _this.options.connectionCount) {
             return _this.upload(_this.queue.shift());
           } else {
             return _this.uploading = false;
           }
         };
       })(this));
-      return $(window).on('beforeunload.uploader-' + this.id, (function(_this) {
+      $(window).on('beforeunload.uploader-' + this.id, (function(_this) {
         return function(e) {
           if (!_this.uploading) {
             return;
@@ -67928,7 +68002,7 @@ define('skylark-widgets-wordpad/uploader',[
 
   Uploader.count = 0;
 
-  Uploader.prototype.opts = {
+  Uploader.prototype.options = {
     url: '',
     params: null,
     fileKey: 'upload_file',
@@ -67945,10 +68019,10 @@ define('skylark-widgets-wordpad/uploader',[
     };
   })();
 
-  Uploader.prototype.upload = function(file, opts) {
+  Uploader.prototype.upload = function(file, options) {
     var f, i, key, len;
-    if (opts == null) {
-      opts = {};
+    if (options == null) {
+      options = {};
     }
     if (file == null) {
       return;
@@ -67956,26 +68030,26 @@ define('skylark-widgets-wordpad/uploader',[
     if (langx.isArray(file) || file instanceof FileList) {
       for (i = 0, len = file.length; i < len; i++) {
         f = file[i];
-        this.upload(f, opts);
+        this.upload(f, options);
       }
     } else if ($(file).is('input:file')) {
       key = $(file).attr('name');
       if (key) {
-        opts.fileKey = key;
+        options.fileKey = key;
       }
-      this.upload(langx.makeArray($(file)[0].files), opts);
+      this.upload(langx.makeArray($(file)[0].files), options);
     } else if (!file.id || !file.obj) {
       file = this.getFile(file);
     }
     if (!(file && file.obj)) {
       return;
     }
-    langx.extend(file, opts);
-    if (this.files.length >= this.opts.connectionCount) {
+    langx.extend(file, options);
+    if (this.files.length >= this.options.connectionCount) {
       this.queue.push(file);
       return;
     }
-    if (this.trigger('beforeupload', [file]) === false) {
+    if (this.trigger('beforeupload', file) === false) {
       return;
     }
     this.files.push(file);
@@ -67992,9 +68066,9 @@ define('skylark-widgets-wordpad/uploader',[
     }
     return {
       id: this.generateId(),
-      url: this.opts.url,
-      params: this.opts.params,
-      fileKey: this.opts.fileKey,
+      url: this.options.url,
+      params: this.options.params,
+      fileKey: this.options.fileKey,
       name: name,
       size: (ref1 = fileObj.fileSize) != null ? ref1 : fileObj.size,
       ext: name ? name.split('.').pop().toLowerCase() : '',
@@ -68016,53 +68090,36 @@ define('skylark-widgets-wordpad/uploader',[
     }
 
     //TODO
-    return file.xhr = langx.xhr({
-      url: file.url,
+    var xhr =  file.xhr = new Xhr({
+      url: this.options.url
+    });
+
+
+    var _this = this;
+
+    xhr.post({
       data: formData,
       processData: false,
       contentType: false,
-      type: 'POST',
       headers: {
         'X-File-Name': encodeURIComponent(file.name)
       },
-      xhr: function() {
-        var req;
-        req = $.ajaxSettings.xhr();
-        if (req) {
-          req.upload.onprogress = (function(_this) {
-            return function(e) {
-              return _this.progress(e);
-            };
-          })(this);
-        }
-        return req;
-      },
-      progress: (function(_this) {
-        return function(e) {
-          if (!e.lengthComputable) {
-            return;
-          }
-          return _this.trigger('uploadprogress', [file, e.loaded, e.total]);
-        };
-      })(this),
-      error: (function(_this) {
-        return function(xhr, status, err) {
-          return _this.trigger('uploaderror', [file, xhr, status]);
-        };
-      })(this),
-      success: (function(_this) {
-        return function(result) {
-          _this.trigger('uploadprogress', [file, file.size, file.size]);
-          _this.trigger('uploadsuccess', [file, result]);
-          return $(document).trigger('uploadsuccess', [file, result, _this]);
-        };
-      })(this),
-      complete: (function(_this) {
-        return function(xhr, status) {
-          return _this.trigger('uploadcomplete', [file, xhr.responseText]);
-        };
-      })(this)
+    }).progress(function(e){
+      if (!e.lengthComputable) {
+        return;
+      }
+      return _this.trigger('uploadprogress', file, e.loaded, e.total);
+    }).then(function(result){
+      _this.trigger('uploadsuccess', file, result);
+
+      _this.trigger('uploadcomplete');
+
+    }).catch(function(e,status){
+      _this.trigger('uploaderror', file,xhr);
+      _this.trigger('uploadcomplete');
     });
+
+    return xhr;
   };
 
   Uploader.prototype.cancel = function(file) {
@@ -68084,28 +68141,6 @@ define('skylark-widgets-wordpad/uploader',[
     return file.xhr = null;
   };
 
-  Uploader.prototype.readImageFile = function(fileObj, callback) {
-    var fileReader, img;
-    if (!langx.isFunction(callback)) {
-      return;
-    }
-    img = new Image();
-    img.onload = function() {
-      return callback(img);
-    };
-    img.onerror = function() {
-      return callback();
-    };
-    if (window.FileReader && FileReader.prototype.readAsDataURL && /^image/.test(fileObj.type)) {
-      fileReader = new FileReader();
-      fileReader.onload = function(e) {
-        return img.src = e.target.result;
-      };
-      return fileReader.readAsDataURL(fileObj);
-    } else {
-      return callback();
-    }
-  };
 
   Uploader.prototype.destroy = function() {
     var file, i, len, ref;
@@ -68127,8 +68162,8 @@ define('skylark-widgets-wordpad/uploader',[
 
   Uploader.locale = 'zh-CN';
 
-  return  function(opts) {
-    return new Uploader(opts);
+  return  function(options) {
+    return new Uploader(options);
   };
 
 });
@@ -68201,9 +68236,9 @@ define('skylark-widgets-wordpad/Wordpad',[
       this.opts = this.options;
 
       var e, editor, uploadOpts;
-      this.textarea = $(this.opts.srcNodeRef);
+      this.textarea = $(this.options.srcNodeRef);
 
-      this.opts.placeholder = this.opts.placeholder || this.textarea.attr('placeholder');
+      this.options.placeholder = this.options.placeholder || this.textarea.attr('placeholder');
 
       if (!this.textarea.length) {
         throw new Error('Wordpad: param textarea is required.');
@@ -68230,20 +68265,20 @@ define('skylark-widgets-wordpad/Wordpad',[
         return self.trigger(e.type,data);
       });
 
-      if (this.opts.upload && uploader) {
-        uploadOpts = typeof this.opts.upload === 'object' ? this.opts.upload : {};
+      if (this.options.upload && uploader) {
+        uploadOpts = typeof this.options.upload === 'object' ? this.options.upload : {};
         this.uploader = uploader(uploadOpts);
       }
 
       this.toolbar = new Toolbar(this,{
-        toolbar: this.opts.toolbar,
-        toolbarFloat:  this.opts.toolbarFloat,
-        toolbarHidden:  this.opts.toolbarHidden,
-        toolbarFloatOffset:  this.opts.toolbarFloatOffset
+        toolbar: this.options.toolbar,
+        toolbarFloat:  this.options.toolbarFloat,
+        toolbarHidden:  this.options.toolbarHidden,
+        toolbarFloatOffset:  this.options.toolbarFloatOffset
 
       });
 
-      if (this.opts.placeholder) {
+      if (this.options.placeholder) {
         this.on('valuechanged', function() {
           return self._placeholder();
         });
@@ -68257,6 +68292,7 @@ define('skylark-widgets-wordpad/Wordpad',[
     }
   });
 
+ 
   Wordpad.prototype.triggerHandler =  Wordpad.prototype.trigger = function(type,data) {
     var args, ref;
     args = [type];
@@ -68297,14 +68333,14 @@ define('skylark-widgets-wordpad/Wordpad',[
 
     this.wrapper = this.el.find('.wordpad-wrapper');
     this.body = this.wrapper.find('.wordpad-body');
-    this.placeholderEl = this.wrapper.find('.wordpad-placeholder').append(this.opts.placeholder);
+    this.placeholderEl = this.wrapper.find('.wordpad-placeholder').append(this.options.placeholder);
     this.el.data('wordpad', this);
     this.wrapper.append(this.textarea);
     this.textarea.data('wordpad', this).blur();
     this.body.attr('tabindex', this.textarea.attr('tabindex'));
 
-    if (this.opts.params) {
-      ref = this.opts.params;
+    if (this.options.params) {
+      ref = this.options.params;
       results = [];
       for (key in ref) {
         val = ref[key];
@@ -68321,7 +68357,7 @@ define('skylark-widgets-wordpad/Wordpad',[
   Wordpad.prototype._placeholder = function() {
     var children;
     children = this.body.children();
-    if (children.length === 0 || (children.length === 1 && this.util.isEmptyNode(children) && parseInt(children.css('margin-left') || 0) < this.opts.indentWidth)) {
+    if (children.length === 0 || (children.length === 1 && this.util.isEmptyNode(children) && parseInt(children.css('margin-left') || 0) < this.options.indentWidth)) {
       return this.placeholderEl.show();
     } else {
       return this.placeholderEl.hide();
@@ -68926,7 +68962,7 @@ define('skylark-widgets-wordpad/addons/actions/CodePopover',[
      render : function() {
       var $option, k, lang, len, ref;
       this._tpl = "<div class=\"code-settings\">\n  <div class=\"settings-field\">\n    <select class=\"select-lang\">\n      <option value=\"-1\">" + (this._t('selectLanguage')) + "</option>\n    </select>\n  </div>\n</div>";
-      this.langs = this.editor.opts.codeLanguages || [
+      this.langs = this.editor.options.codeLanguages || [
         {
           name: 'Bash',
           value: 'bash'
@@ -69448,6 +69484,76 @@ define('skylark-widgets-wordpad/addons/actions/HtmlAction',[
 
    return HtmlAction;
 });
+define('skylark-storages-diskfs/read',[
+    "skylark-langx-async/Deferred",
+    "./diskfs"
+],function(Deferred, diskfs){
+
+    function readFile(file, params) {
+        params = params || {};
+        var d = new Deferred,
+            reader = new FileReader();
+
+        reader.onload = function(evt) {
+            d.resolve(evt.target.result);
+        };
+        reader.onerror = function(e) {
+            var code = e.target.error.code;
+            if (code === 2) {
+                alert('please don\'t open this page using protocol fill:///');
+            } else {
+                alert('error code: ' + code);
+            }
+        };
+
+        if (params.asArrayBuffer) {
+            reader.readAsArrayBuffer(file);
+        } else if (params.asDataUrl) {
+            reader.readAsDataURL(file);
+        } else if (params.asText) {
+            reader.readAsText(file);
+        } else {
+            reader.readAsArrayBuffer(file);
+        }
+
+        return d.promise;
+    }
+
+    return diskfs.read = diskfs.readFile = readFile;
+    
+});
+
+define('skylark-storages-diskfs/readImage',[
+    "skylark-langx/Deferred",
+    "./diskfs",
+    "./read"
+],function(Deferred, diskfs,read){
+
+	function readImage(fileObj) {
+        var d = new Deferred,
+	    	img = new Image();
+
+	    img.onload = function() {
+	      d.resolve(img);
+	    };
+	    img.onerror = function(e) {
+	      d.reject(e);
+	    };
+
+	    read(fileObj,{
+	    	asDataUrl : true
+	    }).then(function(dataUrl){
+	        img.src = dataUrl;
+	    }).catch(function(e){
+	    	d.reject(e);
+	    });
+
+	    return d.promise;
+	}
+
+	return diskfs.readImage = readImage;
+
+});
 define('skylark-widgets-wordpad/addons/actions/ImagePopover',[
   "skylark-langx/langx",
   "skylark-domx-query",
@@ -69479,7 +69585,7 @@ define('skylark-widgets-wordpad/addons/actions/ImagePopover',[
         }
         e.preventDefault();
         range = document.createRange();
-        _this.Action.editor.editable.selection.setRangeAfter(_this.target, range);
+        _this.action.editor.editable.selection.setRangeAfter(_this.target, range);
         return _this.hide();
       };
     })(this));
@@ -69517,7 +69623,7 @@ define('skylark-widgets-wordpad/addons/actions/ImagePopover',[
           $img = _this.target;
           _this.hide();
           range = document.createRange();
-          return _this.Action.editor.editable.selection.setRangeAfter($img, range);
+          return _this.action.editor.editable.selection.setRangeAfter($img, range);
         } else if (e.which === 9) {
           return _this.el.data('popover').refresh();
         }
@@ -69529,7 +69635,7 @@ define('skylark-widgets-wordpad/addons/actions/ImagePopover',[
         if (e.which === 13) {
           e.preventDefault();
           range = document.createRange();
-          _this.Action.editor.editable.selection.setRangeAfter(_this.target, range);
+          _this.action.editor.editable.selection.setRangeAfter(_this.target, range);
           return _this.hide();
         }
       };
@@ -69566,32 +69672,20 @@ define('skylark-widgets-wordpad/addons/actions/ImagePopover',[
       $uploadBtn.remove();
       return;
     }
-    createInput = (function(_this) {
-      return function() {
-        if (_this.input) {
-          _this.input.remove();
-        }
-        return _this.input = $('<input/>', {
-          type: 'file',
-          title: _this._t('uploadImage'),
-          multiple: true,
-          accept: 'image/gif,image/jpeg,image/jpg,image/png,image/svg'
-        }).appendTo($uploadBtn);
-      };
-    })(this);
-    createInput();
-    this.el.on('click mousedown', 'input[type=file]', function(e) {
-      return e.stopPropagation();
-    });
-    return this.el.on('change', 'input[type=file]', (function(_this) {
-      return function(e) {
-        _this.editor.uploader.upload(_this.input, {
+
+    var _this = this;
+    $uploadBtn.picker({
+      title: _this._t('uploadImage'),
+      multiple: true,
+      accept: 'image/gif,image/jpeg,image/jpg,image/png,image/svg',
+      picked : function(files){
+        _this.editor.uploader.upload(files, {
           inline: true,
           img: _this.target
         });
-        return createInput();
-      };
-    })(this));
+      }      
+
+    });
   };
 
   ImagePopover.prototype._resizeImg = function(inputEl, onlySetVal) {
@@ -69643,7 +69737,7 @@ define('skylark-widgets-wordpad/addons/actions/ImagePopover',[
     if (this.target.attr('src') === src) {
       return;
     }
-    return this.Action.loadImage(this.target, src, (function(_this) {
+    return this.action.loadImage(this.target, src, (function(_this) {
       return function(img) {
         var blob;
         if (!img) {
@@ -69696,11 +69790,12 @@ define('skylark-widgets-wordpad/addons/actions/ImagePopover',[
 define('skylark-widgets-wordpad/addons/actions/ImageAction',[
   "skylark-langx/langx",
   "skylark-domx-query",
+  "skylark-storages-diskfs/readImage",  
   "../../addons",
   "../../Action",
   "./ImagePopover",
   "../../i18n"
-],function(langx, $,addons,Action,ImagePopover,i18n){ 
+],function(langx, $, readImage, addons,Action,ImagePopover,i18n){ 
    var ImageAction = Action.inherit({
       name : 'image',
 
@@ -69715,11 +69810,13 @@ define('skylark-widgets-wordpad/addons/actions/ImageAction',[
       needFocus : false,
 
       _init : function() {
+        Action.prototype._init.call(this);
+
         var item, k, len, ref;
-        if (this.editor.opts.imageAction) {
-          if (Array.isArray(this.editor.opts.imageAction)) {
+        if (this.editor.options.imageAction) {
+          if (Array.isArray(this.editor.options.imageAction)) {
             this.menu = [];
-            ref = this.editor.opts.imageAction;
+            ref = this.editor.options.imageAction;
             for (k = 0, len = ref.length; k < len; k++) {
               item = ref[k];
               this.menu.push({
@@ -69745,7 +69842,7 @@ define('skylark-widgets-wordpad/addons/actions/ImageAction',[
             this.menu = false;
           }
         }
-        this.defaultImage = this.editor.opts.defaultImage;
+        this.defaultImage = this.editor.options.defaultImage;
         this.editor.body.on('click', 'img:not([data-non-image])', (function(_this) {
           return function(e) {
             var $img, range;
@@ -69816,78 +69913,16 @@ define('skylark-widgets-wordpad/addons/actions/ImageAction',[
         this.popover = new ImagePopover({
           action: this
         });
-        if (this.editor.opts.imageAction === 'upload') {
-          return this._initUploader(this.el);
+
+        if (this.editor.options.upload) {
+          return this._initUploader();
         }
 
-        return Action.prototype._init.call(this);
 
-
-      },
-
-      render : function() {
-        var args;
-        args = 1 <= arguments.length ? Array.prototype.slice.call(arguments, 0) : [];
-        Action.prototype.render.apply(this, args);
-        this.popover = new ImagePopover({
-          action: this
-        });
-        if (this.editor.opts.imageAction === 'upload') {
-          return this._initUploader(this.el);
-        }
-      },
-
-      renderMenu : function() {
-        Action.prototype.renderMenu.call(this);
-        return this._initUploader();
       },
 
       _initUploader : function($uploadItem) {
-        var $input, createInput, uploadProgress;
-        if ($uploadItem == null) {
-          $uploadItem = this.menuEl.find('.menu-item-upload-image');
-        }
-        if (this.editor.uploader == null) {
-          this.el.find('.btn-upload').remove();
-          return;
-        }
-        $input = null;
-        createInput = (function(_this) {
-          return function() {
-            if ($input) {
-              $input.remove();
-            }
-            return $input = $('<input/>', {
-              type: 'file',
-              title: _this._t('uploadImage'),
-              multiple: true,
-              accept: 'image/gif,image/jpeg,image/jpg,image/png,image/svg'
-            }).appendTo($uploadItem);
-          };
-        })(this);
-        createInput();
-        $uploadItem.on('click mousedown', 'input[type=file]', function(e) {
-          return e.stopPropagation();
-        });
-        $uploadItem.on('change', 'input[type=file]', (function(_this) {
-          return function(e) {
-            if (_this.editor.editable.inputManager.focused) {
-              _this.editor.uploader.upload($input, {
-                inline: true
-              });
-              createInput();
-            } else {
-              _this.editor.one('focus', function(e) {
-                _this.editor.uploader.upload($input, {
-                  inline: true
-                });
-                return createInput();
-              });
-              _this.editor.focus();
-            }
-            return _this.wrapper.removeClass('menu-on');
-          };
-        })(this));
+
         this.editor.uploader.on('beforeupload', (function(_this) {
           return function(e, file) {
             var $img;
@@ -69902,7 +69937,7 @@ define('skylark-widgets-wordpad/addons/actions/ImageAction',[
             }
             $img.addClass('uploading');
             $img.data('file', file);
-            return _this.editor.uploader.readImageFile(file.obj, function(img) {
+            return readImage(file.obj).then(function(img) {
               var src;
               if (!$img.hasClass('uploading')) {
                 return;
@@ -69952,19 +69987,13 @@ define('skylark-widgets-wordpad/addons/actions/ImageAction',[
             if (typeof result !== 'object') {
               try {
                 result = JSON.parse(result);
+                img_path = result.files[0].url;
               } catch (_error) {
                 e = _error;
                 result = {
                   success: false
                 };
               }
-            }
-            if (result.success === false) {
-              msg = result.msg || _this._t('uploadFailed');
-              alert(msg);
-              img_path = _this.defaultImage;
-            } else {
-              img_path = result.file_path;
             }
             _this.loadImage($img, img_path, function() {
               var $mask;
@@ -70148,7 +70177,7 @@ define('skylark-widgets-wordpad/addons/actions/IndentAction',[
 
       _init : function() {
         var hotkey;
-        hotkey = this.editor.opts.tabIndent === false ? '' : ' (Tab)';
+        hotkey = this.editor.options.tabIndent === false ? '' : ' (Tab)';
         this.title = this._t(this.name) + hotkey;
         return Action.prototype._init.call(this);
       },
@@ -70502,7 +70531,7 @@ define('skylark-widgets-wordpad/addons/actions/OutdentAction',[
 
     _init : function() {
       var hotkey;
-      hotkey = this.editor.opts.tabIndent === false ? '' : ' (Shift + Tab)';
+      hotkey = this.editor.options.tabIndent === false ? '' : ' (Shift + Tab)';
       this.title = this._t(this.name) + hotkey;
       return Action.prototype._init.call(this);
     },
@@ -71131,7 +71160,6 @@ define('skylark-widgets-wordpad/addons/actions/TableAction',[
 
     },
 
-
     createTable : function(row, col, phBr) {
       return $(tables.createTable(row,col,phBr ? this.editor.editable.util.phBr : null));
     },
@@ -71375,6 +71403,274 @@ define('skylark-widgets-wordpad/addons/actions/UnorderListAction',[
     return UnorderListAction;
 
 });
+define('skylark-widgets-wordpad/addons/actions/VideoPopover',[
+  "skylark-domx-query",
+  "../../addons",
+  "../../Popover"
+],function($,addons,Popover){ 
+  var VideoPopover = Popover.inherit({
+    offset : {
+      top: 6,
+      left: -4
+    },
+
+    _loadVideo : function(videoData, callback) {
+      if (videoData && this.target.attr('src') === videoData.src) {
+        return;
+      }
+      return $('.J_UploadVideoBtn').data('videowrap') && this.action.loadVideo($('.J_UploadVideoBtn').data('videowrap'), videoData, (function(_this) {
+        return function(img) {
+          if (!img) {
+
+          }
+        };
+      })(this));
+    },
+
+    render : function() {
+      var tpl;
+      tpl = "<div class=\"link-settings\">\n  <div class=\"settings-field video-embed-code\">\n    <label>" + (this._t('video')) + "</label>\n    <textarea placeholder=\"" + (this._t('videoPlaceholder')) + "\" type=\"text\" class=\"video-link\" ></textarea>\n  </div><br>\n  <div class=\"settings-field\">\n    <label>" + (this._t('videoSize')) + "</label>\n    <input class=\"image-size video-size\" id=\"video-width\" type=\"text\" tabindex=\"2\" />\n    <span class=\"times\">×</span>\n    <input class=\"image-size video-size\" id=\"video-height\" type=\"text\" tabindex=\"3\" />\n  </div>\n  <div class=\"video-upload\">\n    <button class=\"btn J_UploadVideoBtn\">" + (this._t('uploadVideoBtn')) + "</div>\n  </div>\n</div>";
+      this.el.addClass('video-popover').append(tpl);
+      this.srcEl = this.el.find('.video-link');
+      this.widthEl = this.el.find('#video-width');
+      this.heightEl = this.el.find('#video-height');
+      this.el.find('.video-size').on('keydown', (function(_this) {
+        return function(e) {
+          if (e.which === 13 || e.which === 27) {
+            e.preventDefault();
+            return $('.J_UploadVideoBtn').click();
+          }
+        };
+      })(this));
+
+      this.srcEl.on('keydown', (function(_this) {
+        return function(e) {
+          if (e.which === 13 || e.which === 27) {
+            e.preventDefault();
+            return $('.J_UploadVideoBtn').click();
+          }
+        };
+      })(this));
+
+      return this.editor.on('valuechanged', (function(_this) {
+        return function(e) {
+          if (_this.active) {
+            return _this.refresh();
+          }
+        };
+      })(this));
+    },
+
+    show : function() {
+      var $video, $videoWrap, args, videoData;
+      args = 1 <= arguments.length ? Array.prototype.slice.call(arguments, 0) : [];
+      Popover.prototype.show.apply(this, args);
+      $video = arguments[0] || this.target;
+      this.width = $video.attr('data-width') || $video.width();
+      this.height = $video.attr('data-height') || $video.height();
+      if ($video.attr('data-link')) {
+        videoData = {
+          link: $video.attr('data-link'),
+          tag: $video.attr('data-tag'),
+          width: this.width,
+          height: this.height
+        };
+        this.src = videoData.link;
+      }
+      this.widthEl.val(this.width);
+      this.heightEl.val(this.height);
+      this.srcEl.val(this.src);
+      $('.J_UploadVideoBtn').data('videowrap', $video);
+      return $videoWrap = this.target;
+    }
+  });
+
+  return VideoPopover;
+});
+define('skylark-widgets-wordpad/addons/actions/VideoAction',[
+  "skylark-langx/langx",
+  "skylark-domx-query",
+  "../../addons",
+  "../../Action",
+  "./VideoPopover"
+],function(langx,$,addons,Action,VideoPopover){ 
+   var reUrlYoutube = /https?:\/\/(?:[0-9A-Z-]+\.)?(?:youtu\.be\/|youtube\.com\S*[^\w\-\s])([\w\-]{11})(?=[^\w\-]|$)(?![?=&+%\w.-]*(?:['"][^<>]*>|<\/a>))[?=&+%\w.-]*/ig,
+      reUrlVimeo = /https?:\/\/(www\.)?vimeo.com\/(\d+)($|\/)/;
+
+   var VideoAction = Action.inherit({
+      name : 'video',
+
+      icon : 'video',
+
+      htmlTag : 'embed, iframe',
+
+      disableTag : 'pre, table, div',
+
+      videoPlaceholder : 'video',
+
+      videoContainerClass : 'video-container',
+
+      videoPoster : './video_poster.jpg ',
+
+      needFocus : true,
+
+      _init : function() {
+        this.title = this._t(this.name);
+        langx.merge(this.editor.editable.formatter._allowedTags, ['embed', 'iframe', 'video']);
+        langx.extend(this.editor.editable.formatter._allowedAttributes, {
+          embed: ['class', 'width', 'height', 'type', 'pluginspage', 'src', 'wmode', 'play', 'loop', 'menu', 'allowscriptaccess', 'allowfullscreen'],
+          iframe: ['class', 'width', 'height', 'src', 'frameborder'],
+          video: ['class', 'width', 'height', 'poster', 'controls', 'allowfullscreen', 'src', 'data-link', 'data-tag']
+        });
+
+        $(document).on('click', '.J_UploadVideoBtn', (function(_this) {
+          return function(e) {
+            var videoData;
+            videoData = {
+              link: $('.video-link').val(),
+              width: $('#video-width').val() || 100,
+              height: $('#video-height').val() || 100
+            };
+            $('.video-link').val('');
+            $('#video-width').val('');
+            $('#video-height').val('');
+            return _this._insert($('.J_UploadVideoBtn').data('videowrap'), videoData, function() {
+              return _this.editor.trigger('valuechanged');
+            });
+          };
+        })(this));
+
+        this.editor.body.on('click', '.wordpad-video-wrapper', (function(_this) {
+          return function(e) {
+            var $video = $(e.currentTarget).find('video,embed,iframe');//siblings('video').show();
+            return _this.popover.show($video);
+          };
+        })(this));
+        this.editor.body.on('mousedown', (function(_this) {
+          return function() {
+            var $videoWrap;
+            $videoWrap = $('.J_UploadVideoBtn').data('videowrap');
+            if ($videoWrap && $videoWrap.html() === _this.videoPlaceholder) {
+              $videoWrap.remove();
+              $('.J_UploadVideoBtn').data('videowrap', null);
+            }
+            return _this.popover.hide();
+          };
+        })(this));
+        this.editor.on('decorate', (function(_this) {
+          return function(e, $el) {
+            return $el.find('video,iframe,embed').each(function(i, video) {
+              return _this.decorate($(video));
+            });
+          };
+        })(this));
+        this.editor.on('undecorate', (function(_this) {
+          return function(e, $el) {
+            return $el.find('video,iframe,embed').each(function(i, video) {
+              return _this.undecorate($(video));
+            });
+          };
+        })(this));
+
+        this.popover = new VideoPopover({
+          action: this
+        });
+        return Action.prototype._init.call(this);
+      },
+
+
+      decorate : function($video) {
+        if ($video.parent('.wordpad-video-wrapper').length > 0) {
+          return;
+        }
+        $video.wrap('<figure class="wordpad-video-wrapper"></figure>');
+        return $video.parent();
+      },
+
+      undecorate : function($video) {
+        if (!($video.parent('.wordpad-video-wrapper').length > 0)) {
+          return;
+        }
+        return $video.parent().replaceWith($video);
+      },
+
+      _execute : function() {
+        var $video = this._create();
+        return this.popover.show($video);
+      },
+
+      _status : function() {
+        return this._disableStatus();
+      },
+
+      _create : function() {
+        var $video, range;
+        if (!this.editor.editable.inputManager.focused) {
+          this.editor.focus();
+        }
+        range = this.editor.editable.selection.range();
+        if (range) {
+          range.deleteContents();
+          this.editor.editable.selection.range(range);
+        }
+        $video = $('<video/>').attr({
+          'poster': this.videoPoster,
+          'width': 500,
+          'height': 281,
+          'class' : 'wordpad-video'
+        });
+        range.insertNode($video[0]);
+        this.editor.editable.selection.setRangeAfter($video, range);
+        this.editor.trigger('valuechanged');
+        this.decorate($video);
+        return $video;
+      },
+
+      _insert : function($video, videoData, callback) {
+        var e, originNode, realVideo, videoLink, videoTag;
+        if (!videoData.link) {
+          this._remove($video);
+        } else {
+          var data = videoData.link;
+          if (!data.match(/<iframe|<video|<embed/gi)) {
+            // parse if it is link on youtube & vimeo
+            var iframeStart = '<iframe style="width: 500px; height: 281px;" src="',
+              iframeEnd = '" frameborder="0" allowfullscreen></iframe>';
+
+            if (data.match(reUrlYoutube))    {
+              data = data.replace(reUrlYoutube, iframeStart + 'https://www.youtube.com/embed/$1' + iframeEnd);
+            } else if (data.match(reUrlVimeo)) {
+              data = data.replace(reUrlVimeo, iframeStart + 'https://player.vimeo.com/video/$2' + iframeEnd);
+            }
+          }
+          var $video1 = $(data).style({
+            width : videoData.width + "px",
+            height : videoData.height + "px"
+          }).attr({
+            "data-link" : videoData.link,
+            "data-width" : videoData.width,
+            "data-height" : videoData.height
+          });
+          
+          $video.replaceWith($video1);
+          $video = $video1;
+        }
+        this.popover.hide();
+        return callback($video);
+      },
+
+      _remove : function($video) {
+        $video.parent().remove();
+      }
+
+   });
+
+
+   addons.actions.video = VideoAction; 
+
+   return VideoAction;
+
+});
 define('skylark-widgets-wordpad/addons/toolbar/items/AlignmentButton',[
   "skylark-langx/langx",
   "skylark-domx-query",
@@ -71498,7 +71794,7 @@ define('skylark-widgets-wordpad/addons/toolbar/items/EmojiButton',[
       opts = langx.extend({
         imagePath: 'images/emoji/',
         images: EmojiButton.images
-      }, this.editor.opts.emoji || {});
+      }, this.editor.options.emoji || {});
       html = "";
       dir = opts.imagePath.replace(/\/$/, '') + '/';
       _ref = opts.images;
@@ -71948,6 +72244,7 @@ define('skylark-widgets-wordpad/main',[
   "./addons/actions/TitleAction", 
   "./addons/actions/UnderlineAction", 
   "./addons/actions/UnorderListAction",
+  "./addons/actions/VideoAction",
 
   "./addons/toolbar/items/AlignmentButton",
   "./addons/toolbar/items/ColorButton",
