@@ -69712,16 +69712,16 @@ define('skylark-widgets-wordpad/addons/actions/FullScreenAction',[
               height: _this.window.height() - $(_this.editor.toolbar._elm).outerHeight() - editablePadding
             });
           };
-        })(this)).resize();
+        })(this));
       } else {
-        this.window.off("resize.wordpad-fullscreen-" + this.editor.id).resize();
-        this._resize({
-          height: 'auto'
-        });
+        this.window.off("resize.wordpad-fullscreen-" + this.editor.id);
+        //this._resize({
+        //  height: 'auto'
+        //});
       }
       return this.setActive(isFullscreen);
     },
-
+    
     _resize : function(size) {
       return this.editable.height(size.height);
     }
@@ -83663,9 +83663,9 @@ define('skylark-codemirror/addon/beautify/beautify',[
       };
 
       if (typeof val === 'object')
-        cm.state.beautify = langx.mixin({}, defaultOptions, cmOptions, val);
+        cm.state.beautify = langx.mixin({}, defaultOptions, cmOptions, val,true);
       else
-        cm.state.beautify = langx.mixin({}, defaultOptions, cmOptions);
+        cm.state.beautify = langx.mixin({}, defaultOptions, cmOptions,true);
 
       if (cm.state.beautify.initialBeautify)
         beautify(cm);
@@ -86025,7 +86025,7 @@ define('skylark-widgets-wordpad/addons/actions/HtmlAction',[
       this.editor.htmlMode = this.editor.el.hasClass('wordpad-html');
       if (this.editor.htmlMode) {
         this.editor.hidePopover();
-        this.editor.textarea.val(this.beautifyHTML(this.editor.textarea.val()));
+        //this.editor.textarea.val(this.beautifyHTML(this.editor.textarea.val()));
         var  codemirrorOptions =  { 
           mode: 'htmlmixed', 
           lineWrapping: true, 
@@ -86055,6 +86055,9 @@ define('skylark-widgets-wordpad/addons/actions/HtmlAction',[
         };
        if (!this.CodeMirrorEditor) {
          this.CodeMirrorEditor = CodeMirror.fromTextArea(this.editor.textarea[0], codemirrorOptions);
+       } else {
+         this.CodeMirrorEditor.setValue(this.editor.textarea.val());
+         this.CodeMirrorEditor.beautify();
        }
        //this._resizeTextarea();
 
