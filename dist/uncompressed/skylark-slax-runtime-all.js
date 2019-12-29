@@ -86781,6 +86781,7 @@ define('skylark-widgets-wordpad/addons/actions/ImageAction',[
               $mask.remove();
               $img.removeData('mask');
             }
+            _this.editor.trigger('valuechanged');
             if (langx.isFunction(callback)) {
               return callback(img);
             }
@@ -88333,6 +88334,7 @@ define('skylark-widgets-wordpad/addons/actions/VideoAction',[
           $video.replaceWith($video1);
           $video = $video1;
         }
+        this.editor.trigger('valuechanged');
         this.popover.hide();
         return callback($video);
       },
@@ -88634,261 +88636,6 @@ define('skylark-widgets-wordpad/addons/toolbar/items/TitleButton',[
   return TitleButton;
 
 });
-define('skylark-widgets-base/Addon',[
-  "skylark-langx/langx",	
-  "skylark-langx/Evented",
-	"./base"
-],function(langx,Evented,base){
-
-	var Addon = Evented.inherit({
-
-		_construct : function(widget,options) {
-			this._widget = widget;
-            Object.defineProperty(this,"options",{
-              value :langx.mixin({},this.options,options,true)
-            });
-			if (this._init) {
-				this._init();
-			}
-		}
-
-	});
-
-	Addon.register = function(Widget) {
-		var categoryName = this.categoryName,
-			addonName = this.addonName;
-
-		if (categoryName && addonName) {
-			Widget.addons = Widget.addons || {};
-			Widget.addons[categoryName] = Widget.addons[categoryName] || {};
-			Widget.addons[categoryName][addonName] = this;
-		}
-	};
-
-	return base.Addon = Addon;
-
-});
-define('skylark-widgets-wordpad/addons/AutoSave',[
-  "skylark-domx-query",
-  "skylark-widgets-base/Addon",
-  "../Toolbar",
-  "../Wordpad",
-  "../i18n"
-],function($,Addon, Toolbar,Wordpad,i18n){ 
-
-
-  var AutoSave = Addon.inherit({
-    needFocus : false,
-
-    _init : function() {
-
-	    var currentVal, link, name, val;
-	    this.editor = this._module;
-	    if (!this.opts.autosave) {
-	      return;
-	    }
-	    this.name = typeof this.opts.autosave === 'string' ? this.opts.autosave : 'simditor';
-	    if (this.opts.autosavePath) {
-	      this.path = this.opts.autosavePath;
-	    } else {
-	      link = $("<a/>", {
-	        href: location.href
-	      });
-	      name = this.editor.textarea.data('autosave') || this.name;
-	      this.path = "/" + (link[0].pathname.replace(/\/$/g, "").replace(/^\//g, "")) + "/autosave/" + name + "/";
-	    }
-	    if (!this.path) {
-	      return;
-	    }
-	    this.editor.on("valuechanged", (function(_this) {
-	      return function() {
-	        return _this.storage.set(_this.path, _this.editor.getValue());
-	      };
-	    })(this));
-	    this.editor.el.closest('form').on('ajax:success.simditor-' + this.editor.id, (function(_this) {
-	      return function(e) {
-	        return _this.storage.remove(_this.path);
-	      };
-	    })(this));
-	    val = this.storage.get(this.path);
-	    if (!val) {
-	      return;
-	    }
-	    currentVal = this.editor.textarea.val();
-	    if (val === currentVal) {
-	      return;
-	    }
-	    if (this.editor.textarea.is('[data-autosave-confirm]')) {
-	      if (confirm(this.editor.textarea.data('autosave-confirm') || 'Are you sure to restore unsaved changes?')) {
-	        return this.editor.setValue(val);
-	      } else {
-	        return this.storage.remove(this.path);
-	      }
-	    } else {
-	      return this.editor.setValue(val);
-	    }
-
-    }
-
-  });
-
-
-  AutoSave.categoryName = "general";
-  AutoSave.addonName = 'autosave';
-
-  AutoSave.prototype.opts = {
-    autosave: true,
-    autosavePath: null
-  };
-
-
-  AutoSave.prototype.storage = {
-    supported: function() {
-      var error;
-      try {
-        localStorage.setItem('_storageSupported', 'yes');
-        localStorage.removeItem('_storageSupported');
-        return true;
-      } catch (_error) {
-        error = _error;
-        return false;
-      }
-    },
-    set: function(key, val, session) {
-      var storage;
-      if (session == null) {
-        session = false;
-      }
-      if (!this.supported()) {
-        return;
-      }
-      storage = session ? sessionStorage : localStorage;
-      return storage.setItem(key, val);
-    },
-    get: function(key, session) {
-      var storage;
-      if (session == null) {
-        session = false;
-      }
-      if (!this.supported()) {
-        return;
-      }
-      storage = session ? sessionStorage : localStorage;
-      return storage[key];
-    },
-    remove: function(key, session) {
-      var storage;
-      if (session == null) {
-        session = false;
-      }
-      if (!this.supported()) {
-        return;
-      }
-      storage = session ? sessionStorage : localStorage;
-      return storage.removeItem(key);
-    }
-  };
-
-  return Wordpad.addons.general.autoSave = AutoSave;
-
-});
-define('skylark-widgets-wordpad/addons/Dropzone',[
-  "skylark-domx-query",
-  "skylark-widgets-base/Addon",
-  "../Toolbar",
-  "../Wordpad",
-  "../i18n"
-],function($,Addon, Toolbar,Wordpad,i18n){ 
-
-
-  var Dropzone = Addon.inherit({
-  });
-
-  Dropzone.categoryName = "genernal";
-
-  Dropzone.addonName = "dropzone";
-
-
-  Dropzone.prototype._entered = 0;
-
-  Dropzone.prototype._init = function() {
-    this.editor = this._widget;
-    if (this.editor.uploader == null) {
-      //throw new Error("Can't work without 'simple-uploader' module");
-      return;
-    }
-    $(document.body).on("dragover", function(e) {
-      e.originalEvent.dataTransfer.dropEffect = "none";
-      return e.preventDefault();
-    });
-    $(document.body).on('drop', function(e) {
-      return e.preventDefault();
-    });
-    this.imageBtn = this.editor.toolbar.findButton("image");
-    return this.editor.body.on("dragover", function(e) {
-      e.originalEvent.dataTransfer.dropEffect = "copy";
-      e.stopPropagation();
-      return e.preventDefault();
-    }).on("dragenter", (function(_this) {
-      return function(e) {
-        if ((_this._entered += 1) === 1) {
-          _this.show();
-        }
-        e.preventDefault();
-        return e.stopPropagation();
-      };
-    })(this)).on("dragleave", (function(_this) {
-      return function(e) {
-        if ((_this._entered -= 1) <= 0) {
-          _this.hide();
-        }
-        e.preventDefault();
-        return e.stopPropagation();
-      };
-    })(this)).on("drop", (function(_this) {
-      return function(e) {
-        var file, imageFiles, _i, _j, _len, _len1, _ref;
-        imageFiles = [];
-        _ref = e.originalEvent.dataTransfer.files;
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          file = _ref[_i];
-          if (!_this.validFile(file)) {
-            alert("「" + file.name + "]」文件不是图片。");
-            _this.hide();
-            return false;
-          }
-          imageFiles.push(file);
-        }
-        for (_j = 0, _len1 = imageFiles.length; _j < _len1; _j++) {
-          file = imageFiles[_j];
-          _this.editor.uploader.upload(file, {
-            inline: true
-          });
-        }
-        _this.hide();
-        e.stopPropagation();
-        return e.preventDefault();
-      };
-    })(this));
-  };
-
-  Dropzone.prototype.show = function() {
-    return this.imageBtn.setActive(true);
-  };
-
-  Dropzone.prototype.hide = function() {
-    this.imageBtn.setActive(false);
-    return this._entered = 0;
-  };
-
-  Dropzone.prototype.validFile = function(file) {
-    return file.type.indexOf("image/") > -1;
-  };
-
-  return Wordpad.addons.general.dropzone = Dropzone;
-
-
-});
 define('skylark-widgets-wordpad/main',[
   "./Wordpad", 
   "./Action",
@@ -88928,10 +88675,7 @@ define('skylark-widgets-wordpad/main',[
   "./addons/toolbar/items/ColorButton",
   "./addons/toolbar/items/EmojiButton",
   "./addons/toolbar/items/TableButton",
-  "./addons/toolbar/items/TitleButton",
-
-  "./addons/AutoSave",
-  "./addons/Dropzone"
+  "./addons/toolbar/items/TitleButton"
 ],function(Wordpad){
 	
   return Wordpad;
