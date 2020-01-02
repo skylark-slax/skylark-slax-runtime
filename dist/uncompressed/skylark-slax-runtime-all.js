@@ -86102,6 +86102,7 @@ define('skylark-widgets-wordpad/addons/actions/HtmlAction',[
         lineNumbers: true
   
         };
+       this.editor.sync(); 
        if (!this.CodeMirrorEditor) {
          this.CodeMirrorEditor = CodeMirror.fromTextArea(this.editor.textarea[0], codemirrorOptions);
          this.CodeMirrorEditor.on("blur",function(){
@@ -88327,7 +88328,6 @@ define('skylark-widgets-wordpad/addons/actions/VideoAction',[
           }).attr({
             "width" : videoData.width + "px",
             "height" : videoData.height + "px",
-
             'class' : 'wordpad-video',
             "data-link" : videoData.link,
             "data-width" : videoData.width,
