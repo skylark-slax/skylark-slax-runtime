@@ -2511,7 +2511,7 @@ define('skylark-net-http/Xhr',[
                     user = options.user , 
                     password = options.password,
                     deferred = new Deferred(),
-                    contentType = isFormData ? false : 'application/x-www-form-urlencoded';
+                    contentType = options.contentType || (isFormData ? false : 'application/x-www-form-urlencoded');
 
                 if (xhrFields) {
                     for (name in xhrFields) {
@@ -4274,7 +4274,14 @@ define('skylark-domx-noder/noder',[
      * @param } parent
      */
     function createElement(tag, props, parent) {
-        var node = document.createElement(tag);
+        var node;
+
+        if (/svg/i.test(tag)) {
+            node = document.createElementNS("http://www.w3.org/2000/svg", tag)
+        } else {
+            node = document.createElement(tag);
+        }
+
         if (props) {
             for (var name in props) {
                 node.setAttribute(name, props[name]);
@@ -23742,8 +23749,9 @@ define('skylark-jquery/core',[
 	"skylark-domx-forms",
 	"skylark-domx-fx",
 	"skylark-domx-styler",
-	"skylark-domx-query"
-],function(skylark,langx,browser,noder,datax,eventer,finder,forms,fx,styler,query){
+	"skylark-domx-query",
+	"skylark-domx-scripter"
+],function(skylark,langx,browser,noder,datax,eventer,finder,forms,fx,styler,query,scripter){
 	var filter = Array.prototype.filter,
 		slice = Array.prototype.slice;
 
@@ -66545,13 +66553,13 @@ define('skylark-domx-contents/Formatter',[
         code: ['class']
       }, this.opts.allowedAttributes);
       this._allowedStyles = langx.extend({
-        span: ['color', 'font-size'],
-        b: ['color', 'font-size'],
-        i: ['color', 'font-size'],
-        strong: ['color', 'font-size'],
-        strike: ['color', 'font-size'],
-        u: ['color', 'font-size'],
-        p: ['margin-left', 'text-align'],
+        span: ['color', 'font-size','background-color','background'],
+        b: ['color', 'font-size','background-color','background'],
+        i: ['color', 'font-size','background-color','background'],
+        strong: ['color', 'font-size','background-color','background'],
+        strike: ['color', 'font-size','background-color','background'],
+        u: ['color', 'font-size','background-color','background'],
+        p: ['margin-left', 'text-align','background-color','background'],
         h1: ['margin-left', 'text-align'],
         h2: ['margin-left', 'text-align'],
         h3: ['margin-left', 'text-align'],
