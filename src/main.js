@@ -2,21 +2,15 @@ define([
 	"./slax",
 	"./cache",
 	"skylark-langx",
-	"skylark-widgets-shells",
+	"skylark-domx",
+	"skylark-domx-files",
+	"skylark-domx-images",
+	"skylark-domx-colorpicker",
+	"skylark-domx-gradienter",
 	"skylark-jquery",
 	"skylark-ajaxfy-spa",
 	"skylark-data-entities",
-	"skylark-data-streams",
-	"skylark-data-zip",
-	"skylark-data-zip",
-	"skylark-domx-images",
-	"skylark-widgets-colorpicker",
-	"skylark-widgets-gradienter",
-	"skylark-widgets-hierarchy",
-	"skylark-widgets-iconpicker",
-	"skylark-widgets-repeater",
-	"skylark-widgets-uploads",
-	"skylark-widgets-wordpad"
+	"skylark-data-streams"
 ],function(slax){
 	return slax;
 })
