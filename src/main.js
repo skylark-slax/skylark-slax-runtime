@@ -10,7 +10,7 @@ define([
 	"skylark-jquery",
 	"skylark-ajaxfy-spa",
 	"skylark-data-entities",
-	"skylark-data-streams"
+	"skylark-io-streams"
 ],function(slax){
 	return slax;
 })

@@ -4890,6 +4890,9 @@ function removeSelfClosingTags(xml) {
         return new RegExp("^(" + (blockNodes.join('|')) + ")$").test(node.nodeName.toLowerCase());
     }
 
+    function isActive (elem) {
+            return elem === document.activeElement && (elem.type || elem.href);
+    }
 
     /*   
      * Get the owner document object for the specified element.
@@ -5013,6 +5016,18 @@ function removeSelfClosingTags(xml) {
     }
 
 
+    function selectable(elem, selectable) {
+        if (elem === undefined || elem.style === undefined)
+            return;
+        elem.onselectstart = selectable ? function () {
+            return false;
+        } : function () {
+        };
+        elem.style.MozUserSelect = selectable ? 'auto' : 'none';
+        elem.style.KhtmlUserSelect = selectable ? 'auto' : 'none';
+        elem.unselectable = selectable ? 'on' : 'off';
+    }
+
     /*   
      * traverse the specified node and its descendants, perform the callback function on each
      * @param {Node} node
@@ -5086,6 +5101,12 @@ function removeSelfClosingTags(xml) {
     langx.mixin(noder, {
         active  : activeElement,
 
+        after: after,
+
+        append: append,
+
+        before: before,
+
         blur : function(el) {
             el.blur();
         },
@@ -5095,14 +5116,16 @@ function removeSelfClosingTags(xml) {
         },
 
         clone: clone,
+
+        contains: contains,
+
         contents: contents,
 
         createElement: createElement,
 
         createFragment: createFragment,
 
-        contains: contains,
-
+     
         createTextNode: createTextNode,
 
         doc: doc,
@@ -5114,6 +5137,8 @@ function removeSelfClosingTags(xml) {
         focusable: focusable,
 
         html: html,
+
+        isActive,
 
         isChildOf: isChildOf,
 
@@ -5131,13 +5156,7 @@ function removeSelfClosingTags(xml) {
 
         ownerWindow: ownerWindow,
 
-        after: after,
-
-        before: before,
-
         prepend: prepend,
-
-        append: append,
 
         reflow: reflow,
 
@@ -5146,6 +5165,8 @@ function removeSelfClosingTags(xml) {
         removeChild : removeChild,
 
         replace: replace,
+
+        selectable,
 
         traverse: traverse,
 
@@ -10142,6 +10163,27 @@ define('skylark-domx-geom/geom',[
         };
     }
 
+
+    function fullCover(elem, hor, vert) {
+        let vertical = vert;
+        let horizontal = hor;
+        if (langx.isUndefined(horizontal)) {
+            horizontal = true;
+        }
+        if (langx.isUndefined(vertical)) {
+            vertical = true;
+        }
+        elem.style.position = 'absolute';
+        if (horizontal) {
+            elem.style.left = 0;
+            elem.style.right = 0;
+        }
+        if (vertical) {
+            elem.style.top = 0;
+            elem.style.bottom = 0;
+        }
+    }
+
     /*
      * Get the document size.
      * @param {HTMLDocument} doc
@@ -10523,6 +10565,8 @@ define('skylark-domx-geom/geom',[
         clientWidth: clientWidth,
 
         contentRect: contentRect,
+
+        fullCover,
 
         getDocumentSize: getDocumentSize,
 
@@ -21202,14 +21246,14 @@ define('skylark-data-entities/main',[
 });
 define('skylark-data-entities', ['skylark-data-entities/main'], function (main) { return main; });
 
-define('skylark-data-streams/streams',[
+define('skylark-io-streams/streams',[
     "skylark-langx/skylark"
 ], function(skylark) {
 
     return skylark.attach("data.streams",{});
 });
 
-define('skylark-data-streams/Stream',[
+define('skylark-io-streams/Stream',[
     "skylark-langx/skylark",
     "skylark-langx/langx",
     "./streams"
@@ -21286,7 +21330,7 @@ define('skylark-data-streams/Stream',[
 	
 });
 
-define('skylark-data-streams/DecodeStream',[
+define('skylark-io-streams/DecodeStream',[
     "skylark-langx/skylark",
     "skylark-langx/langx",
     "./streams",
@@ -21392,7 +21436,7 @@ define('skylark-data-streams/DecodeStream',[
 
 });
 
-define('skylark-data-streams/Ascii85Stream',[
+define('skylark-io-streams/Ascii85Stream',[
     "skylark-langx/skylark",
     "skylark-langx/langx",
     "./streams",
@@ -21473,7 +21517,7 @@ define('skylark-data-streams/Ascii85Stream',[
 
 });
 
-define('skylark-data-streams/AsciiHexStream',[
+define('skylark-io-streams/AsciiHexStream',[
     "skylark-langx/skylark",
     "skylark-langx/langx",
     "./streams",
@@ -21553,7 +21597,7 @@ define('skylark-data-streams/AsciiHexStream',[
     return streams.AsciiHexStream = AsciiHexStream;
 });
 
-define('skylark-data-streams/ChunkedStream',[
+define('skylark-io-streams/ChunkedStream',[
     "skylark-langx/skylark",
     "skylark-langx/langx",
     "./streams",
@@ -21755,7 +21799,7 @@ define('skylark-data-streams/ChunkedStream',[
 });
 
 
-define('skylark-data-streams/DecryptStream',[
+define('skylark-io-streams/DecryptStream',[
     "skylark-langx/skylark",
     "skylark-langx/langx",
     "./streams",
@@ -21796,7 +21840,7 @@ define('skylark-data-streams/DecryptStream',[
 });
 
 
-define('skylark-data-streams/FakeStream',[
+define('skylark-io-streams/FakeStream',[
     "skylark-langx/skylark",
     "skylark-langx/langx",
     "./streams",
@@ -21846,7 +21890,7 @@ define('skylark-data-streams/FakeStream',[
 });
 
 
-define('skylark-data-streams/FlateStream',[
+define('skylark-io-streams/FlateStream',[
     "skylark-langx/skylark",
     "skylark-langx/langx",
     "./streams",
@@ -22198,7 +22242,7 @@ define('skylark-data-streams/FlateStream',[
     return streams.FlateStream = FlateStream;
 });
 
-define('skylark-data-streams/LZWStream',[
+define('skylark-io-streams/LZWStream',[
     "skylark-langx/skylark",
     "skylark-langx/langx",
     "./streams",
@@ -22336,7 +22380,7 @@ define('skylark-data-streams/LZWStream',[
 });
 
 
-define('skylark-data-streams/PredictorStream',[
+define('skylark-io-streams/PredictorStream',[
     "skylark-langx/skylark",
     "skylark-langx/langx",
     "./streams",
@@ -22522,7 +22566,7 @@ define('skylark-data-streams/PredictorStream',[
 });
 
 
-define('skylark-data-streams/StreamsSequenceStream',[
+define('skylark-io-streams/StreamsSequenceStream',[
     "skylark-langx/skylark",
     "skylark-langx/langx",
     "./streams",
@@ -22556,7 +22600,7 @@ define('skylark-data-streams/StreamsSequenceStream',[
     return streams.StreamsSequenceStream = StreamsSequenceStream;
 });
 
-define('skylark-data-streams/StringStream',[
+define('skylark-io-streams/StringStream',[
     "skylark-langx/skylark",
     "skylark-langx/langx",
     "./streams",
@@ -22580,7 +22624,7 @@ define('skylark-data-streams/StringStream',[
 
 });
 
-define('skylark-data-streams/main',[
+define('skylark-io-streams/main',[
     "./streams",
     "./Ascii85Stream",
     "./AsciiHexStream",
@@ -22598,7 +22642,7 @@ define('skylark-data-streams/main',[
 
 	return streams;
 });
-define('skylark-data-streams', ['skylark-data-streams/main'], function (main) { return main; });
+define('skylark-io-streams', ['skylark-io-streams/main'], function (main) { return main; });
 
 define('skylark-slax-runtime/main',[
 	"./slax",
@@ -22612,7 +22656,7 @@ define('skylark-slax-runtime/main',[
 	"skylark-jquery",
 	"skylark-ajaxfy-spa",
 	"skylark-data-entities",
-	"skylark-data-streams"
+	"skylark-io-streams"
 ],function(slax){
 	return slax;
 });
