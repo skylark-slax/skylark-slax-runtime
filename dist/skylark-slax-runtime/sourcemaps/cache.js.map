@@ -1,0 +1,1 @@
+{"version":3,"sources":["cache.js"],"names":["define","slax","_cache","cache"],"mappings":";;;;;;;AAAAA,QACC,SACA,0BACC,SAASC,EAAKC,GAIf,OAAOD,EAAKE","file":"../cache.js","sourcesContent":["define([\r\n\t\"./slax\",\r\n\t\"skylark-storages-cache\"\r\n],function(slax,_cache){\r\n\t//local\r\n\t//page\r\n\t//session\r\n\treturn slax.cache = {};\r\n})"]}
