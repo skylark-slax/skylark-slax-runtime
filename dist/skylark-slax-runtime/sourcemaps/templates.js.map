@@ -1,1 +1,0 @@
-{"version":3,"sources":["templates.js"],"names":["define","slax","templates"],"mappings":";;;;;;;AAAAA,QACC,UACC,SAASC,GAEV,OAAOA,EAAKC","file":"../templates.js","sourcesContent":["define([\r\n\t\"./slax\"\r\n],function(slax){\r\n        \r\n\treturn slax.templates = {};\r\n})"]}
