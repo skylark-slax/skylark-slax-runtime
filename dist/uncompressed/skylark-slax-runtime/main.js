@@ -1,6 +1,6 @@
 define([
 	"./slax",
-	"./cache",
+	"./caches",
 	"skylark-langx",
 	"skylark-domx",
 	"skylark-domx-files",

@@ -5,5 +5,5 @@
  * @link https://github.com/skylark-slax/skylark-slax-runtime/
  * @license MIT
  */
-define(["./slax","skylark-storages-cache"],function(e,a){return e.cache={}});
-//# sourceMappingURL=sourcemaps/cache.js.map
+define(["./slax","skylark-io-caches"],function(c,e){return c.caches=e});
+//# sourceMappingURL=sourcemaps/caches.js.map

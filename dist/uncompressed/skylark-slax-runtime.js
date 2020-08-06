@@ -211,18 +211,18 @@ define('skylark-slax-runtime/slax',[
     return skylark.attach("slax",slax);
 
 });
-define('skylark-slax-runtime/cache',[
+define('skylark-slax-runtime/caches',[
 	"./slax",
-	"skylark-storages-cache"
-],function(slax,_cache){
+	"skylark-io-caches"
+],function(slax,caches){
 	//local
 	//page
 	//session
-	return slax.cache = {};
+	return slax.caches = caches;
 });
 define('skylark-slax-runtime/main',[
 	"./slax",
-	"./cache",
+	"./caches",
 	"skylark-langx",
 	"skylark-domx",
 	"skylark-domx-files",
