@@ -1,4 +1,4 @@
-define([
+cdefine([
 	"./slax"
 ],function(slax){
         

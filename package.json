@@ -10,7 +10,7 @@
   "homepage": "https://github.com/skylark-slax/skylark-slax-runtime/",
   "author": "Hudaokeji, Inc.",
   "scripts": {
-    "build": "sbundle build ."
+    "build": "slib build ."
   },
   "repository": {
     "type": "git",
@@ -21,8 +21,9 @@
   },
   "license": "MIT",
   "dependencies": {
-    "skylark-ajaxfy-routers": "git+https://github.com/skylark-ajaxfy/skylark-ajaxfy-routers.git#master",
-    "skylark-ajaxfy-spa": "git+https://github.com/skylark-ajaxfy/skylark-ajaxfy-spa.git#master",
+    "skylark-ajaxify-routers": "git+https://github.com/skylark-ajaxify/skylark-ajaxify-routers.git#master",
+    "skylark-ajaxify-shells": "git+https://github.com/skylark-ajaxify/skylark-ajaxify-shells.git#master",
+    "skylark-ajaxify-spa": "git+https://github.com/skylark-ajaxify/skylark-ajaxify-spa.git#master",
     "skylark-data-entities": "git+https://github.com/skylark-data/skylark-data-entities.git#master",
     "skylark-domx": "git+https://github.com/skylark-domx/skylark-domx.git#master",
     "skylark-domx-colors": "git+https://github.com/skylark-domx/skylark-domx-colors.git#master",
@@ -36,5 +37,27 @@
   },
   "engines": {
     "node": ">=0.10.1"
+  },
+  "skylarkjs": {
+    "directories": {
+      "dependencies": "./node_modules"
+    },
+    "secondaries": {},
+    "build": {
+      "prepare": {
+        "texttojs": [
+          "html",
+          "json",
+          "css"
+        ],
+        "jsxtojs": false,
+        "es6toamd": false,
+        "cjstoamd": false
+      },
+      "bundles": {
+        "all": true
+      }
+    }
   }
+
 }

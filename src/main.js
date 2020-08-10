@@ -7,7 +7,8 @@ define([
 	"skylark-domx-images",
 	"skylark-domx-colors",
 	"skylark-jquery",
-	"skylark-ajaxfy-spa",
+	"skylark-ajaxify-spa",
+	"skylark-ajaxify-shells",
 	"skylark-data-entities",
 	"skylark-io-streams"
 ],function(slax){
