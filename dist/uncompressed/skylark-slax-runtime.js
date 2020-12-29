@@ -223,16 +223,6 @@ define('skylark-slax-runtime/caches',[
 define('skylark-slax-runtime/main',[
 	"./slax",
 	"./caches",
-	"skylark-langx",
-	"skylark-domx",
-	"skylark-domx-files",
-	"skylark-domx-images",
-	"skylark-domx-colors",
-	"skylark-jquery",
-	"skylark-ajaxify-spa",
-	"skylark-ajaxify-shells",
-	"skylark-data-entities",
-	"skylark-io-streams"
 ],function(slax){
 	return slax;
 });
