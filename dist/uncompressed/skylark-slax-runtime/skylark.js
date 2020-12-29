@@ -1,5 +1,5 @@
 define([
-	"./slax"
+	"./slax",
 	"skylark-langx",
 	"skylark-domx",
 	"skylark-domx-files",

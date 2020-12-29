@@ -1,1 +1,1 @@
-{"version":3,"sources":["main.js"],"names":["define","slax"],"mappings":";;;;;;;AAAAA,QACC,SACA,YACC,SAASC,GACV,OAAOA","file":"../main.js","sourcesContent":["define([\r\n\t\"./slax\",\r\n\t\"./caches\",\r\n],function(slax){\r\n\treturn slax;\r\n})"]}
+{"version":3,"sources":["main.js"],"names":["define","slax"],"mappings":";;;;;;;AAAAA,QACC,SACA,WACA,aACC,SAASC,GACV,OAAOA","file":"../main.js","sourcesContent":["define([\r\n\t\"./slax\",\r\n\t\"./caches\",\r\n\t\"./skylark\"\r\n],function(slax){\r\n\treturn slax;\r\n})"]}
