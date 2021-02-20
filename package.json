@@ -29,6 +29,7 @@
     "skylark-domx-colors": "git+https://github.com/skylark-domx/skylark-domx-colors.git#master",
     "skylark-domx-files": "git+https://github.com/skylark-domx/skylark-domx-files.git#master",
     "skylark-domx-images": "git+https://github.com/skylark-domx/skylark-domx-images.git#master",
+    "skylark-domx-plugins-colors": "git+https://github.com/skylark-domx/skylark-domx-colors.git#master",
     "skylark-io-caches": "git+https://github.com/skylark-io/skylark-io-caches.git#master",
     "skylark-io-streams": "git+https://github.com/skylark-io/skylark-io-streams.git#master",
     "skylark-jquery": "git+https://github.com/skylark-integration/skylark-jquery.git#master",
