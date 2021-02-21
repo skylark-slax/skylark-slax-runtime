@@ -4,7 +4,7 @@ define([
 	"skylark-domx",
 	"skylark-domx-files",
 	"skylark-domx-images",
-	"skylark-domx-colors",
+	"skylark-domx-plugins-colors",
 	"skylark-jquery",
 	"skylark-ajaxify-spa",
 	"skylark-ajaxify-shells",
