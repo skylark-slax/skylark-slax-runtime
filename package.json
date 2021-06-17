@@ -21,9 +21,9 @@
   },
   "license": "MIT",
   "dependencies": {
-    "skylark-ajaxify-routers": "git+https://github.com/skylark-ajaxify/skylark-ajaxify-routers.git#master",
-    "skylark-ajaxify-shells": "git+https://github.com/skylark-ajaxify/skylark-ajaxify-shells.git#master",
-    "skylark-ajaxify-spa": "git+https://github.com/skylark-ajaxify/skylark-ajaxify-spa.git#master",
+    "skylark-appify-routers": "git+https://github.com/skylark-appify/skylark-appify-routers.git#master",
+    "skylark-appify-shells": "git+https://github.com/skylark-appify/skylark-appify-shells.git#master",
+    "skylark-appify-spa": "git+https://github.com/skylark-appify/skylark-appify-spa.git#master",
     "skylark-data-entities": "git+https://github.com/skylark-data/skylark-data-entities.git#master",
     "skylark-domx": "git+https://github.com/skylark-domx/skylark-domx.git#master",
     "skylark-domx-files": "git+https://github.com/skylark-domx/skylark-domx-files.git#master",

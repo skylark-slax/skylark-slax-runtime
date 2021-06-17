@@ -101,7 +101,8 @@ define('skylark-langx-ns/_attach',[],function(){
             name = path[i++];
         }
 
-        return ns[name] = obj2;
+        ns[name] = obj2 || {};
+        return ns[name];
     }
 });
 define('skylark-langx-ns/ns',[
@@ -1415,6 +1416,10 @@ define('skylark-langx-arrays/arrays',[
         return -1;
     }
 
+    function indexOf(array,item) {
+      return array.indexOf(item);
+    }
+
     function makeArray(obj, offset, startWith) {
        if (isArrayLike(obj) ) {
         return (startWith || []).concat(Array.prototype.slice.call(obj, offset || 0));
@@ -1428,6 +1433,10 @@ define('skylark-langx-arrays/arrays',[
     function forEach (arr, fn) {
       if (arr.forEach) return arr.forEach(fn)
       for (var i = 0; i < arr.length; i++) fn(arr[i], i);
+    }
+
+    function last(arr) {
+        return arr[arr.length - 1];     
     }
 
     function map(elements, callback) {
@@ -1506,9 +1515,13 @@ define('skylark-langx-arrays/arrays',[
 
         inArray: inArray,
 
+        indexOf : indexOf,
+
         makeArray: makeArray, // 
 
         toArray : makeArray,
+
+        last : last,
 
         merge : merge,
 
@@ -1556,31 +1569,55 @@ define('skylark-langx-funcs/funcs',[
     });
 });
 define('skylark-langx-funcs/defer',[
+    "skylark-langx-types",
     "./funcs"
-],function(funcs){
-    function defer(fn,args,context) {
+],function(types,funcs){
+
+    function defer(fn,trigger,args,context) {
         var ret = {
-            stop : null
+            cancel : null
         },
-        id,
         fn1 = fn;
+
+        if (!types.isNumber(trigger) && !types.isFunction(trigger)) {
+            context = args;
+            args = trigger;
+            trigger = 0;
+        }
 
         if (args) {
             fn1 = function() {
                 fn.apply(context,args);
             };
         }
-        if (requestAnimationFrame) {
-            id = requestAnimationFrame(fn1);
-            ret.stop = function() {
-                return cancelAnimationFrame(id);
-            };
+
+        if (types.isFunction(trigger)) {
+            var canceled = false;
+            trigger(function(){
+                if (!canceled) {
+                    fn1();
+                }
+            });
+
+            ret.cancel = function() {
+                canceled = true;
+            }
+
         } else {
-            id = setTimeoutout(fn1);
-            ret.stop = function() {
-                return clearTimeout(id);
-            };
+            var  id;
+            if (trigger == 0 && requestAnimationFrame) {
+                id = requestAnimationFrame(fn1);
+                ret.cancel = function() {
+                    return cancelAnimationFrame(id);
+                };
+            } else {
+                id = setTimeout(fn1,trigger);
+                ret.cancel = function() {
+                    return clearTimeout(id);
+                };
+            }            
         }
+
         return ret;
     }
 
@@ -1593,37 +1630,37 @@ define('skylark-langx-funcs/debounce',[
    
     function debounce(fn, wait,useAnimationFrame) {
         var timeout,
-            defered;
+            defered,
+            debounced = function () {
+                var context = this, args = arguments;
+                var later = function () {
+                    timeout = null;
+                    if (useAnimationFrame) {
+                        defered = defer(fn,args,context);
+                    } else {
+                        fn.apply(context, args);
+                    }
+                };
 
-        return function () {
-            var context = this, args = arguments;
-            var later = function () {
-                timeout = null;
-                if (useAnimationFrame) {
-                    defered = defer(fn,args,context);
-                } else {
-                    fn.apply(context, args);
-                }
-            };
+                cancel();
+                timeout = setTimeout(later, wait);
 
-            function stop() {
+                return {
+                    cancel 
+                };
+            },
+            cancel = debounced.cancel = function () {
                 if (timeout) {
                     clearTimeout(timeout);
                 }
                 if (defered) {
-                    defered.stop();
+                    defered.cancel();
                 }
                 timeout = void 0;
                 defered = void 0;
-            }
-
-            stop();
-            timeout = setTimeout(later, wait);
-
-            return {
-                stop 
             };
-        };
+
+        return debounced;
     }
 
     return funcs.debounce = debounce;
@@ -2738,12 +2775,17 @@ define('skylark-langx-events/Listener',[
                 }
 
                 var listeningEvents = listening.events;
+
                 for (var eventName in listeningEvents) {
                     if (event && event != eventName) {
                         continue;
                     }
 
                     var listeningEvent = listeningEvents[eventName];
+
+                    if (!listeningEvent) { 
+                        continue;
+                    }
 
                     for (var j = 0; j < listeningEvent.length; j++) {
                         if (!callback || callback == listeningEvent[i]) {
@@ -2911,13 +2953,15 @@ define('skylark-langx-events/Emitter',[
                     if (ns && (!listener.ns ||  !listener.ns.startsWith(ns))) {
                         continue;
                     }
-                    if (e.data) {
-                        if (listener.data) {
-                            e.data = mixin({}, listener.data, e.data);
-                        }
-                    } else {
-                        e.data = listener.data || null;
+
+                    if (listener.data) {
+                        e.data = mixin({}, listener.data, e.data);
                     }
+                    if (args.length == 2 && isPlainObject(args[1])) {
+                        e.data = e.data || {};
+                        mixin(e.data,args[1]);
+                    }
+
                     listener.fn.apply(listener.ctx, args);
                     if (listener.one) {
                         listeners[i] = null;
@@ -2939,6 +2983,10 @@ define('skylark-langx-events/Emitter',[
         },
 
         off: function(events, callback) {
+            if (!events) {
+              this._hub = null;
+              return;
+            }
             var _hub = this._hub || (this._hub = {});
             if (isString(events)) {
                 events = events.split(/\s/)
@@ -3022,6 +3070,80 @@ define('skylark-langx-emitter/Evented',[
 ],function(Emitter){
 	return Emitter;
 });
+define('skylark-langx-urls/urls',[
+  "skylark-langx-ns"
+],function(skylark){
+
+
+    return skylark.attach("langx.urls",{
+
+    });
+});
+
+
+
+define('skylark-langx-urls/parseUrl',[
+    './urls'
+], function (urls) {
+    'use strict';
+    const parseUrl = function (url) {
+        const props = [
+            'protocol',
+            'hostname',
+            'port',
+            'pathname',
+            'search',
+            'hash',
+            'host'
+        ];
+        let a = document.createElement('a');
+        a.href = url;
+        const addToBody = a.host === '' && a.protocol !== 'file:';
+        let div;
+        if (addToBody) {
+            div = document.createElement('div');
+            div.innerHTML = `<a href="${ url }"></a>`;
+            a = div.firstChild;
+            div.setAttribute('style', 'display:none; position:absolute;');
+            document.body.appendChild(div);
+        }
+        const details = {};
+        for (let i = 0; i < props.length; i++) {
+            details[props[i]] = a[props[i]];
+        }
+        if (details.protocol === 'http:') {
+            details.host = details.host.replace(/:80$/, '');
+        }
+        if (details.protocol === 'https:') {
+            details.host = details.host.replace(/:443$/, '');
+        }
+        if (!details.protocol) {
+            details.protocol = window.location.protocol;
+        }
+        if (addToBody) {
+            document.body.removeChild(div);
+        }
+        return details;
+    };
+
+    return urls.parseUrl = parseUrl;
+});
+define('skylark-langx-urls/isCrossOrigin',[
+    './urls',
+    "./parseUrl"
+], function (urls,parseUrl) {
+    'use strict';
+
+    const isCrossOrigin = function (url, winLoc = window.location) {
+        const urlInfo = parseUrl(url);
+        const srcProtocol = urlInfo.protocol === ':' ? winLoc.protocol : urlInfo.protocol;
+        const crossOrigin = srcProtocol + urlInfo.host !== winLoc.protocol + winLoc.host;
+        return crossOrigin;
+    };
+
+    return urls.isCrossOrigin = isCrossOrigin;
+
+});
 define('skylark-net-http/http',[
   "skylark-langx-ns/ns",
 ],function(skylark){
@@ -3035,8 +3157,9 @@ define('skylark-net-http/Xhr',[
   "skylark-langx-funcs",
   "skylark-langx-async/Deferred",
   "skylark-langx-emitter/Evented",
+  "skylark-langx-urls/isCrossOrigin",
   "./http"
-],function(skylark,types,objects,arrays,funcs,Deferred,Evented,http){
+],function(skylark,types,objects,arrays,funcs,Deferred,Evented,isCrossOrigin,http){
 
     var each = objects.each,
         mixin = objects.mixin,
@@ -3107,7 +3230,7 @@ define('skylark-net-http/Xhr',[
             traditional : false,
             
             xhrFields : {
-                withCredentials : false
+                ///withCredentials : false
             }
         };
 
@@ -3249,8 +3372,9 @@ define('skylark-net-http/Xhr',[
                             } else if (dataType == "blob") {
                                 result = xhr.response; // new Blob([xhr.response]);
                             } else if (dataType == "arraybuffer") {
-                                result = xhr.reponse;
-                            } else if (dataType == "text") {
+                                result = xhr.response;
+                            } else {
+                                //if (dataType == "text" || dataType=="html")
                                 result = xhr.responseText;
                             }
                         } catch (e) { 
@@ -3312,7 +3436,9 @@ define('skylark-net-http/Xhr',[
                 }
 
                 if(!headers || !('X-Requested-With' in headers)){
-                    //xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest'); // del for s02
+                    if (!isCrossOrigin(url)) {// for s02
+                      xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest'); 
+                    }
                 }
 
 
@@ -11167,10 +11293,21 @@ define('skylark-domx-browser/support/fullscreen',[
 
     return browser.support.fullscreen;
 });
+define('skylark-domx-browser/support/touch',[
+	"../browser"
+],function(browser){
+
+    function supportTouch() {
+        return !!('ontouchstart' in window || window.DocumentTouch && document instanceof window.DocumentTouch);
+    }
+
+    return browser.support.tocuh = supportTouch();
+});
 define('skylark-domx-browser/main',[
 	"./browser",
 	"./support/css3",
-	"./support/fullscreen"
+	"./support/fullscreen",
+	"./support/touch"
 ],function(browser){
 	return browser;
 });
@@ -11492,7 +11629,7 @@ function removeSelfClosingTags(xml) {
         if (el === false) {
             return browser.exitFullscreen.apply(document);
         } else if (el) {
-            return browser.requestFullscreen.apply(el);
+            return el[browser.support.fullscreen.requestFullscreen]();
             fulledEl = el;
         } else {
             return (
@@ -15681,6 +15818,23 @@ define('skylark-domx-eventer/eventer',[
         return this;
     }
 
+    var focusedQueue = [],
+        focuser = langx.loop(function(){
+            for (var i = 0; i<focusedQueue.length; i++) {
+                trigger(focusedQueue[i],"focused");
+            }
+            focusedQueue = [];
+        });
+
+    focuser.start();
+
+
+    function focused(elm) {
+        if (!focusedQueue.includes(elm)) {
+            focusedQueue.push(elm)
+        }
+    }
+
     /*   
      * Remove an event handler for one or more events from the specified element.
      * @param {HTMLElement} elm  
@@ -15799,8 +15953,8 @@ define('skylark-domx-eventer/eventer',[
      * @param {Anything Optional} data
      * @param {Function} callback
      */
-    function one(elm, events, selector, data, callback) {
-        on(elm, events, selector, data, callback, 1);
+    function one(...args) {
+        on(...args, true);
 
         return this;
     }
@@ -15871,11 +16025,11 @@ define('skylark-domx-eventer/eventer',[
 
 
     function resized(elm) {
-        if (!resizedQueue.contains(elm)) {
+        if (!resizedQueue.includes(elm)) {
             resizedQueue.push(elm)
         }
-
     }
+
 
     var keyCodeLookup = {
         "backspace": 8,
@@ -15995,6 +16149,8 @@ define('skylark-domx-eventer/eventer',[
         clear,
         
         create: createEvent,
+
+        focused,
 
         keys: keyCodeLookup,
 
@@ -17168,7 +17324,11 @@ define('skylark-domx-geom/geom',[
         return (cachedScrollbarWidth = w1 - w2);
     }
 
-    
+
+    function hasScrollbar() {
+        return document.body.scrollHeight > (window.innerHeight || document.documentElement.clientHeight);
+    }
+
     /*
      * Get the widths of each border of the specified element.
      * @param {HTMLElement} elm
@@ -17379,6 +17539,24 @@ define('skylark-domx-geom/geom',[
         }
     }
 
+
+
+    function inview(elm, cushion) {
+        function calibrate(coords, cushion) {
+            var o = {};
+            cushion = +cushion || 0;
+            o.width = (o.right = coords.right + cushion) - (o.left = coords.left - cushion);
+            o.height = (o.bottom = coords.bottom + cushion) - (o.top = coords.top - cushion);
+            return o;
+        }
+
+        var r = calibrate(boundingRect(elm), cushion),
+            vsize = viewportSize();
+
+        return !!r && r.bottom >= 0 && r.right >= 0 && r.top <= vsize.height && r.left <= vsize.width;
+    }
+
+
     /*
      * Get the widths of each margin of the specified element.
      * @param {HTMLElement} elm
@@ -17521,14 +17699,28 @@ define('skylark-domx-geom/geom',[
                 left: offset.left - parentOffset.left - pbex.left - mex.left
             }
         } else {
+            var // Get *real* offsetParent
+                parent = offsetParent(elm);
+
             var props = {
                 top: coords.top,
                 left: coords.left
+            };
+
+            if (langx.isDefined(props.top)) {
+                props.top = props.top + (scrollTop(parent) || 0);
             }
+
+            if (langx.isDefined(props.left)) {
+                props.left = props.left + (scrollLeft(parent) || 0);
+            } 
+
 
             if (styler.css(elm, "position") == "static") {
                 props['position'] = "relative";
             }
+
+
             styler.css(elm, props);
             return this;
         }
@@ -17613,6 +17805,8 @@ define('skylark-domx-geom/geom',[
     function scrollLeft(elm, value) {
         if (elm.nodeType === 9) {
             elm = elm.defaultView;
+        } else if (elm == document.body) {
+            elm = document.scrollingElement  || document.documentElement;
         }
         var hasScrollLeft = "scrollLeft" in elm;
         if (value === undefined) {
@@ -17634,7 +17828,10 @@ define('skylark-domx-geom/geom',[
     function scrollTop(elm, value) {
         if (elm.nodeType === 9) {
             elm = elm.defaultView;
+        } else if (elm == document.body) {
+            elm = document.scrollingElement  || document.documentElement;
         }
+
         var hasScrollTop = "scrollTop" in elm;
 
         if (value === undefined) {
@@ -17698,6 +17895,14 @@ define('skylark-domx-geom/geom',[
             return this;
         }
     }
+
+
+    function viewportSize(win) {
+        win = win || window;
+
+        return boundingRect(win);
+    }
+
     /*
      * Get or set the size of the specified element border box.
      * @param {HTMLElement} elm
@@ -17773,7 +17978,11 @@ define('skylark-domx-geom/geom',[
 
         getDocumentSize: getDocumentSize,
 
+        hasScrollbar,
+
         height: height,
+
+        inview,
 
         marginExtents: marginExtents,
 
@@ -17808,6 +18017,8 @@ define('skylark-domx-geom/geom',[
         size: size,
 
         testAxis,
+
+        viewportSize,
 
         width: width
     });
@@ -18680,9 +18891,10 @@ define('skylark-domx-fx/bounce',[
 });
 define('skylark-domx-fx/emulateTransitionEnd',[
     "skylark-langx/langx",
+    "skylark-domx-browser",
     "skylark-domx-eventer",
     "./fx"
-],function(langx,eventer,fx) {
+],function(langx,browser,eventer,fx) {
     
     function emulateTransitionEnd(elm,duration) {
         var called = false;
@@ -19554,393 +19766,440 @@ define('skylark-domx/geom',[
 
     return geom;
 });
+define('skylark-domx-iframes/iframes',[
+	"skylark-langx-ns"
+],function(skylark){
+	return skylark.attach("domx.iframes");
+});
+define('skylark-domx-iframes/create',[
+  "skylark-domx-noder",
+  "./iframes"
+],function(noder,iframes){
+  'use strict';
+
+  function create(options,parentElm) {
+  	  options = options || {
+  	  };
+
+  	  let props = {},
+  	  	  attrs = {};
+
+  	  if (options.id) {
+  	  	props.id = options.id;
+  	  };
+
+  	  if (options.url) {
+  	  	props.src = options.url;
+  	  };
+
+  	  if (options.style) {
+  	  	props.style = options.style;
+  	  }
+
+  	  if (options.onload) {
+  	  	props.onload = options.onload;
+  	  }
+
+  	  if (options.onerror) {
+  	  	props.onload = options.onerror;
+  	  }
+
+  	  if (options.className) {
+  	  	props.className = options.className;
+  	  }
+
+  	  if (options.sandbox) {
+  	  	attrs.sandbox = options.sandbox;
+  	  }
+
+  	  if (options.frameBorder) {
+  	  	attrs.frameBorder = options.frameBorder;  	  	
+  	  }
+
+  	  if (options.name) {
+  	  	attrs.name = options.name;
+  	  }
+
+  	  /*
+      // Basic mode
+      // This adds the runner iframe to the page. It's only run once.
+      //if (!$live.find('iframe').length) {
+        iframe = noder.create("iframe",{
+          ///iframe.src = jsbin.runner;
+          src : this.options.runnerUrl
+        },{
+          "class" : "stretch",
+          "sandbox", "allow-modals allow-forms allow-pointer-lock allow-popups allow-same-origin allow-scripts",
+          "frameBorder": '0',
+          "name", "<proxy>",
+        },this._elm);
+
+        try {
+          ///iframe.contentWindow.name = '/' + jsbin.state.code + '/' + jsbin.state.revision;
+          iframe.contentWindow.name  = this.options.runnerName;
+        } catch (e) {
+          // ^- this shouldn't really fail, but if we're honest, it's a fucking mystery as to why it even works.
+          // problem is: if this throws (because iframe.contentWindow is undefined), then the execution exits
+          // and `var renderLivePreview` is set to undefined. The knock on effect is that the calls to renderLivePreview
+          // then fail, and jsbin doesn't boot up. Tears all round, so we catch.
+        }
+      //}
+
+      iframe.onload = () => {
+        if (window.postMessage) {
+          // setup postMessage listening to the runner
+          $window.on('message', (event) => {
+            this.handleMessage(event.originalEvent)
+          });
+          this.setup(iframe);
+          this._inited.resolve();
+        }
+      };
+
+      iframe.onerror = err => {
+        this._inited.reject(err);
+      };
+
+      */
+
+      let iframe = noder.create("iframe",props,attrs,parentElm);
+
+      if (options.contentWindowName) {
+      	iframe.contentWindow.name = options.contentWindowName;
+      }
+
+      return iframe;
+  }
+
+  return iframes.create = create;
+});
+define('skylark-domx-iframes/hook-sizing',[
+  "skylark-domx-eventer",
+  "./iframes"
+],function(eventer,iframes){
+  'use strict';
+
+  function hookSizing(iframe) {
+    var onmessage = function (event) {
+      if (!event) { event = window.event; }
+      ///TODO : how check message source
+      // * 1 to coerse to number, and + 2 to compensate for border
+      iframe.style.height = (event.data.height * 1 + 2) + 'px';
+    };
+
+    eventer.on(window,'message', onmessage);
+  }
+
+  return iframes.hookSizing = hookSizing;
+
+});
+define('skylark-domx-iframes/load-real',[
+  "skylark-domx-noder",
+  "skylark-domx-data",
+  "./iframes",
+  "./hook-sizing"
+],function(noder,datax,iframes,hookSizing){
+
+  function loadReal(iframe,options) {
+    options = options || {};
+    var clone = noder.clone(iframe);
+    var url = options.url;
+    if (!url) {
+      url = datax.attr(clone,options.urlAttrName || 'data-url');
+    }
+    url = url.split('&')[0];
+    datax.prop(clone,"src",url);
+    datax.prop(clone,"_src",url); // support for google slide embed
+    noder.replace(clone,ifame);
+    ///hookSizing(clone);
+  }
+
+  return iframes.loadReal = loadReal;  
+});
+define('skylark-domx-iframes/lazy-load',[
+	"skylark-domx-eventer",
+	"skylark-domx-data",
+	"skylark-domx-geom",
+	"./iframes",
+	"./load-real"
+],function(eventer,datax,geom,iframes,loadReal){
+	var pending;
+
+
+  	function check() {
+	    var i = 0;
+	    var todo = [];
+	    for (i = 0; i < pending.length; i++) {
+	      if (geom.inview(pending[i], 400)) {
+	        todo.unshift({ iframe: pending[i], i: i });
+	      }
+	    }
+
+	    for (i = todo.length -1 ; i >=0 ; i--) {
+	      pending.splice(todo[i].i, 1);
+	      loadReal(todo[i].iframe);
+	    }
+  	}
+
+	function init() {
+		if (pending) {
+			return
+		}
+
+		pending = [];
+
+		eventer.on(window,"scroll",function(){
+			check();
+		});
+	}
+
+	function lazyLoad(iframe,options) {
+		init();
+
+		options = options || {};
+	
+      	///iframe.setAttribute('data-url', url);
+      	///iframe.src = 'https://jsbin.com/embed-holding';
+      	if (options.url) {
+      		datax.attr(iframe,(options.urlAttrName || "data-url"),options.url)
+      	}
+
+      	if (options.holdingUrl) {
+      		datax.prop(iframe,"src",options.holdingUrl)      		
+      	}
+
+		pending.push(iframe);
+	}
+
+	return iframes.lazyLoad = lazyLoad
+});
+define('skylark-langx-urls/getQuery',[
+    './urls'
+], function (urls) {
+    'use strict';
+	function getQuery(querystring) {
+		var query = {};
+
+		var pairs = querystring.split('&'),
+		    length = pairs.length,
+		    keyval = [],
+		    i = 0;
+
+		for (; i < length; i++) {
+		  keyval = pairs[i].split('=', 2);
+		  try {
+		    keyval[0] = decodeURIComponent(keyval[0]); // key
+		    keyval[1] = decodeURIComponent(keyval[1]); // value
+		  } catch (e) {}
+
+		  if (query[keyval[0]] === undefined) {
+		    query[keyval[0]] = keyval[1];
+		  } else {
+		    query[keyval[0]] += ',' + keyval[1];
+		  }
+		}
+
+		return query;
+	}
+
+	return urls.getQuery = getQuery;
+
+});
+define('skylark-domx-iframes/replace',[
+  "skylark-langx-urls/getQuery",
+  "skylark-domx-noder",
+  "skylark-domx-geom",
+  "skylark-domx-styler",
+  "./iframes",
+  "./create",
+  "./load-real",
+  "./lazy-load"
+],function(getQuery,noder,geom,styler,iframes,create,loadReal,lazyLoad){
+  'use strict';
+  
+  function replace(link,options) {
+    options = options || {};
+
+    /*
+    var iframe = noder.createElement('iframe',{
+      "className" : link.className, // inherit all the classes from the link
+      "id" : link.id, // also inherit, giving more style control to the user
+      "style" : { "border" : '1px solid #aaa'}
+    });
+    */
+
+    var ifarme =create({
+      "className" : link.className, // inherit all the classes from the link
+      "id" : link.id, // also inherit, giving more style control to the user
+      "style" : { 
+        "border" : '1px solid #aaa'
+      }
+    });
+    ///var url = link.href.replace(/edit/, 'embed');
+    var url = options.url || link.href,
+        size = options.size || getQuery(link.search),
+        holdingUrl = options.holdingUrl;
+
+    styler.css(iframe,"width", size.width || '100%');
+    styler.css(iframe,"minHeight", size.height || '300px');
+    if (size.height) {
+      styler.css(iframe,"maxHeight", size.height);
+    }
+
+    // track when it comes into view and reload
+    if (geom.inview(link, 100)) {
+      // the iframe is full view, let's render it
+      ///iframe.src = url.split('&')[0];
+      ///iframe._src = url.split('&')[0]; // support for google slide embed
+      ///hookMessaging(iframe);
+      loadReal(iframe,{url})
+    } else {
+      ///iframe.setAttribute('data-url', url);
+      ///iframe.src = 'https://jsbin.com/embed-holding';
+      ///pending.push(iframe);
+      lazyLoad(iframe,{
+        url,
+        holdingUrl
+      });
+
+    }
+
+    noder.replace(iframe, link);
+  }
+
+  return iframes.replace = replace;
+});
+define('skylark-domx-iframes/main',[
+	"./iframes",
+	"./create",
+	"./lazy-load",
+	"./load-real",
+	"./replace"
+],function(){
+	
+});
+define('skylark-domx-iframes', ['skylark-domx-iframes/main'], function (main) { return main; });
+
+define('skylark-domx/iframes',[
+    "skylark-domx-iframes"
+], function( iframes) {
+    return iframes;
+});
+define('skylark-domx-lists/lists',[
+	"skylark-langx-ns",
+	"skylark-domx-query",
+	"skylark-domx-data",
+	"skylark-domx-geom",
+	"skylark-domx-finder",
+	"skylark-domx-noder",
+	"skylark-domx-styler"
+],function(skylark){
+	return skylark.attach("domx.lists");
+});
+define('skylark-domx-lists/multitier',[
+	"skylark-langx",
+	"skylark-domx-query",
+	"./lists"
+],function(langx,$,lists){
+	function multitier(elm,options) {
+		options = langx.mixin({
+			classes : {
+				active : "active",
+				collapse : "collapse",
+				in : "in",
+			},
+
+			selectors : {
+				item : "li",                   // ".list-group-item"
+				sublist : "ul",  // "> .list-group"
+				hasSublist : ":has(ul)",
+				toggler : " > a"
+			},
+
+			mode   : "",  // "tree" or "accordion" or "popover"
+
+			levels : 2,
+
+			multiExpand : false,
+
+			show : function($el) {
+				$el.show();
+			},
+
+			hide : function($el) {
+				$el.hide();
+			},
+
+			toggle : function($el) {
+				$el.toggle();
+			}
+		},options,true);
+
+    var itemSelector = options.selectors.item,
+        $items = $(itemSelector,elm),
+
+        activeClass = options.classes.active,
+        activeSelector = "." + activeClass,
+
+		multitierMode = options.mode,
+
+        sublistSelector = options.selectors.sublist;           
+        multiExpand = options.multiExpand,
+        togglerSelector = options.selectors.toggler,
+
+        collapseClass = options.classes.collapse,
+        inClass = options.classes.in,
+        inSelector = "." + inClass,
+
+        hide = options.hide,
+        toggle = options.toggle;
+
+     $items.has(sublistSelector).find(togglerSelector).on("click.multitier", function(e) {
+          e.preventDefault();
+
+          let $children;
+
+          if (!multiExpand) {
+              ///langx.scall($(this).closest(itemSelector).siblings().removeClass("active").children(sublistSelector+".in").plugin("domx.toggles.collapse"),"hide");
+              $clildren = $(this).closest(itemSelector).siblings().removeClass(activeClass).children(sublistSelector+"."+options.classes.in);
+              if ($children) {
+	              hide($children);
+              }
+          }
+          //$(this).closest(itemSelector).toggleClass(activeClass).children(sublistSelector).plugin("domx.toggles.collapse").toggle();
+          $children = $(this).closest(itemSelector).toggleClass(activeClass).children(options.selectors.sublist);
+          if ($children) {
+	          toggle($children);
+	      }
+      });
+
+      $items.filter(activeSelector).has(sublistSelector).children(sublistSelector).addClass(collapseClass).addClass(inClass);
+      $items.not(activeSelector).has(sublistSelector).children(sublistSelector).addClass(collapseClass);
+
+
+	}
+
+	return lists.multitier = multitier
+});
+define('skylark-domx-lists/main',[
+	"./lists",
+	"./multitier"
+],function(lists){
+	return lists;
+});
+define('skylark-domx-lists', ['skylark-domx-lists/main'], function (main) { return main; });
+
+define('skylark-domx/lists',[
+    "skylark-domx-lists"
+], function( lists) {
+
+    return lists;
+});
 define('skylark-domx/noder',[
     "skylark-domx-noder"
 ], function( noder) {
 
     return noder;
-});
-define('skylark-domx-plugins/plugins',[
-    "skylark-langx-ns",
-    "skylark-langx-types",
-    "skylark-langx-objects",
-    "skylark-langx-funcs",
-    "skylark-langx-events/Emitter",
-    "skylark-domx-noder",
-    "skylark-domx-data",
-    "skylark-domx-eventer",
-    "skylark-domx-finder",
-    "skylark-domx-geom",
-    "skylark-domx-styler",
-    "skylark-domx-fx",
-    "skylark-domx-query",
-    "skylark-domx-velm"
-], function(
-    skylark,
-    types,
-    objects,
-    funcs,
-    Emitter, 
-    noder, 
-    datax, 
-    eventer, 
-    finder, 
-    geom, 
-    styler, 
-    fx, 
-    $, 
-    elmx
-) {
-    "use strict";
-
-    var slice = Array.prototype.slice,
-        concat = Array.prototype.concat,
-        pluginKlasses = {},
-        shortcuts = {};
-
-    /*
-     * Create or get or destory a plugin instance assocated with the element.
-     */
-    function instantiate(elm,pluginName,options) {
-        var pair = pluginName.split(":"),
-            instanceDataName = pair[1];
-        pluginName = pair[0];
-
-        if (!instanceDataName) {
-            instanceDataName = pluginName;
-        }
-
-        var pluginInstance = datax.data( elm, instanceDataName );
-
-        if (options === "instance") {
-            return pluginInstance;
-        } else if (options === "destroy") {
-            if (!pluginInstance) {
-                throw new Error ("The plugin instance is not existed");
-            }
-            pluginInstance.destroy();
-            //datax.removeData( elm, pluginName);
-            pluginInstance = undefined;
-        } else {
-            if (!pluginInstance) {
-                if (options !== undefined && typeof options !== "object") {
-                    throw new Error ("The options must be a plain object");
-                }
-                var pluginKlass = pluginKlasses[pluginName]; 
-                pluginInstance = new pluginKlass(elm,options);
-                datax.data( elm, instanceDataName,pluginInstance );
-            } else if (options) {
-                pluginInstance.reset(options);
-            }
-        }
-
-        return pluginInstance;
-    }
-
-
-    function shortcutter(pluginName,extfn) {
-       /*
-        * Create or get or destory a plugin instance assocated with the element,
-        * and also you can execute the plugin method directory;
-        */
-        return function (elm,options) {
-            var  plugin = instantiate(elm, pluginName,"instance");
-            if ( options === "instance" ) {
-              return plugin || null;
-            }
-
-            if (!plugin) {
-                plugin = instantiate(elm, pluginName,typeof options == 'object' && options || {});
-                if (typeof options != "string") {
-                  return this;
-                }
-            } 
-            if (options) {
-                var args = slice.call(arguments,1); //2
-                if (extfn) {
-                    return extfn.apply(plugin,args);
-                } else {
-                    if (typeof options == 'string') {
-                        var methodName = options;
-
-                        if ( !plugin ) {
-                            throw new Error( "cannot call methods on " + pluginName +
-                                " prior to initialization; " +
-                                "attempted to call method '" + methodName + "'" );
-                        }
-
-                        if ( !types.isFunction( plugin[ methodName ] ) || methodName.charAt( 0 ) === "_" ) {
-                            throw new Error( "no such method '" + methodName + "' for " + pluginName +
-                                " plugin instance" );
-                        }
-
-                        args = slice.call(args,1); //remove method name
-
-                        var ret = plugin[methodName].apply(plugin,args);
-                        if (ret == plugin) {
-                          ret = undefined;
-                        }
-
-                        return ret;
-                    }                
-                }                
-            }
-
-        }
-
-    }
-
-    /*
-     * Register a plugin type
-     */
-    function register( pluginKlass,shortcutName,instanceDataName,extfn) {
-        var pluginName = pluginKlass.prototype.pluginName;
-        
-        pluginKlasses[pluginName] = pluginKlass;
-
-        if (shortcutName) {
-            if (instanceDataName && types.isFunction(instanceDataName)) {
-                extfn = instanceDataName;
-                instanceDataName = null;
-            } 
-            if (instanceDataName) {
-                pluginName = pluginName + ":" + instanceDataName;
-            }
-
-            var shortcut = shortcuts[shortcutName] = shortcutter(pluginName,extfn);
-                
-            $.fn[shortcutName] = function(options) {
-                var returnValue = this;
-
-                if ( !this.length && options === "instance" ) {
-                  returnValue = undefined;
-                } else {
-                  var args = slice.call(arguments);
-                  this.each(function () {
-                    var args2 = slice.call(args);
-                    args2.unshift(this);
-                    var  ret  = shortcut.apply(undefined,args2);
-                    if (ret !== undefined) {
-                        returnValue = ret;
-                    }
-                  });
-                }
-
-                return returnValue;
-            };
-
-            elmx.partial(shortcutName,function(options) {
-                var  ret  = shortcut(this._elm,options);
-                if (ret === undefined) {
-                    ret = this;
-                }
-                return ret;
-            });
-
-        }
-    }
-
-    function parentClass(ctor){
-        if (ctor.hasOwnProperty("superclass")) {
-            return ctor.superclass;
-        }
-
-        return Object.getPrototypeOf(ctor);
-    }
-
- 
-    var Plugin =   Emitter.inherit({
-        klassName: "Plugin",
-
-        _construct : function(elm,options) {
-           this._elm = elm;
-           this._initOptions(options);
-        },
-
-        _initOptions : function(options) {
-          var ctor = this.constructor,
-              cache = ctor.cache = (ctor.hasOwnProperty("cache") ? ctor.cache : {}),
-              defaults = cache.defaults;
-          if (!defaults) {
-            var  ctors = [];
-            do {
-              ctors.unshift(ctor);
-              if (ctor === Plugin) {
-                break;
-              }
-              ctor = parentClass(ctor);
-            } while (ctor);
-
-            defaults = cache.defaults = {};
-            for (var i=0;i<ctors.length;i++) {
-              ctor = ctors[i];
-              if (ctor.prototype.hasOwnProperty("options")) {
-                objects.mixin(defaults,ctor.prototype.options,true);
-              }
-              if (ctor.hasOwnProperty("options")) {
-                objects.mixin(defaults,ctor.options,true);
-              }
-            }
-          }
-          Object.defineProperty(this,"options",{
-            value :objects.mixin({},defaults,options,true)
-          });
-
-          //return this.options = langx.mixin({},defaults,options);
-          return this.options;
-        },
-
-
-        destroy: function() {
-
-            this._destroy();
-
-            // remove all event lisener
-            this.unlistenTo();
-            // remove data 
-            datax.removeData(this._elm,this.pluginName );
-        },
-
-        _destroy: funcs.noop,
-
-        _delay: function( handler, delay ) {
-            function handlerProxy() {
-                return ( typeof handler === "string" ? instance[ handler ] : handler )
-                    .apply( instance, arguments );
-            }
-            var instance = this;
-            return setTimeout( handlerProxy, delay || 0 );
-        },
-
-        elmx : function(elm) {
-            elm = elm || this._elm;
-            return elmx(elm);
-
-        },
-
-        $ : function(elm) {
-            elm = elm || this._elm;
-            return $(elm);
-        },
-
-        option: function( key, value ) {
-            var options = key;
-            var parts;
-            var curOption;
-            var i;
-
-            if ( arguments.length === 0 ) {
-
-                // Don't return a reference to the internal hash
-                return objects.mixin( {}, this.options );
-            }
-
-            if ( typeof key === "string" ) {
-
-                // Handle nested keys, e.g., "foo.bar" => { foo: { bar: ___ } }
-                options = {};
-                parts = key.split( "." );
-                key = parts.shift();
-                if ( parts.length ) {
-                    curOption = options[ key ] = objects.mixin( {}, this.options[ key ] );
-                    for ( i = 0; i < parts.length - 1; i++ ) {
-                        curOption[ parts[ i ] ] = curOption[ parts[ i ] ] || {};
-                        curOption = curOption[ parts[ i ] ];
-                    }
-                    key = parts.pop();
-                    if ( arguments.length === 1 ) {
-                        return curOption[ key ] === undefined ? null : curOption[ key ];
-                    }
-                    curOption[ key ] = value;
-                } else {
-                    if ( arguments.length === 1 ) {
-                        return this.options[ key ] === undefined ? null : this.options[ key ];
-                    }
-                    options[ key ] = value;
-                }
-            }
-
-            this._setOptions( options );
-
-            return this;
-        },
-
-        _setOptions: function( options ) {
-            var key;
-
-            for ( key in options ) {
-                this._setOption( key, options[ key ] );
-            }
-
-            return this;
-        },
-
-        _setOption: function( key, value ) {
-
-            this.options[ key ] = value;
-
-            return this;
-        },
-
-        getUID : function (prefix) {
-            prefix = prefix || "plugin";
-            do prefix += ~~(Math.random() * 1000000)
-            while (document.getElementById(prefix))
-            return prefix;
-        },
-
-        elm : function() {
-            return this._elm;
-        }
-
-    });
-
-    Plugin.instantiate = function(elm,options) {
-        return instantiate(elm,this.prototype.pluginName,options);
-    };
-    
-    $.fn.plugin = function(name,options) {
-        var args = slice.call( arguments, 1 ),
-            self = this,
-            returnValue ;
-
-        this.each(function(){
-            returnValue = instantiate.apply(self,[this,name].concat(args));
-        });
-        return returnValue;
-    };
-
-    elmx.partial("plugin",function(name,options) {
-        var args = slice.call( arguments, 1 );
-        return instantiate.apply(this,[this._elm,name].concat(args));
-    }); 
-
-
-    function plugins() {
-        return plugins;
-    }
-     
-    objects.mixin(plugins, {
-        instantiate,
-        Plugin,
-        register,
-        shortcuts
-    });
-
-    return  skylark.attach("domx.plugins",plugins);
-});
-define('skylark-domx-plugins/main',[
-	"./plugins"
-],function(plugins){
-	return plugins;
-});
-define('skylark-domx-plugins', ['skylark-domx-plugins/main'], function (main) { return main; });
-
-define('skylark-domx/plugins',[
-    "skylark-domx-plugins"
-], function( plugins) {
-    "use strict";
-    return plugins;
 });
 define('skylark-domx/styler',[
     "skylark-domx-styler"
@@ -20322,14 +20581,15 @@ define('skylark-domx/main',[
     "./finder",
     "./fx",
     "./geom",
+    "./iframes",
+    "./lists",
     "./noder",
-    "./plugins",
     "./query",
     "./scripter",
     "./styler",
     "./transforms",
     "./velm"
-], function(browser,css,data,eventer,finder,fx,geom,noder,plugins,query,scripter,styler,transforms,velm) {
+], function(browser,css,data,eventer,finder,fx,geom,lists,noder,iframes,query,scripter,styler,transforms,velm) {
     return {
         browser,
         css,
@@ -20337,8 +20597,9 @@ define('skylark-domx/main',[
         eventer,
         finder,
         geom,
+        lists,
         noder,
-        plugins,
+        iframes,
         query,
         scripter,
         styler,
@@ -20671,876 +20932,11 @@ define('skylark-domx-files/picker',[
 
 
 
-define('skylark-langx-emitter/main',[
-	"./Emitter",
-	"./Evented"
-],function(Emitter){
-	return Emitter;
-});
-define('skylark-langx-emitter', ['skylark-langx-emitter/main'], function (main) { return main; });
-
-define('skylark-domx-files/SingleUploader',[
-	"skylark-langx-emitter",
-	"skylark-langx-async/Deferred",
-    "skylark-domx-velm",
-    "skylark-domx-plugins",
-	"./files",
-	"./dropzone",
-	"./pastezone",
-	"./picker"
-],function(
-	Emitter, 
-	Deferred, 
-	elmx,
-	plugins,
-	files
-) {
-	//import ZipLoader from 'zip-loader';
-
-	/**
-	 * Watches an element for file drops, parses to create a filemap hierarchy,
-	 * and emits the result.
-	 */
-	class SingleUploader extends plugins.Plugin {
-		get klassName() {
-	    	return "SingleUploader";
-    	} 
-
-    	get pluginName(){
-      		return "lark.singleuploader";
-    	} 
-
-		get options () {
-      		return {
-	            selectors : {
-	              picker   : ".file-picker",
-	              dropzone : ".file-dropzone",
-	              pastezone: ".file-pastezone",
-
-	              startUploads: '.start-uploads',
-	              cancelUploads: '.cancel-uploads',
-	            }
-	     	}
-		}
-
-
-	  /**
-	   * @param  {Element} elm
-	   * @param  [options] 
-	   */
-	  constructor (elm, options) {
-	  	super(elm,options);
-
-        this._velm = elmx(this._elm);
-
-	  	this._initFileHandlers();
-
-	}
-
-    _initFileHandlers () {
-        var self = this;
-
-        var selectors = this.options.selectors,
-        	dzSelector = selectors.dropzone,
-        	pzSelector = selectors.pastezone,
-        	pkSelector = selectors.picker;
-
-        if (dzSelector) {
-			this._velm.$(dzSelector).dropzone({
-                dropped : function (files) {
-                    self._addFile(files[0]);
-                }
-			});
-        }
-
-
-        if (pzSelector) {
-            this._velm.$(pzSelector).pastezone({
-                pasted : function (files) {
-                    self._addFile(files[0]);
-                }
-            });                
-        }
-
-        if (pkSelector) {
-            this._velm.$(pkSelector).picker({
-                multiple: true,
-                picked : function (files) {
-                    self._addFile(files[0]);
-                }
-            });                
-        }
-    }
-
-     _addFile(file) {
-        this.emit('added', file);	  
-     }
-
-
-	  /**
-	   * Destroys the instance.
-	   */
-	  destroy () {
-	  }
-
-
-	}
-
-	return files.SingleUploader = SingleUploader;
-
-});
-
- 
-define('skylark-net-http/Upload',[
-    "skylark-langx-types",
-    "skylark-langx-objects",
-    "skylark-langx-arrays",
-    "skylark-langx-async/Deferred",
-    "skylark-langx-emitter/Evented",    
-    "./Xhr",
-    "./http"
-],function(types, objects, arrays, Deferred, Evented,Xhr, http){
-
-    var blobSlice = Blob.prototype.slice || Blob.prototype.webkitSlice || Blob.prototype.mozSlice;
-
-
-    /*
-     *Class for uploading files using xhr.
-     */
-    var Upload = Evented.inherit({
-        klassName : "Upload",
-
-        _construct : function(options) {
-            this._options = objects.mixin({
-                debug: false,
-                url: '/upload',
-                headers : {
-
-                },
-                // maximum number of concurrent uploads
-                maxConnections: 999,
-                // To upload large files in smaller chunks, set the following option
-                // to a preferred maximum chunk size. If set to 0, null or undefined,
-                // or the browser does not support the required Blob API, files will
-                // be uploaded as a whole.
-                maxChunkSize: undefined,
-
-                onProgress: function(id, fileName, loaded, total){
-                },
-                onComplete: function(id, fileName,result,status,xhr){
-                },
-                onCancel: function(id, fileName){
-                },
-                onFailure : function(id,fileName,e) {                    
-                }
-            },options);
-
-            this._queue = [];
-            // params for files in queue
-            this._params = [];
-
-            this._files = [];
-            this._xhrs = [];
-
-            // current loaded size in bytes for each file
-            this._loaded = [];
-
-        },
-
-        /**
-         * Adds file to the queue
-         * Returns id to use with upload, cancel
-         **/
-        add: function(file){
-            return this._files.push(file) - 1;
-        },
-
-        /**
-         * Sends the file identified by id and additional query params to the server.
-         */
-        send: function(id, params){
-            if (!this._files[id]) {
-                // Already sended or canceled
-                return ;
-            }
-            if (this._queue.indexOf(id)>-1) {
-                // Already in the queue
-                return;
-            }
-            var len = this._queue.push(id);
-
-            var copy = objects.clone(params);
-
-            this._params[id] = copy;
-
-            // if too many active uploads, wait...
-            if (len <= this._options.maxConnections){
-                this._send(id, this._params[id]);
-            }     
-        },
-
-        /**
-         * Sends all files  and additional query params to the server.
-         */
-        sendAll: function(params){
-           for( var id = 0; id <this._files.length; id++) {
-                this.send(id,params);
-            }
-        },
-
-        /**
-         * Cancels file upload by id
-         */
-        cancel: function(id){
-            this._cancel(id);
-            this._dequeue(id);
-        },
-
-        /**
-         * Cancells all uploads
-         */
-        cancelAll: function(){
-            for (var i=0; i<this._queue.length; i++){
-                this._cancel(this._queue[i]);
-            }
-            this._queue = [];
-        },
-
-        getName: function(id){
-            var file = this._files[id];
-            return file.fileName != null ? file.fileName : file.name;
-        },
-
-        getSize: function(id){
-            var file = this._files[id];
-            return file.fileSize != null ? file.fileSize : file.size;
-        },
-
-        /**
-         * Returns uploaded bytes for file identified by id
-         */
-        getLoaded: function(id){
-            return this._loaded[id] || 0;
-        },
-
-
-        /**
-         * Sends the file identified by id and additional query params to the server
-         * @param {Object} params name-value string pairs
-         */
-        _send: function(id, params){
-            var options = this._options,
-                name = this.getName(id),
-                size = this.getSize(id),
-                chunkSize = options.maxChunkSize || 0,
-                curUploadingSize,
-                curLoadedSize = 0,
-                file = this._files[id],
-                args = {
-                    headers : objects.clone(options.headers)                    
-                };
-
-            this._loaded[id] = this._loaded[id] || 0;
-
-            var xhr = this._xhrs[id] = new Xhr({
-                url : options.url
-            });
-
-            if (chunkSize)  {
-
-                args.data = blobSlice.call(
-                    file,
-                    this._loaded[id],
-                    this._loaded[id] + chunkSize,
-                    file.type
-                );
-                // Store the current chunk size, as the blob itself
-                // will be dereferenced after data processing:
-                curUploadingSize = args.data.size;
-                // Expose the chunk bytes position range:
-                args.headers["content-range"] = 'bytes ' + this._loaded[id] + '-' +
-                    (this._loaded[id] + curUploadingSize - 1) + '/' + size;
-                args.headers["Content-Type"] = "application/octet-stream";
-            }  else {
-                curUploadingSize = size;
-                var formParamName =  params.formParamName,
-                    formData = params.formData;
-
-                if (formParamName) {
-                    if (!formData) {
-                        formData = new FormData();
-                    }
-                    formData.append(formParamName,file);
-                    args.data = formData;
-    
-                } else {
-                    args.headers["Content-Type"] = file.type || "application/octet-stream";
-                    args.data = file;
-                }
-            }
-
-
-            var self = this;
-            xhr.post(
-                args
-            ).progress(function(e){
-                if (e.lengthComputable){
-                    curLoadedSize = curLoadedSize + e.loaded;
-                    self._loaded[id] = self._loaded[id] + e.loaded;
-                    self._options.onProgress(id, name, self._loaded[id], size);
-                }
-            }).then(function(result,status,xhr){
-                if (!self._files[id]) {
-                    // the request was aborted/cancelled
-                    return;
-                }
-
-                if (curLoadedSize < curUploadingSize) {
-                    // Create a progress event if no final progress event
-                    // with loaded equaling total has been triggered
-                    // for this chunk:
-                    self._loaded[id] = self._loaded[id] + curUploadingSize - curLoadedSize;
-                    self._options.onProgress(id, name, self._loaded[id], size);                    
-                }
-
-                if (self._loaded[id] <size) {
-                    // File upload not yet complete,
-                    // continue with the next chunk:
-                    self._send(id,params);
-                } else {
-                    self._options.onComplete(id,name,result,status,xhr);
-
-                    self._files[id] = null;
-                    self._xhrs[id] = null;
-                    self._dequeue(id);
-                }
-
-
-            }).catch(function(e){
-                self._options.onFailure(id,name,e);
-
-                self._files[id] = null;
-                self._xhrs[id] = null;
-                self._dequeue(id);
-            });
-        },
-
-        _cancel: function(id){
-            this._options.onCancel(id, this.getName(id));
-
-            this._files[id] = null;
-
-            if (this._xhrs[id]){
-                this._xhrs[id].abort();
-                this._xhrs[id] = null;
-            }
-        },
-
-        /**
-         * Returns id of files being uploaded or
-         * waiting for their turn
-         */
-        getQueue: function(){
-            return this._queue;
-        },
-
-
-        /**
-         * Removes element from queue, starts upload of next
-         */
-        _dequeue: function(id){
-            var i = arrays.inArray(id,this._queue);
-            this._queue.splice(i, 1);
-
-            var max = this._options.maxConnections;
-
-            if (this._queue.length >= max && i < max){
-                var nextId = this._queue[max-1];
-                this._send(nextId, this._params[nextId]);
-            }
-        }
-    });
-
-
-  Upload.send = function(file, options) {
-    var uploader = new Upload(options);
-    var id = uploader.add(file);
-    return uploader.send(id,options);
-  };
-
-  Upload.sendAll = function(files,options) {
-      var uploader = new Upload(options);
-      for (var i = 0, len = files.length; i < len; i++) {
-        this.add(file[i]);
-      }
-      return uploader.send(options);
-  };
-
-    return http.Upload = Upload;    
-});
-define('skylark-domx-files/MultiUploader',[
-  "skylark-langx/skylark",
-  "skylark-langx/langx",
-  "skylark-domx-query",
-  "skylark-domx-velm",
-  "skylark-net-http/Upload",
-  "skylark-domx-plugins",
-  "./files"
-]  ,function(skylark,langx,$, elmx,FileUpload, plugins,files){
-
-    var fileListTemplate = '<div class="lark-multiuploader">' + 
-        '    <h3 class="popover-title">Upload files</h3>' + 
-        '    <div class="popover-content container-fluid" class="file-list file-dropzone file-pastezone">' + 
-        '        <div class="no-data"><em>Add files.</em></div>' + 
-        '    </div>' + 
-        '    <footer>' + 
-        '        <button class="btn btn-warning pull-right btn-sm" id="cancel-uploads-button"><i class="icon-cancel"></i>Cancel uploads</button>' + 
-        '        <span class="btn btn-success fileinput-button btn-sm" id="fileinput-button">' + 
-        '            <i class="icon-plus"></i>' + 
-        '            <span>Add files...</span>' + 
-        '            <input id="fileupload" type="file" name="files[]" multiple="multiple">' + 
-        '        </span>' + 
-        '        <button class="btn btn-primary btn-sm" id="start-uploads-button"><i class="icon-start"></i>Start uploads</button>' + 
-        '    </footer>' + 
-        '</div>',
-        fileItemTemplate = '<div class="file-item row">' +
-        '   <div class="col-md-6"><span class="name"></span></div>' + 
-        '   <div class="col-md-3">' +
-        '    <span class="size"></span>' +
-        '    <div class="progress hidden">' +
-        '        <div class="progress-label"></div>' +
-        '        <div class="bar"></div>' +
-        '    </div>' +
-        '    <span class="message hidden"></span>' +
-        '   </div>' +
-        '   <div class="col-md-3">' +
-        '    <button class="btn btn-warning btn-xs cancel"><i class="icon-remove"></i>Cancel</button>' +
-        '    <button class="btn btn-xs clear hidden">Clear</button>' +
-        '   </div>' +
-        '</div>';
-
-    var MultiUploader =  plugins.Plugin.inherit({
-        klassName : "Uploader",
-        pluginName : "lark.multiuploader",
-
-        options: {
-            uploadUrl: '/upload',
-
-        	params: {
-                formParamName : "file"
-            },
-
-    	    maxConnections: 3,
-        	// validation
-        	allowedExtensions: [],
-        	sizeLimit: 0,
-        	minSizeLimit: 0,
-
-            autoUpload: false,
-            selectors : {
-              fileList : ".file-list",
-              fileItem : ".file-item",
-              nodata : ".file-list .no-data",
-
-              picker   : ".file-picker",
-              dropzone : ".file-dropzone",
-              pastezone: ".file-pastezone",
-
-              startUploads: '.start-uploads',
-              cancelUploads: '.cancel-uploads',
-            },
-
-            template : fileListTemplate,
-
-            dataType: 'json',
-
-            fileItem : {
-            	selectors : {
-                    name : ".name",
-                    size : ".size",
-                    cancel: ".cancel",
-                    clear : ".clear",
-                    progress : ".progress",
-                    message : ".message"                   
-            	},
-
-            	template : fileItemTemplate
-            }
-        },
-
-
-        _construct : function(elm,options) {
-            var self = this;
-
-
-            // Render current files
-            /*
-            this.files.forEach(function (file) {
-                self.renderFile(file);
-            });
-            */
-
-            //this._refresh({files:true});
-        
-
-            //this._files.on('all', function(){
-            //  self._refresh({files:true});
-            //});
-
-
-           this.overrided(elm,options);
-
-
-           this._velm = elmx(this._elm);
-        
-
-
-            this._initEventHandler();
-            this._initFileHandlers();
-            this._initUpoadHandler();
-            this._updateFileList();
-        },
-
-        _initFileHandlers : function() {
-            var self = this;
-
-            var selectors = this.options.selectors,
-            	dzSelector = selectors.dropzone,
-            	pzSelector = selectors.pastezone,
-            	pkSelector = selectors.picker;
-
-            if (dzSelector) {
-				this._velm.$(dzSelector).dropzone({
-	                dropped : function (files) {
-                        self._addFiles(files);
-	                }
-				});
-            }
-
-
-            if (pzSelector) {
-                this._velm.$(pzSelector).pastezone({
-                    pasted : function (files) {
-                        self._addFiles(files);
-                    }
-                });                
-            }
-
-            if (pkSelector) {
-                this._velm.$(pkSelector).picker({
-                    multiple: true,
-                    picked : function (files) {
-                        self._addFiles(files);
-                    }
-                });                
-            }
-        },
-
-        _initUpoadHandler: function(){
-            var self = this,
-                handlerClass;
-
-            this._handler = new FileUpload({
-                url: this.options.uploadUrl,
-                maxConnections: this.options.maxConnections,
-                onProgress: function(id, fileName, loaded, total){
-                    self._onProgress(id, fileName, loaded, total);
-                },
-                onComplete: function(id, fileName, result){
-                    self._onComplete(id, fileName, result);
-                },
-                onCancel: function(id, fileName){
-                    self._onCancel(id, fileName);
-                },
-                onFailure: function(id,fileName,e){
-                    self._onFailure(id,fileName,e);
-                }
-            });
-        },
-        
-         /**
-         * delegate click event for cancel link
-         **/
-        _initEventHandler: function(){
-            var self = this,
-               selectors = this.options.selectors,
-               itemSelectors = this.options.fileItem.selectors, 
-               list = this._listElement;
-
-            // Add cancel handler
-            this._velm.$(selectors.fileList).on("click",itemSelectors.cancel,function(e){
-                var $fileItem = $(this).closest(selectors.fileItem),
-                    fileId = $fileItem.data("fileId");
-                self._handler.cancel(fileId);
-                $fileItem.remove();
-                self._updateFileList();
-            });
-
-            // Add clear handler
-            this._velm.$(selectors.fileList).on("click",itemSelectors.clear,function(e){
-                var $fileItem = $(this).closest(selectors.fileItem),
-                    fileId = $fileItem.data("fileId");
-                $fileItem.remove();
-                self._updateFileList();
-            });
-
-            // Add cancel all handler
-            this._velm.$(selectors.cancelUploads).click(function(){
-                var $files = self._velm.$(selectors.fileList).find(selectors.fileItem);           
-                $files.forEach(function(fileItem){
-                    var $fileItem = $(fileItem),
-                        fileId = $fileItem.data("fileId");
-                    self._handler.cancel(fileId);
-                    $fileItem.remove();
-                });
-                self._updateFileList();
-
-            });
-
-            // Add start uploads handler
-            this._velm.$(selectors.startUploads).click(function(){
-                var $files = self._velm.$(selectors.fileList).find(selectors.fileItem);           
-                $files.forEach(function(fileItem){
-                    var $fileItem = $(fileItem),
-                        fileId = $fileItem.data("fileId");
-                    if (!$fileItem.data("status")) {
-                        // The file has not yet been sent
-                        self._handler.send(fileId,self.options.params);
-                    }
-                });
-
-            });
-            
-
-        },       
-
-        _onProgress: function(id, fileName, loaded, total){          
-            var $item = this._getItemByFileId(id);
-
-            var percent = parseInt(loaded / total * 100, 10);
-            var progressHTML = this._formatSize(loaded)+' of '+ this._formatSize(total);
-
-            $item.data("status","running");
-            $item.find('.progress')
-                .find('.bar')
-                .css('width', percent+'%')
-                .parent()
-                .find('.progress-label')
-                .html(progressHTML);
-            this._updateFile($item);
-
-        },
-
-        _onComplete: function(id, fileName, result){
-            this._filesInProgress--;
-            var $item = this._getItemByFileId(id);
-            $item.data("status","done");
-            $item.find('.message').html('<i class="icon-success"></i> ' + (this.doneMsg || 'Uploaded'));
-            this._updateFile($item);
-        },
-
-        _onFailure : function(id,fileName,e) {
-            this._filesInProgress--;
-            var $item = this._getItemByFileId(id);
-            $item.data("status","error");
-            $item.find('.message').html('<i class="icon-error"></i> ');;
-            this._updateFile($item)
-
-        },
-
-        _onCancel: function(id, fileName){
-            this._filesInProgress--;
-            var $item = this._getItemByFileId(id);
-            $item.data("status","cancel");
-            this._updateFile($item)
-        },
-
-        _addToList: function(id, fileName){
-            var self = this;
-
-
-            var fileName = this._handler.getName(id),
-                fileSize = this._handler.getSize(id);
-
-            var item = $(this.options.fileItem.template);
-            item.data("fileId",id);
-
-            item.find(this.options.fileItem.selectors.name).html(this._formatFileName(fileName));
-            item.find(this.options.fileItem.selectors.size).html(this._formatSize(fileSize));
-
-            this._velm.$(this.options.selectors.fileList).append(item);
-
-            this._updateFileList();
-        },
-    
-        _updateFileList : function ()  {
-            var selectors = this.options.selectors,
-                itemSelectors = this.options.fileItem.selectors,
-                files = this._velm.$(selectors.fileList).find(selectors.fileItem);
-
-            var with_files_elements = this._velm.$(selectors.cancelUploads + ',' + selectors.startUploads);
-            var without_files_elements = this._velm.$(selectors.nodata);
-            if (files.length > 0) {
-                with_files_elements.removeClass('hidden');
-                without_files_elements.addClass('hidden');
-            } else {
-                with_files_elements.addClass('hidden');
-                without_files_elements.removeClass('hidden');
-            }
-        },
-        
-        _updateFile: function ($item) {
-            var selectors = this.options.fileItem.selectors,
-                when_pending = $item.find(selectors.size + "," + selectors.cancel),
-                when_running = $item.find(selectors.progress + "," + selectors.cancel),
-                when_done = $item.find(selectors.message + "," + selectors.clear);
-
-            var status = $item.data("status");    
-            if (status == "pending") {
-                when_running.add(when_done).addClass('hidden');
-                when_pending.removeClass('hidden');
-            } else if (status == "running") {
-                when_pending.add(when_done).addClass('hidden');
-                when_running.removeClass('hidden');
-            } else if (status == "done" || status == "error") {
-                when_pending.add(when_running).addClass('hidden');
-                when_done.removeClass('hidden');
-            }
-        },
-
-        _getItemByFileId: function(id){
-            var selectors = this.options.selectors,
-                files = this._velm.$(selectors.fileList).find(selectors.fileItem),
-                item;
-
-            // there can't be txt nodes in dynamically created list
-            // and we can  use nextSibling
-
-            for (var i = 0; i<files.length;i++){
-                var item2 = files[i];
-                if ($(item2).data("fileId") == id) {
-                    item = item2;
-                    break;
-                }
-            }
-            if (item) {
-                return $(item);
-            }
-        },
-
-
-            
-        _addFiles: function(files){
-            for (var i=0; i<files.length; i++){
-                if ( !this._validateFile(files[i])){
-                    return;
-                }
-            }
-
-            for (var i=0; i<files.length; i++){
-                this._addFile(files[i]);
-            }
-        },
-
-        _addFile: function(file){
-            var id = this._handler.add(file);
-
-            this._filesInProgress++;
-            this._addToList(id);
-
-            //this._handler.upload(id, this.options.params);
-        },
-
-        _validateFile: function(file){
-            var name, size;
-
-            if (file.value){
-                // it is a file input
-                // get input value and remove path to normalize
-                name = file.value.replace(/.*(\/|\\)/, "");
-            } else {
-                // fix missing properties in Safari
-                name = file.fileName != null ? file.fileName : file.name;
-                size = file.fileSize != null ? file.fileSize : file.size;
-            }
-
-            if (! this._isAllowedExtension(name)){
-                this._error('typeError', name);
-                return false;
-
-            } else if (size === 0){
-                this._error('emptyError', name);
-                return false;
-
-            } else if (size && this.options.sizeLimit && size > this.options.sizeLimit){
-                this._error('sizeError', name);
-                return false;
-
-            } else if (size && size < this.options.minSizeLimit){
-                this._error('minSizeError', name);
-                return false;
-            }
-
-            return true;
-        },
-
-        _error: function(code, fileName){
-            var message = this.options.messages[code];
-            function r(name, replacement){ message = message.replace(name, replacement); }
-
-            r('{file}', this._formatFileName(fileName));
-            r('{extensions}', this.options.allowedExtensions.join(', '));
-            r('{sizeLimit}', this._formatSize(this.options.sizeLimit));
-            r('{minSizeLimit}', this._formatSize(this.options.minSizeLimit));
-
-            this.options.showMessage(message);
-        },
-
-        _formatFileName: function(name){
-            if (name.length > 33){
-                name = name.slice(0, 19) + '...' + name.slice(-13);
-            }
-            return name;
-        },
-
-        _isAllowedExtension: function(fileName){
-            var ext = (-1 !== fileName.indexOf('.')) ? fileName.replace(/.*[.]/, '').toLowerCase() : '';
-            var allowed = this.options.allowedExtensions;
-
-            if (!allowed.length){return true;}
-
-            for (var i=0; i<allowed.length; i++){
-                if (allowed[i].toLowerCase() == ext){ return true;}
-            }
-
-            return false;
-        },
-
-        _formatSize: function(bytes){
-            var i = -1;
-            do {
-                bytes = bytes / 1024;
-                i++;
-            } while (bytes > 99);
-
-            return Math.max(bytes, 0.1).toFixed(1) + ['KB', 'MB', 'GB', 'TB', 'PB', 'EB'][i];
-        }
-
-    });
-
-   plugins.register(MultiUploader);
-
-
-
-	return files.MultiUploader = MultiUploader;
-});
 define('skylark-domx-files/main',[
 	"./files",
 	"./dropzone",
 	"./pastezone",
-	"./picker",
-	"./SingleUploader",
-	"./MultiUploader"
+	"./picker"
 ],function(files){
 	return files;
 });
@@ -21578,8 +20974,10 @@ define('skylark-domx-images/isLoaded',[
 define('skylark-domx-images/watch',[
     "skylark-langx/langx",
     "skylark-domx-eventer",
-    "./images"
-], function(langx,eventer,images) {
+    "./images",
+    "./isCompleted",
+    "./isLoaded"
+], function(langx,eventer,images,isCompleted,isLoaded) {
 
   function watch(imgs) {
     if (!langx.isArray(imgs)) {
@@ -21884,6 +21282,382 @@ define('skylark-domx-plugins-colors/colors',[
 ],function(skylark){
 	return skylark.attach("domx.colores",{});
 });
+define('skylark-domx-plugins-base/plugins',[
+    "skylark-langx-ns",
+    "skylark-langx-types",
+    "skylark-langx-objects",
+    "skylark-langx-funcs",
+    "skylark-langx-events/Emitter",
+    "skylark-domx-noder",
+    "skylark-domx-data",
+    "skylark-domx-eventer",
+    "skylark-domx-finder",
+    "skylark-domx-geom",
+    "skylark-domx-styler",
+    "skylark-domx-fx",
+    "skylark-domx-query",
+    "skylark-domx-velm"
+], function(
+    skylark,
+    types,
+    objects,
+    funcs,
+    Emitter, 
+    noder, 
+    datax, 
+    eventer, 
+    finder, 
+    geom, 
+    styler, 
+    fx, 
+    $, 
+    elmx
+) {
+    "use strict";
+
+    var slice = Array.prototype.slice,
+        concat = Array.prototype.concat,
+        pluginKlasses = {},
+        shortcuts = {};
+
+    /*
+     * Create or get or destory a plugin instance assocated with the element.
+     */
+    function instantiate(elm,pluginName,options) {
+        var pair = pluginName.split(":"),
+            instanceDataName = pair[1];
+        pluginName = pair[0];
+
+        if (!instanceDataName) {
+            instanceDataName = pluginName;
+        }
+
+        var pluginInstance = datax.data( elm, instanceDataName );
+
+        if (options === "instance") {
+            return pluginInstance;
+        } else if (options === "destroy") {
+            if (!pluginInstance) {
+                throw new Error ("The plugin instance is not existed");
+            }
+            pluginInstance.destroy();
+            //datax.removeData( elm, pluginName);
+            pluginInstance = undefined;
+        } else {
+            if (!pluginInstance) {
+                if (options !== undefined && typeof options !== "object") {
+                    throw new Error ("The options must be a plain object");
+                }
+                var pluginKlass = pluginKlasses[pluginName]; 
+                pluginInstance = new pluginKlass(elm,options);
+                datax.data( elm, instanceDataName,pluginInstance );
+            } else if (options) {
+                pluginInstance.reset(options);
+            }
+        }
+
+        return pluginInstance;
+    }
+
+
+    function shortcutter(pluginName,extfn) {
+       /*
+        * Create or get or destory a plugin instance assocated with the element,
+        * and also you can execute the plugin method directory;
+        */
+        return function (elm,options) {
+            var  plugin = instantiate(elm, pluginName,"instance");
+            if ( options === "instance" ) {
+              return plugin || null;
+            }
+
+            if (!plugin) {
+                plugin = instantiate(elm, pluginName,typeof options == 'object' && options || {});
+                if (typeof options != "string") {
+                  return this;
+                }
+            } 
+            if (options) {
+                var args = slice.call(arguments,1); //2
+                if (extfn) {
+                    return extfn.apply(plugin,args);
+                } else {
+                    if (typeof options == 'string') {
+                        var methodName = options;
+
+                        if ( !plugin ) {
+                            throw new Error( "cannot call methods on " + pluginName +
+                                " prior to initialization; " +
+                                "attempted to call method '" + methodName + "'" );
+                        }
+
+                        if ( !types.isFunction( plugin[ methodName ] ) || methodName.charAt( 0 ) === "_" ) {
+                            throw new Error( "no such method '" + methodName + "' for " + pluginName +
+                                " plugin instance" );
+                        }
+
+                        args = slice.call(args,1); //remove method name
+
+                        var ret = plugin[methodName].apply(plugin,args);
+                        if (ret == plugin) {
+                          ret = undefined;
+                        }
+
+                        return ret;
+                    }                
+                }                
+            }
+
+        }
+
+    }
+
+    /*
+     * Register a plugin type
+     */
+    function register( pluginKlass,shortcutName,instanceDataName,extfn) {
+        var pluginName = pluginKlass.prototype.pluginName;
+        
+        pluginKlasses[pluginName] = pluginKlass;
+
+        if (shortcutName) {
+            if (instanceDataName && types.isFunction(instanceDataName)) {
+                extfn = instanceDataName;
+                instanceDataName = null;
+            } 
+            if (instanceDataName) {
+                pluginName = pluginName + ":" + instanceDataName;
+            }
+
+            var shortcut = shortcuts[shortcutName] = shortcutter(pluginName,extfn);
+                
+            $.fn[shortcutName] = function(options) {
+                var returnValue = this;
+
+                if ( !this.length && options === "instance" ) {
+                  returnValue = undefined;
+                } else {
+                  var args = slice.call(arguments);
+                  this.each(function () {
+                    var args2 = slice.call(args);
+                    args2.unshift(this);
+                    var  ret  = shortcut.apply(undefined,args2);
+                    if (ret !== undefined) {
+                        returnValue = ret;
+                    }
+                  });
+                }
+
+                return returnValue;
+            };
+
+            elmx.partial(shortcutName,function(options) {
+                var  ret  = shortcut(this._elm,options);
+                if (ret === undefined) {
+                    ret = this;
+                }
+                return ret;
+            });
+
+        }
+    }
+
+    function parentClass(ctor){
+        if (ctor.hasOwnProperty("superclass")) {
+            return ctor.superclass;
+        }
+
+        return Object.getPrototypeOf(ctor);
+    }
+
+ 
+    var Plugin =   Emitter.inherit({
+        klassName: "Plugin",
+
+        _construct : function(elm,options) {
+           this._elm = elm;
+           this._initOptions(options);
+        },
+
+        _initOptions : function(options) {
+          var ctor = this.constructor,
+              cache = ctor.cache = (ctor.hasOwnProperty("cache") ? ctor.cache : {}),
+              defaults = cache.defaults;
+          if (!defaults) {
+            var  ctors = [];
+            do {
+              ctors.unshift(ctor);
+              if (ctor === Plugin) {
+                break;
+              }
+              ctor = parentClass(ctor);
+            } while (ctor);
+
+            defaults = cache.defaults = {};
+            for (var i=0;i<ctors.length;i++) {
+              ctor = ctors[i];
+              if (ctor.prototype.hasOwnProperty("options")) {
+                objects.mixin(defaults,ctor.prototype.options,true);
+              }
+              if (ctor.hasOwnProperty("options")) {
+                objects.mixin(defaults,ctor.options,true);
+              }
+            }
+          }
+          Object.defineProperty(this,"options",{
+            value :objects.mixin({},defaults,options,true)
+          });
+
+          //return this.options = langx.mixin({},defaults,options);
+          return this.options;
+        },
+
+
+        destroy: function() {
+
+            this._destroy();
+
+            // remove all event lisener
+            this.unlistenTo();
+            // remove data 
+            datax.removeData(this._elm,this.pluginName );
+        },
+
+        _destroy: funcs.noop,
+
+        _delay: function( handler, delay ) {
+            function handlerProxy() {
+                return ( typeof handler === "string" ? instance[ handler ] : handler )
+                    .apply( instance, arguments );
+            }
+            var instance = this;
+            return setTimeout( handlerProxy, delay || 0 );
+        },
+
+        elmx : function(elm) {
+            elm = elm || this._elm;
+            return elmx(elm);
+
+        },
+
+        $ : function(elm) {
+            elm = elm || this._elm;
+            return $(elm);
+        },
+
+        option: function( key, value ) {
+            var options = key;
+            var parts;
+            var curOption;
+            var i;
+
+            if ( arguments.length === 0 ) {
+
+                // Don't return a reference to the internal hash
+                return objects.mixin( {}, this.options );
+            }
+
+            if ( typeof key === "string" ) {
+
+                // Handle nested keys, e.g., "foo.bar" => { foo: { bar: ___ } }
+                options = {};
+                parts = key.split( "." );
+                key = parts.shift();
+                if ( parts.length ) {
+                    curOption = options[ key ] = objects.mixin( {}, this.options[ key ] );
+                    for ( i = 0; i < parts.length - 1; i++ ) {
+                        curOption[ parts[ i ] ] = curOption[ parts[ i ] ] || {};
+                        curOption = curOption[ parts[ i ] ];
+                    }
+                    key = parts.pop();
+                    if ( arguments.length === 1 ) {
+                        return curOption[ key ] === undefined ? null : curOption[ key ];
+                    }
+                    curOption[ key ] = value;
+                } else {
+                    if ( arguments.length === 1 ) {
+                        return this.options[ key ] === undefined ? null : this.options[ key ];
+                    }
+                    options[ key ] = value;
+                }
+            }
+
+            this._setOptions( options );
+
+            return this;
+        },
+
+        _setOptions: function( options ) {
+            var key;
+
+            for ( key in options ) {
+                this._setOption( key, options[ key ] );
+            }
+
+            return this;
+        },
+
+        _setOption: function( key, value ) {
+
+            this.options[ key ] = value;
+
+            return this;
+        },
+
+        getUID : function (prefix) {
+            prefix = prefix || "plugin";
+            do prefix += ~~(Math.random() * 1000000)
+            while (document.getElementById(prefix))
+            return prefix;
+        },
+
+        elm : function() {
+            return this._elm;
+        }
+
+    });
+
+    Plugin.instantiate = function(elm,options) {
+        return instantiate(elm,this.prototype.pluginName,options);
+    };
+    
+    $.fn.plugin = function(name,options) {
+        var args = slice.call( arguments, 1 ),
+            self = this,
+            returnValue ;
+
+        this.each(function(){
+            returnValue = instantiate.apply(self,[this,name].concat(args));
+        });
+        return returnValue;
+    };
+
+    elmx.partial("plugin",function(name,options) {
+        var args = slice.call( arguments, 1 );
+        return instantiate.apply(this,[this._elm,name].concat(args));
+    }); 
+
+
+    function plugins() {
+        return plugins;
+    }
+     
+    objects.mixin(plugins, {
+        instantiate,
+        Plugin,
+        register,
+        shortcuts
+    });
+
+    return  skylark.attach("domx.plugins",plugins);
+});
+define('skylark-domx-plugins-base/main',[
+	"./plugins"
+],function(plugins){
+	return plugins;
+});
+define('skylark-domx-plugins-base', ['skylark-domx-plugins-base/main'], function (main) { return main; });
+
 define('skylark-domx-plugins-popups/popups',[
 	"skylark-langx-ns"
 ],function(skylark){
@@ -22036,7 +21810,7 @@ define('skylark-domx-plugins-popups/Dropdown',[
   "skylark-domx-noder",
   "skylark-domx-geom",
   "skylark-domx-query",
-  "skylark-domx-plugins",
+  "skylark-domx-plugins-base",
   "./popups"
 ],function(langx,browser,eventer,noder,geom,$,plugins,popups){
 
@@ -22051,7 +21825,7 @@ define('skylark-domx-plugins-popups/Dropdown',[
   var Dropdown = plugins.Plugin.inherit({
     klassName: "Dropdown",
 
-    pluginName : "domx.dropdown",
+    pluginName : "lark.popups.dropdown",
 
     options : {
       "selectors" : {
@@ -22201,7 +21975,7 @@ define('skylark-domx-plugins-popups/ComboBox',[
   "skylark-domx-noder",
   "skylark-domx-geom",
   "skylark-domx-query",
-  "skylark-domx-plugins",
+  "skylark-domx-plugins-base",
   "./popups",
   "./Dropdown"
 ],function(langx,browser,eventer,noder,geom,$,plugins,popups,Dropdown){
@@ -22212,7 +21986,7 @@ define('skylark-domx-plugins-popups/ComboBox',[
 	var ComboBox = plugins.Plugin.inherit({
 		klassName: "ComboBox",
 
-		pluginName : "domx.combobox",
+		pluginName : "lark.popups.combobox",
 
 		options : {
 
@@ -22253,7 +22027,7 @@ define('skylark-domx-plugins-popups/ComboBox',[
 			this.$dropMenu = this.$element.find('.dropdown-menu');
 			this.$input = this.$element.find('input');
 			this.$button = this.$element.find('.btn');
-			this.$button.plugin("domx.dropdown");
+			this.$button.plugin("lark.popups.dropdown");
 			this.$inputGroupBtn = this.$element.find('.input-group-btn');
 
 			this.$element.on('click.lark', 'a', langx.proxy(this.itemclicked, this));
@@ -22438,7 +22212,7 @@ define('skylark-domx-plugins-popups/ComboBox',[
 			);
 
 			if(this.options.showOptionsOnKeypress && !this.$inputGroupBtn.hasClass('open')){
-				this.$button.plugin("domx.dropdown").toggle();
+				this.$button.plugin("lark.popups.dropdown").toggle();
 				this.$input.focus();
 			}
 
@@ -22529,7 +22303,7 @@ define('skylark-domx-plugins-popups/SelectList',[
   "skylark-domx-noder",
   "skylark-domx-geom",
   "skylark-domx-query",
-  "skylark-domx-plugins",
+  "skylark-domx-plugins-base",
   "./popups",
   "./Dropdown"
 ],function(langx,browser,eventer,noder,geom,$,plugins,popups,Dropdown){
@@ -22540,7 +22314,7 @@ define('skylark-domx-plugins-popups/SelectList',[
 	var SelectList = plugins.Plugin.inherit({
 		klassName: "SelectList",
 
-		pluginName : "domx.selectlist",
+		pluginName : "lark.popups.selectlist",
 	
 		options : {
 			emptyLabelHTML: '<li data-value=""><a href="#">No items</a></li>'
@@ -22558,7 +22332,7 @@ define('skylark-domx-plugins-popups/SelectList',[
 			this.$label = this.$element.find('.selected-label');
 			this.$dropdownMenu = this.$element.find('.dropdown-menu');
 
-			this.$button.plugin("domx.dropdown");
+			this.$button.plugin("lark.popups.dropdown");
 
 			this.$element.on('click.selectlist', '.dropdown-menu a', langx.proxy(this.itemClicked, this));
 			this.setDefaultSelection();
@@ -23983,7 +23757,7 @@ define('skylark-domx-plugins-colors/Indicator',[
     "skylark-domx-eventer",
     "skylark-domx-finder",
     "skylark-domx-query",
-    "skylark-domx-plugins"    
+    "skylark-domx-plugins-base"    
 ],function(skylark, langx, browser, noder, eventer,finder, $,plugins) {
     /**
     * Lightweight drag helper.  Handles containment within the element, so that
@@ -24178,7 +23952,7 @@ define('skylark-domx-plugins-colors/ColorPicker',[
     "skylark-domx-query",
     "skylark-domx-eventer",
     "skylark-domx-styler",
-    "skylark-domx-plugins",
+    "skylark-domx-plugins-base",
     "skylark-graphics-colors/Color",
     "./colors",
     "./helper",
@@ -24680,7 +24454,7 @@ define('skylark-domx-plugins-colors/ColorPalette',[
     "skylark-domx-eventer",
     "skylark-domx-styler",
     "skylark-domx-fx",
-    "skylark-domx-plugins",
+    "skylark-domx-plugins-base",
     "skylark-graphics-colors/Color",
     "./colors",
     "./helper"
@@ -24863,7 +24637,7 @@ define('skylark-domx-plugins-colors/ColorPane',[
     "skylark-domx-eventer",
     "skylark-domx-styler",
     "skylark-domx-fx",
-    "skylark-domx-plugins",
+    "skylark-domx-plugins-base",
     "skylark-domx-plugins-popups",
     "skylark-graphics-colors/Color",
     "./colors",
@@ -25085,7 +24859,7 @@ define('skylark-domx-plugins-colors/ColorBox',[
     "skylark-domx-query",
     "skylark-domx-eventer",
     "skylark-domx-styler",
-    "skylark-domx-plugins",
+    "skylark-domx-plugins-base",
     "skylark-domx-plugins-popups",
     "skylark-graphics-colors/Color",
     "./colors",
@@ -25575,7 +25349,7 @@ define('skylark-domx-plugins-colors/Gradienter',[
     "skylark-domx-eventer",
     "skylark-domx-finder",
     "skylark-domx-query",
-    "skylark-domx-plugins",    
+    "skylark-domx-plugins-base",    
     "skylark-graphics-colors/Color",
     "./colors",
     "./colorer",
@@ -27850,7 +27624,7 @@ define('skylark-jquery/JqueryPlugin',[
 	"skylark-langx/langx",
 	"skylark-domx-data",
 	"skylark-domx-eventer",
-	"skylark-domx-plugins",
+	"skylark-domx-plugins-base",
 	"skylark-domx-query",
 ],function(types, objects, arrays, langx, datax, eventer, plugins, $){
 
@@ -28167,7 +27941,7 @@ define('skylark-jquery/JqueryPlugin',[
 
 define( 'skylark-jquery/widget',[ 
 	"skylark-langx/langx",
-	"skylark-domx-plugins",
+	"skylark-domx-plugins-base",
 	"./core",
 	"./JqueryPlugin"
 ],  function(langx,splugins, $,JqPlugin ) {
@@ -28572,7 +28346,7 @@ define('skylark-jquery/main',[
 
 define('skylark-jquery', ['skylark-jquery/main'], function (main) { return main; });
 
-define('skylark-ajaxify-routers/routers',[
+define('skylark-appify-routers/routers',[
 	"skylark-langx/skylark",
 	"skylark-langx/langx"	
 ],function(skylark,langx){
@@ -28586,7 +28360,7 @@ define('skylark-ajaxify-routers/routers',[
 	});	
 });
 
-define('skylark-ajaxify-routers/Route',[
+define('skylark-appify-routers/Route',[
 	"skylark-langx/langx",
 	"./routers"
 ],function(langx,routers){
@@ -28724,7 +28498,7 @@ define('skylark-ajaxify-routers/Route',[
 
 	return routers.Route = Route;	
 });
-define('skylark-ajaxify-routers/Router',[
+define('skylark-appify-routers/Router',[
     "skylark-langx/langx",
     "./routers",
     "./Route"
@@ -29031,7 +28805,7 @@ define('skylark-ajaxify-routers/Router',[
     return routers.Router = Router;
 });
 
-define('skylark-ajaxify-routers/main',[
+define('skylark-appify-routers/main',[
     "./routers",
     "./Router",
     "./Route"
@@ -29039,12 +28813,12 @@ define('skylark-ajaxify-routers/main',[
     return routers;
 });
 
-define('skylark-ajaxify-routers', ['skylark-ajaxify-routers/main'], function (main) { return main; });
+define('skylark-appify-routers', ['skylark-appify-routers/main'], function (main) { return main; });
 
-define('skylark-ajaxify-spa/spa',[
+define('skylark-appify-spa/spa',[
     "skylark-langx/skylark",
     "skylark-langx/langx",
-    "skylark-ajaxify-routers"
+    "skylark-appify-routers"
 ], function(skylark, langx, routers) {
     var Deferred = langx.Deferred;
 
@@ -29389,15 +29163,15 @@ define('skylark-ajaxify-spa/spa',[
     return skylark.attach("ajaxify.spa",spa);
 });
 
-define('skylark-ajaxify-spa/main',[
+define('skylark-appify-spa/main',[
     "./spa"
 ], function(spa) {
     return spa;
 });
 
-define('skylark-ajaxify-spa', ['skylark-ajaxify-spa/main'], function (main) { return main; });
+define('skylark-appify-spa', ['skylark-appify-spa/main'], function (main) { return main; });
 
-define('skylark-ajaxify-shells/shells',[
+define('skylark-appify-shells/shells',[
 	"skylark-langx/skylark"
 ],function(skylark){
 	return skylark.attach("ajaxify.shells",{});
@@ -31547,13 +31321,13 @@ define('skylark-tinycon/main',[
 });
 define('skylark-tinycon', ['skylark-tinycon/main'], function (main) { return main; });
 
-define('skylark-ajaxify-shells/Shell',[
+define('skylark-appify-shells/Shell',[
 	"skylark-langx/langx",
 	"skylark-domx-css",
 	"skylark-domx-scripter",
 	"skylark-domx-finder",
 	"skylark-domx-query",
-	"skylark-domx-plugins",
+	"skylark-domx-plugins-base",
 	"skylark-nprogress",
 	"skylark-bootbox4",
     "skylark-visibility",
@@ -31898,13 +31672,13 @@ define('skylark-ajaxify-shells/Shell',[
 
 });
 
-define('skylark-ajaxify-shells/main',[
+define('skylark-appify-shells/main',[
 	"./shells",
 	"./Shell"
 ],function(shells){
 	return shells;
 });
-define('skylark-ajaxify-shells', ['skylark-ajaxify-shells/main'], function (main) { return main; });
+define('skylark-appify-shells', ['skylark-appify-shells/main'], function (main) { return main; });
 
 define('skylark-data-entities/entities',[
     "skylark-langx/langx"
@@ -34248,8 +34022,8 @@ define('skylark-slax-runtime/skylark',[
 	"skylark-domx-images",
 	"skylark-domx-plugins-colors",
 	"skylark-jquery",
-	"skylark-ajaxify-spa",
-	"skylark-ajaxify-shells",
+	"skylark-appify-spa",
+	"skylark-appify-shells",
 	"skylark-data-entities",
 	"skylark-io-streams"
 ],function(slax,skylark){

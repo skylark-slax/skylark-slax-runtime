@@ -6,8 +6,8 @@ define([
 	"skylark-domx-images",
 	"skylark-domx-plugins-colors",
 	"skylark-jquery",
-	"skylark-ajaxify-spa",
-	"skylark-ajaxify-shells",
+	"skylark-appify-spa",
+	"skylark-appify-shells",
 	"skylark-data-entities",
 	"skylark-io-streams"
 ],function(slax,skylark){
