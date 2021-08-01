@@ -32075,7 +32075,7 @@ define('skylark-visibility/main',[
 define('skylark-visibility', ['skylark-visibility/main'], function (main) { return main; });
 
 define('skylark-tinycon/tinycon',[
-  "skylark-langx/skylark"
+  "skylark-langx-ns"
 ],function(skylark) {
   var Tinycon = {};
   var currentFavicon = null;
