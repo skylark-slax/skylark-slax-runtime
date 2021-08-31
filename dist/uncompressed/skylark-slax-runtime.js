@@ -229,7 +229,6 @@ define('skylark-slax-runtime/skylark',[
 	"skylark-domx-plugins-colors",
 	"skylark-jquery",
 	"skylark-appify-spa",
-	"skylark-appify-shells",
 	"skylark-data-entities",
 	"skylark-io-streams"
 ],function(slax,skylark){

@@ -1375,7 +1375,7 @@ define('skylark-langx-hoster/detects/mobile',[
     return hoster.detects.mobile = detectMobile;
 });
 
-define('skylark-langx-hoster/isMobile',[
+define('skylark-langx-hoster/is-mobile',[
     "./hoster",
     "./detects/mobile"
 ],function(hoster,detectMobile){
@@ -1388,7 +1388,7 @@ define('skylark-langx-hoster/isMobile',[
 
 define('skylark-langx-hoster/main',[
 	"./hoster",
-	"./isMobile"
+	"./is-mobile"
 ],function(hoster){
 	return hoster;
 });
@@ -2079,7 +2079,7 @@ define('skylark-langx-funcs/main',[
 });
 define('skylark-langx-funcs', ['skylark-langx-funcs/main'], function (main) { return main; });
 
-define('skylark-langx-async/Deferred',[
+define('skylark-langx-async/deferred',[
     "skylark-langx-arrays",
 	"skylark-langx-funcs",
     "skylark-langx-objects"
@@ -2367,7 +2367,7 @@ define('skylark-langx-async/Deferred',[
 define('skylark-langx-async/async',[
     "skylark-langx-ns",
     "skylark-langx-objects",
-    "./Deferred"
+    "./deferred"
 ],function(skylark,objects,Deferred){
     var each = objects.each;
     
@@ -2738,7 +2738,7 @@ define('skylark-langx-klass/main',[
 });
 define('skylark-langx-klass', ['skylark-langx-klass/main'], function (main) { return main; });
 
-define('skylark-langx-events/Event',[
+define('skylark-langx-events/event',[
   "skylark-langx-objects",
   "skylark-langx-funcs",
   "skylark-langx-klass",
@@ -2795,13 +2795,13 @@ define('skylark-langx-events/Event',[
     return events.Event = Event;
     
 });
-define('skylark-langx-events/Listener',[
+define('skylark-langx-events/listener',[
   "skylark-langx-types",
   "skylark-langx-objects",
   "skylark-langx-arrays",
   "skylark-langx-klass",
   "./events",
-  "./Event"
+  "./event"
 ],function(types,objects,arrays,klass,events,Event){
     var slice = Array.prototype.slice,
         compact = arrays.compact,
@@ -2979,14 +2979,14 @@ define('skylark-langx-events/Listener',[
     return events.Listener = Listener;
 
 });
-define('skylark-langx-events/Emitter',[
+define('skylark-langx-events/emitter',[
   "skylark-langx-types",
   "skylark-langx-objects",
   "skylark-langx-arrays",
   "skylark-langx-klass",
   "./events",
-  "./Event",
-  "./Listener"
+  "./event",
+  "./listener"
 ],function(types,objects,arrays,klass,events,Event,Listener){
     var slice = Array.prototype.slice,
         compact = arrays.compact,
@@ -3227,9 +3227,9 @@ define('skylark-langx-events/Emitter',[
     return events.Emitter = Emitter;
 
 });
-define('skylark-langx-events/createEvent',[
+define('skylark-langx-events/create-event',[
 	"./events",
-	"./Event"
+	"./event"
 ],function(events,Event){
     function createEvent(type,props) {
         //var e = new CustomEvent(type,props);
@@ -3241,22 +3241,22 @@ define('skylark-langx-events/createEvent',[
 });
 define('skylark-langx-events/main',[
 	"./events",
-	"./Event",
-	"./Listener",
-	"./Emitter",
-	"./createEvent"
+	"./event",
+	"./listener",
+	"./emitter",
+	"./create-event"
 ],function(events){
 	return events;
 });
 define('skylark-langx-events', ['skylark-langx-events/main'], function (main) { return main; });
 
-define('skylark-langx-emitter/Emitter',[
+define('skylark-langx-emitter/emitter',[
     "skylark-langx-events"
 ],function(events){
     return events.Emitter;
 });
-define('skylark-langx-emitter/Evented',[
-	"./Emitter"
+define('skylark-langx-emitter/evented',[
+	"./emitter"
 ],function(Emitter){
 	return Emitter;
 });
@@ -3272,7 +3272,7 @@ define('skylark-langx-urls/urls',[
 
 
 
-define('skylark-langx-urls/parseUrl',[
+define('skylark-langx-urls/parse-url',[
     './urls'
 ], function (urls) {
     'use strict';
@@ -3318,9 +3318,9 @@ define('skylark-langx-urls/parseUrl',[
 
     return urls.parseUrl = parseUrl;
 });
-define('skylark-langx-urls/isCrossOrigin',[
+define('skylark-langx-urls/is-cross-origin',[
     './urls',
-    "./parseUrl"
+    "./parse-url"
 ], function (urls,parseUrl) {
     'use strict';
 
@@ -3345,9 +3345,9 @@ define('skylark-net-http/Xhr',[
   "skylark-langx-objects",
   "skylark-langx-arrays",
   "skylark-langx-funcs",
-  "skylark-langx-async/Deferred",
-  "skylark-langx-emitter/Evented",
-  "skylark-langx-urls/isCrossOrigin",
+  "skylark-langx-async/deferred",
+  "skylark-langx-emitter/evented",
+  "skylark-langx-urls/is-cross-origin",
   "./http"
 ],function(skylark,types,objects,arrays,funcs,Deferred,Evented,isCrossOrigin,http){
 
@@ -3725,7 +3725,7 @@ define('skylark-langx/klass',[
 ],function(klass){
     return klass;
 });
-define('skylark-langx/ArrayStore',[
+define('skylark-langx/array-store',[
     "./klass"
 ],function(klass){
     var SimpleQueryEngine = function(query, options){
@@ -4294,12 +4294,26 @@ define('skylark-langx-binary/binary',[
 
 		//Faster but the results is failing the "instanceof ArrayBuffer" test
 		//return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
-	};
+	}
+
+    function readInt8(data, offset) {
+        return data[offset] << 24 >> 24;
+    }
+    function readUint16(data, offset) {
+        return data[offset] << 8 | data[offset + 1];
+    }
+    function readUint32(data, offset) {
+        return (data[offset] << 24 | data[offset + 1] << 16 | data[offset + 2] << 8 | data[offset + 3]) >>> 0;
+    }
+
 
 	return skylark.attach("langx.binary",{
 		fromBase64,
 		fromBinaryString,
-		fromBuffer
+		fromBuffer,
+		readInt8,
+		readUint16,
+		readUint32
 	});
 });
 define('skylark-langx-binary/main',[
@@ -4393,8 +4407,107 @@ define('skylark-langx-datetimes/datetimes',[
 		parseMilliSeconds
 	});
 });
+define('skylark-langx-datetimes/to_date',[
+	"skylark-langx-types",
+    "./datetimes"
+],function(types,datetimes){
+
+//original :pdf.js-2.7.750/src/display/display_utils.js
+
+  /**
+class PDFDateString {
+   * Convert a PDF date string to a JavaScript `Date` object.
+   *
+   * The PDF date string format is described in section 7.9.4 of the official
+   * PDF 32000-1:2008 specification. However, in the PDF 1.7 reference (sixth
+   * edition) Adobe describes the same format including a trailing apostrophe.
+   * This syntax in incorrect, but Adobe Acrobat creates PDF files that contain
+   * them. We ignore all apostrophes as they are not necessary for date parsing.
+   *
+   * Moreover, Adobe Acrobat doesn't handle changing the date to universal time
+   * and doesn't use the user's time zone (effectively ignoring the HH' and mm'
+   * parts of the date string).
+   *
+   * @param {string} input
+   * @returns {Date|null}
+   *
+  static toDateObject(input) {
+   **/
+
+
+	let pdfDateStringRegex;
+
+	function toDate(input) {
+    if (!input || !types.isString(input)) {
+      return null;
+    }
+
+    // Lazily initialize the regular expression.
+    if (!pdfDateStringRegex) {
+      pdfDateStringRegex = new RegExp(
+        "^D:" + // Prefix (required)
+          "(\\d{4})" + // Year (required)
+          "(\\d{2})?" + // Month (optional)
+          "(\\d{2})?" + // Day (optional)
+          "(\\d{2})?" + // Hour (optional)
+          "(\\d{2})?" + // Minute (optional)
+          "(\\d{2})?" + // Second (optional)
+          "([Z|+|-])?" + // Universal time relation (optional)
+          "(\\d{2})?" + // Offset hour (optional)
+          "'?" + // Splitting apostrophe (optional)
+          "(\\d{2})?" + // Offset minute (optional)
+          "'?" // Trailing apostrophe (optional)
+      );
+    }
+
+    // Optional fields that don't satisfy the requirements from the regular
+    // expression (such as incorrect digit counts or numbers that are out of
+    // range) will fall back the defaults from the specification.
+    const matches = pdfDateStringRegex.exec(input);
+    if (!matches) {
+      return null;
+    }
+
+    // JavaScript's `Date` object expects the month to be between 0 and 11
+    // instead of 1 and 12, so we have to correct for that.
+    const year = parseInt(matches[1], 10);
+    let month = parseInt(matches[2], 10);
+    month = month >= 1 && month <= 12 ? month - 1 : 0;
+    let day = parseInt(matches[3], 10);
+    day = day >= 1 && day <= 31 ? day : 1;
+    let hour = parseInt(matches[4], 10);
+    hour = hour >= 0 && hour <= 23 ? hour : 0;
+    let minute = parseInt(matches[5], 10);
+    minute = minute >= 0 && minute <= 59 ? minute : 0;
+    let second = parseInt(matches[6], 10);
+    second = second >= 0 && second <= 59 ? second : 0;
+    const universalTimeRelation = matches[7] || "Z";
+    let offsetHour = parseInt(matches[8], 10);
+    offsetHour = offsetHour >= 0 && offsetHour <= 23 ? offsetHour : 0;
+    let offsetMinute = parseInt(matches[9], 10) || 0;
+    offsetMinute = offsetMinute >= 0 && offsetMinute <= 59 ? offsetMinute : 0;
+
+    // Universal time relation 'Z' means that the local time is equal to the
+    // universal time, whereas the relations '+'/'-' indicate that the local
+    // time is later respectively earlier than the universal time. Every date
+    // is normalized to universal time.
+    if (universalTimeRelation === "-") {
+      hour += offsetHour;
+      minute += offsetMinute;
+    } else if (universalTimeRelation === "+") {
+      hour -= offsetHour;
+      minute -= offsetMinute;
+    }
+
+    return new Date(Date.UTC(year, month, day, hour, minute, second));
+  }
+
+  return datetimes.toDate = toDate;
+
+});
 define('skylark-langx-datetimes/main',[
-	"./datetimes"
+	"./datetimes",
+	"./to_date"
 ],function(datetimes){
 	return datetimes;
 });
@@ -4405,18 +4518,18 @@ define('skylark-langx/datetimes',[
 ],function(datetimes){
     return datetimes;
 });
-define('skylark-langx/Deferred',[
+define('skylark-langx/deferred',[
     "skylark-langx-async"
 ],function(async){
     return async.Deferred;
 });
-define('skylark-langx/Emitter',[
+define('skylark-langx/emitter',[
     "skylark-langx-events"
 ],function(events){
     return events.Emitter;
 });
-define('skylark-langx/Evented',[
-    "./Emitter"
+define('skylark-langx/evented',[
+    "./emitter"
 ],function(Emitter){
     return Emitter;
 });
@@ -4920,7 +5033,7 @@ define('skylark-langx-numerics/maths',[
 
 	return  numerics.maths = maths;
 });
-define('skylark-langx-numerics/Quaternion',[
+define('skylark-langx-numerics/quaternion',[
 	"skylark-langx-klass",
 	"./numerics",
 	"./maths"
@@ -5570,11 +5683,11 @@ define('skylark-langx-numerics/Quaternion',[
 
 
 });
-define('skylark-langx-numerics/Vector3',[
+define('skylark-langx-numerics/vector3',[
 	"skylark-langx-klass",
 	"./numerics",
 	"./maths",
-	"./Quaternion"
+	"./quaternion"
 ] ,function(
 	klass,
 	numerics,
@@ -6292,10 +6405,10 @@ define('skylark-langx-numerics/Vector3',[
 
 	return numerics.Vector3 = Vector3;
 });
-define('skylark-langx-numerics/Matrix4',[
+define('skylark-langx-numerics/matrix4',[
 	"skylark-langx-klass",
 	"./numerics",
-	"./Vector3"
+	"./vector3"
 ] ,function(
 	klass,
 	numerics,
@@ -7180,13 +7293,13 @@ define('skylark-langx-numerics/Matrix4',[
 	return numerics.Matrix4 =  Matrix4 ;
 
 });
-define('skylark-langx-numerics/Euler',[
+define('skylark-langx-numerics/euler',[
 	"skylark-langx-klass",
 	"./numerics",
 	"./maths",
-	"./Quaternion",
-	"./Vector3",
-	"./Matrix4"
+	"./quaternion",
+	"./vector3",
+	"./matrix4"
 ] ,function(
 	klass,
 	numerics,
@@ -7528,7 +7641,7 @@ define('skylark-langx-numerics/Euler',[
 	return numerics.Euler = Euler ;
 });
 
-define('skylark-langx-numerics/Matrix3',[
+define('skylark-langx-numerics/matrix3',[
 	"skylark-langx-klass",
 	"./numerics"
 ] ,function(klass,numerics) {
@@ -7885,7 +7998,7 @@ define('skylark-langx-numerics/Matrix3',[
 
 	return numerics.Matrix3 = Matrix3;
 });
-define('skylark-langx-numerics/Transform',[
+define('skylark-langx-numerics/transform',[
 	"skylark-langx-klass",	
     "./numerics",
 ], function(klass,numerics) {
@@ -7902,9 +8015,9 @@ define('skylark-langx-numerics/Transform',[
 	return numerics.Transform =Transform;
 });
 
-define('skylark-langx-numerics/MatrixTransform',[
+define('skylark-langx-numerics/matrix-transform',[
     "./numerics",
-	"./Transform"
+	"./transform"
 ],function(numerics,Transform) {
 
     var MatrixTransform =  Transform.inherit({
@@ -7943,11 +8056,11 @@ define('skylark-langx-numerics/MatrixTransform',[
 	
 });	
 
-define('skylark-langx-numerics/Plane',[
+define('skylark-langx-numerics/plane',[
 	"skylark-langx-klass",
 	"./numerics",
-	"./Matrix3",
-	"./Vector3"
+	"./matrix3",
+	"./vector3"
 ] ,function(
 	klass,
 	numerics,
@@ -8181,10 +8294,10 @@ define('skylark-langx-numerics/Plane',[
 
 	return numerics.Plane = Plane;
 });
-define('skylark-langx-numerics/RotateTransform',[
+define('skylark-langx-numerics/rotate-transform',[
     "./numerics",
-	"./Transform",
-	"./MatrixTransform"
+	"./transform",
+	"./matrix-transform"
 ],function(numerics,Transform,Matrix) {
 
 
@@ -8238,10 +8351,10 @@ define('skylark-langx-numerics/RotateTransform',[
 	
 });	
 
-define('skylark-langx-numerics/ScaleTransform',[
+define('skylark-langx-numerics/scale-transform',[
     "./numerics",
-    "./Transform",
-    "./MatrixTransform"
+    "./transform",
+    "./matrix-transform"
 ], function(numerics, Transform, Matrix) {
 
    var ScaleTransform =  Transform.inherit({
@@ -8300,10 +8413,10 @@ define('skylark-langx-numerics/ScaleTransform',[
 
 });
 
-define('skylark-langx-numerics/SkewTransform',[
+define('skylark-langx-numerics/skew-transform',[
     "./numerics",
-    "./Transform",
-    "./MatrixTransform"
+    "./transform",
+    "./matrix-transform"
 ], function(numerics, Transform, Matrix) {
 
    var SkewTransform = Transform.inherit({
@@ -8345,7 +8458,7 @@ define('skylark-langx-numerics/SkewTransform',[
 
 });
 
-define('skylark-langx-numerics/Vector2',[
+define('skylark-langx-numerics/vector2',[
 	"skylark-langx-klass",
 	"./numerics"
 ] ,function(klass,numerics) {
@@ -8799,10 +8912,10 @@ define('skylark-langx-numerics/Vector2',[
 	return numerics.Vector2 = Vector2 ;
 });
 
-define( 'skylark-langx-numerics/TransformMatrix',[
+define( 'skylark-langx-numerics/transform-matrix',[
     "skylark-langx-klass",
     "./numerics",
-    "./Vector2"
+    "./vector2"
 ], function(klass,numerics,Vector2){
 	// reference easeljs/numerics/Matrix2D  and dojox/gfx/matrix
 	
@@ -9685,10 +9798,10 @@ define( 'skylark-langx-numerics/TransformMatrix',[
 	return numerics.TransformMatrix = TransformMatrix;
 });
 
-define('skylark-langx-numerics/TranslateTransform',[
+define('skylark-langx-numerics/translate-transform',[
     "./numerics",
-    "./Transform",
-    "./MatrixTransform"
+    "./transform",
+    "./matrix-transform"
 ],function(numerics,Transform,Matrix,Point,Rect) {
 
     //|1   0   dx|
@@ -9733,7 +9846,7 @@ define('skylark-langx-numerics/TranslateTransform',[
     return numerics.TranslateTransform =TranslateTransform;
 });	
 
-define('skylark-langx-numerics/Vector4',[
+define('skylark-langx-numerics/vector4',[
 	"skylark-langx-klass",
 	"./numerics"
 ] ,function(klass,numerics) {
@@ -10387,22 +10500,22 @@ define('skylark-langx-numerics/Vector4',[
 });
 define('skylark-langx-numerics/main',[
 	"./numerics",
-	"./Euler",
+	"./euler",
 	"./maths",
-	"./Matrix3",
-	"./Matrix4",
-	"./MatrixTransform",
-	"./Plane",
-	"./Quaternion",
-	"./RotateTransform",
-	"./ScaleTransform",
-	"./SkewTransform",
-	"./Transform",
-	"./TransformMatrix",
-	"./TranslateTransform",
-	"./Vector2",
-	"./Vector3",
-	"./Vector4"
+	"./matrix3",
+	"./matrix4",
+	"./matrix-transform",
+	"./plane",
+	"./quaternion",
+	"./rotate-transform",
+	"./scale-transform",
+	"./skew-transform",
+	"./transform",
+	"./transform-matrix",
+	"./translate-transform",
+	"./vector2",
+	"./vector3",
+	"./vector4"
 ],function(numerics){
 	return numerics;
 });
@@ -10417,6 +10530,11 @@ define('skylark-langx/objects',[
     "skylark-langx-objects"
 ],function(objects){
     return objects;
+});
+define('skylark-langx/Evented',[
+    "./emitter"
+],function(Emitter){
+    return Emitter;
 });
 define('skylark-langx-strings/strings',[
     "skylark-langx-ns"
@@ -10486,6 +10604,19 @@ define('skylark-langx-strings/strings',[
 
     function trim(str) {
         return str == null ? "" : String.prototype.trim.call(str);
+    }
+
+    const NullCharactersRegExp = /\x00/g;
+
+    /**
+     * @param {string} str
+     */
+    function trimNull(str) {
+      if (typeof str !== "string") {
+        warn("The argument for removeNullCharacters must be a string.");
+        return str;
+      }
+      return str.replace(NullCharactersRegExp, "");
     }
 
     function substitute( /*String*/ template,
@@ -10706,6 +10837,8 @@ define('skylark-langx-strings/strings',[
 
         trim: trim,
 
+        trimNull,
+
         uniqueId: uniqueId,
 
         upperFirst: function(str) {
@@ -10877,7 +11010,7 @@ define('skylark-langx/strings',[
 ],function(strings){
     return strings;
 });
-define('skylark-langx/Stateful',[
+define('skylark-langx/stateful',[
 	"./Evented",
   "./strings",
   "./objects"
@@ -11137,18 +11270,586 @@ define('skylark-langx/types',[
 ],function(types){
     return types;
 });
+define('skylark-langx-urls/get-absolute-url',[
+    './urls'
+], function (urls) {
+    'use strict';
+
+    const getAbsoluteUrl = function (url) {
+        if (!url.match(/^https?:\/\//)) {
+            const div = document.createElement('div');
+            div.innerHTML = `<a href="${ url }">x</a>`;
+            url = div.firstChild.href;
+        }
+        return url;
+    };
+
+    return urls.getAbsoluteUrl = getAbsoluteUrl;
+
+});
+define('skylark-langx-urls/get-file-extension',[
+    './urls'
+], function (urls) {
+    'use strict';
+
+    const getFileExtension = function (path) {
+        if (typeof path === 'string') {
+            const splitPathRe = /^(\/?)([\s\S]*?)((?:\.{1,2}|[^\/]+?)(\.([^\.\/\?]+)))(?:[\/]*|[\?].*)$/;
+            const pathParts = splitPathRe.exec(path);
+            if (pathParts) {
+                return pathParts.pop().toLowerCase();
+            }
+        }
+        return '';
+    };
+
+    return urls.getFileExtension = getFileExtension;
+
+});
+   define('skylark-langx-urls/get-file-name',[
+    './urls'
+], function (urls) {
+    'use strict';
+
+    function getFileName (url) {
+        ///var fileName = url.split('/').pop() || "";
+        ///return fileName;
+        const anchor = url.indexOf('#');
+        const query = url.indexOf('?');
+        const end = Math.min(anchor > 0 ? anchor : url.length, query > 0 ? query : url.length);
+        return url.substring(url.lastIndexOf('/', end) + 1, end);         
+    }
+
+
+
+
+    return urls.getFileName = getFileName;
+
+});
+define('skylark-langx-urls/get-query',[
+    './urls'
+], function (urls) {
+    'use strict';
+	function getQuery(querystring) {
+		var query = {};
+
+		var pairs = querystring.split('&'),
+		    length = pairs.length,
+		    keyval = [],
+		    i = 0;
+
+		for (; i < length; i++) {
+		  keyval = pairs[i].split('=', 2);
+		  try {
+		    keyval[0] = decodeURIComponent(keyval[0]); // key
+		    keyval[1] = decodeURIComponent(keyval[1]); // value
+		  } catch (e) {}
+
+		  if (query[keyval[0]] === undefined) {
+		    query[keyval[0]] = keyval[1];
+		  } else {
+		    query[keyval[0]] += ',' + keyval[1];
+		  }
+		}
+
+		return query;
+	}
+
+	return urls.getQuery = getQuery;
+
+});
+define('skylark-langx-urls/path',[
+    "skylark-langx-types",
+    "skylark-langx-constructs/klass",
+    "./urls"
+], function(types,klass,urls) {
+
+    /**
+     * @class Path
+     * @constructor
+     */
+    var Path =   klass({
+        _construct : function() {
+            var _ = this._ = {
+                segments : null,
+                hasLeading : false,
+                hasTrailing : false
+            };
+            if (arguments.length == 1 && types.isString(arguments[0])) {
+                  this._parse(arguments[0]);
+            } else  if (types.isArray(arguments[0])){
+                _.segments = arguments[0];
+                _.hasLeading = arguments[1] || false;
+                _.hasTrailing = arguments[2] || false;
+                this._canonicalize();                
+            }
+        },
+
+        _canonicalize: function() {
+            var doIt;
+            var segments = this._.segments;
+            for (var i = 0; i < segments.length; i++) {
+                if (segments[i] == "." || segments[i] == "..") {
+                    doIt = true;
+                    break;
+                }
+            }
+            if (doIt) {
+                var stack = [];
+                for (var i = 0; i < segments.length; i++) {
+                    if (segments[i] == "..") {
+                        if (stack.length == 0) {
+                            // if the stack is empty we are going out of our scope
+                            // so we need to accumulate segments.  But only if the original
+                            // path is relative.  If it is absolute then we can't go any higher than
+                            // root so simply toss the .. references.
+                            if (!this.hasLeading) {
+                                stack.push(segments[i]); //stack push
+                            }
+                        } else {
+                            // if the top is '..' then we are accumulating segments so don't pop
+                            if (".." == stack[stack.length - 1]) {
+                                stack.push("..");
+                            } else {
+                                stack.pop();
+                            }
+                        }
+                        //collapse current references
+                    } else if (segments[i] != "." || segments.length == 1) {
+                        stack.push(segments[i]); //stack push
+                    }
+                }
+                //if the number of segments hasn't changed, then no modification needed
+                if (stack.length == segments.length) {
+                    return;
+                }
+                this._.segments = stack;
+            }
+        },
+
+        _length: function(anotherPath) {
+            return this._.segments.length;
+        },
+
+
+        _parse : function( /*String*/ path) {
+            if (!path) {
+                path = ".";
+            }
+            var _ = this._,
+                segments = path.split("/");
+
+            if (path.charAt(0) == "/") {
+                _.hasLeading = true;
+                segments.shift();
+            }
+            if (path.charAt(path.length - 1) == "/") {
+                _.hasTrailing = true;
+                // If the path ends in '/', split() will create an array whose last element
+                // is an empty string. Remove that here.
+                segments.pop();
+            }
+            _.segments = segments;
+            _.path = path;
+
+            this._canonicalize()
+        },
+
+        /*
+         *
+         *@method append
+         *@parameter {Path|String}tail
+         *@return {Path}
+         */
+        append: /*Path*/ function( /*Path*/ tail) {
+            if (types.isString(tail)) {
+                return this.appendPathStr(tail);
+            } else {
+                return this.appendPath(tail);
+            }
+        },
+
+        /*
+         *
+         *@method appendPath
+         *@parameter {Path}tail
+         *@return {Path}
+         */
+        appendPath: /*Path*/ function( /*Path*/ tail) {
+            if (tail.isAbsolute()) {
+                return tail;
+            }
+            var mySegments = this.segments,
+                tailSegments = tail.segments,
+                newSegments = mySegments.concat(tailSegments),
+                result = new Path(newSegments, this.hasLeading, tail.hasTrailing);
+            return result;
+        },
+
+        /*
+         *
+         *@method appendPathStr
+         *@parameter {String}tail
+         *@return {Path}
+         */
+        appendPathStr: function( /*String*/ tail) {
+            tail = new Path(tail || "");
+            return this.appendPath(tail);
+        },
+
+        /*
+         *
+         *@method clone
+         *@return {Path}
+         */
+        "clone": function() {
+            return new Path(this.segments, this.hasLeading, this.hasTrailing);
+        },
+
+        /*
+         *Tests if this path ends with the given path.
+         *@method endsWidth
+         *@parameter {String}tail
+         *@return {Boolean}
+         */
+        "endsWith": /*Boolean*/ function( /*String*/ tail) {
+            var segments = this.segments;
+            var tailSegments = (new Path(tail)).segments;
+            while (tailSegments.length > 0 && segments.length > 0) {
+                if (tailSegments.pop() != segments.pop()) {
+                    return false;
+                }
+            }
+            return true;
+        },
+
+        /*
+         *Tests this path for equality with the given object.
+         *@method equals
+         *@parameter {Path}another
+         *@return {Boolean}
+         */
+        "equals": /*Boolean*/ function( /*Path*/ another) {
+            var segments = this._.segments,
+                anotherSegments = another._.segments;
+            if (segments.length != anotherSegments.length) {
+                return false;
+            }
+            for (var i = 0; i < segments.length; i++) {
+                if (anotherSegments[i] != segments[i]) {
+                    return false;
+                };
+            }
+            return true;
+        },
+
+        /*
+         *
+         *@method firstSegment
+         *@parameter {Number}length
+         *@return {String}
+         */
+        firstSegment: /*String*/ function( /*Number*/ length) {
+            var segments = this._.segments;
+            return segments[length || 0];
+        },
+
+        /*
+         *
+         *@method getExtension
+         *@return {String}
+         */
+        getExtension: function() {
+            var extension = this._.extension,
+                path = this._.path;
+            if (!textension) {
+                extension = this._.extension = path.substr(path.lastIndexOf('.') + 1);
+            }
+            return extension;
+        },
+
+        /*
+         *
+         *@method getSegments
+         *@return {Array}
+         */
+        getSegments: /*Array*/ function() {
+            return this.segments;
+        },
+
+        /*
+         *Returns the parent path, or null if this path does not have a parent.
+         *@method getParentPath
+         *@return {Path}
+         */
+        getParentPath: /*Path*/ function() {
+            var parentPath = this._.parentPath;
+            if (!parentPath) {
+                var parentSegments = this.segments;
+                parentSegments.pop();
+                parentPath = this._.parentPath = new Path(parentSegments, this.hasLeading);
+            }
+            return parentPath;
+        },
+
+
+        /*
+         *Returns the root component of this path as a Path object, or null if this path does not have a root component.
+         *@method getRoot
+         *@return {Path}
+         */
+        "getRoot": /*Path*/ function() {
+            //TODO: will be implemented
+        },
+
+        /*
+         *Tells whether or not this path is absolute.
+         *@method isAbsolute
+         *@return {Boolean}
+         */
+        isAbsolute: /*Boolean*/ function() {
+            return this.hasLeading;
+        },
+
+
+        /*
+         *
+         *@method lastSegment
+         *@ return {String}
+         */
+        lastSegment: /*String*/ function() {
+            var segments = this._.segments;
+            return segments[segments.length - 1];
+        },
+
+        /*
+         *
+         *@method matchingFirstSegments
+         *@parameter {Path}another
+         *@return {Number}
+         */
+        matchingFirstSegments: /*Number*/ function( /*Path*/ another) {
+            var mySegments = this.segments;
+            var pathSegments = another.segments;
+            var max = Math.min(mySegments.length, pathSegments.length);
+            var count = 0;
+            for (var i = 0; i < max; i++) {
+                if (mySegments[i] != pathSegments[i]) {
+                    return count;
+                }
+                count++;
+            }
+            return count;
+        },
+
+        /*
+         *Returns a path that is this path with redundant name elements eliminated.
+         *@method normalize
+         *@return {Path}
+         */
+        "normalize": /*Path*/ function() {
+            //TODO: will be implemented
+        },
+
+
+        /*
+         *
+         *@method removeFirstSegments
+         *@parameter {Number}count
+         *@return {Path}
+         */
+        removeFirstSegments: /*Path*/ function( /*Number*/ count) {
+            var segments = this._.segments,
+                hasLeading = this._.hasLeading;
+            hasTrailing = this._.hasTrailing;
+
+            return new Path(segments.slice(count, segments.length), hasLeading, hasTrailing);
+        },
+
+        /*
+         *
+         *@method removeLastSegments
+         *@parameter {Number}count
+         *@return {Path}
+         */
+        removeLastSegments: /*Path*/ function( /*Number?*/ count) {
+            var segments = this._.segments,
+                hasLeading = this._.hasLeading;
+            hasTrailing = this._.hasTrailing;
+
+            if (!count) {
+                count = 1;
+            }
+
+            return new Path(segments.slice(0, segments.length - count), hasLeading, hasTrailing);
+        },
+
+        /*
+         *
+         *@method removeMatchingFirstSegments
+         *@parameter {Path}another
+         *@return {Path}
+         */
+        removeMatchingFirstSegments: /*Path*/ function( /*Path*/ another) {
+            var match = this.matchingFirstSegments(another);
+            return this.removeFirstSegments(match);
+        },
+
+        /*
+         *
+         *@method removeMatchingLastSegments
+         *@parameter {Path}another
+         *@return {Path}
+         */
+        removeMatchingLastSegments: /*Path*/ function( /*Path*/ another) {
+            var match = this.matchingFirstSegments(anotherPath);
+            return this.removeLastSegments(match);
+        },
+
+        /*
+         *
+         *@method removeRelative
+         *@return {Path}
+         */
+        removeRelative: function() {
+            var segs = this.segments;
+            if (segs.length > 0 && segs[1] == ".")
+                return this.removeFirstSegments(1);
+            return this;
+        },
+
+        /*
+         *Constructs a relative path between this path and a given path.
+         *@method relativeTo
+         *@parameter {Path}base
+         *@return {Path}
+         */
+        relativeTo: /*Path*/ function( /*Path|String*/ base, /*Boolean*/ ignoreFilename) {
+            if (typeof base == 'string') {
+                base = new Path(base);
+            }
+            var mySegments = this.segments;
+            if (this.isAbsolute()) {
+                return this;
+            }
+            var baseSegments = base.segments;
+            var commonLength = this.matchingFirstSegments(base);
+            var baseSegmentLength = baseSegments.length;
+            if (ignoreFilename) {
+                baseSegmentLength = baseSegmentLength - 1;
+            }
+            var differenceLength = baseSegmentLength - commonLength;
+            var newSegmentLength = differenceLength + mySegments.length - commonLength;
+            if (newSegmentLength == 0) {
+                return Path.EMPTY;
+            }
+            var newSegments = [];
+            for (var i = 0; i < differenceLength; i++) {
+                newSegments.push('..');
+            }
+            for (var i = commonLength; i < mySegments.length; i++) {
+                newSegments.push(mySegments[i]);
+            }
+            return new Path(newSegments, false, this.hasTrailing);
+        },
+
+        /*
+         *
+         *@method segment
+         *@parameter {Number}index
+         *@return {String}
+         */
+        segment: /*String*/ function( /*Number*/ index) {
+            var segments = this._.segments;
+            if (segments.length < index) return null;
+            return segments[index];
+        },
+
+        /*
+         *
+         *@method startsWith
+         *@parameter {Path}index
+         *@return {Boolean}
+         */
+        startsWith: /*Boolean*/ function( /*Path*/ another) {
+            var count = this.matchingFirstSegments(another);
+            return another._length() == count;
+        },
+
+        /*
+         *
+         *@method toString
+         *@return {String}
+         */
+        toString: function() {
+            var result = [],
+                segments = this._.segments;
+            if (this.hasLeading) {
+                result.push("/");
+            }
+            for (var i = 0; i < segments.length; i++) {
+                if (i > 0) {
+                    result.push("/");
+                }
+                result.push(segments[i]);
+            }
+            if (this.hasTrailing) {
+                result.push("/");
+            }
+            return result.join("");
+        },
+
+        hasLeading : {
+            get : function() {
+                return this._.hasLeading
+            }
+        },
+
+        hasTrailing : {
+            get : function() {
+                return this._.hasTrailing
+            }
+        }
+
+    });
+
+
+    Path.EMPTY = new Path("");
+
+    return urls.Path = Path;
+});
+
+define('skylark-langx-urls/main',[
+	"./urls",
+	"./get-absolute-url",
+	"./get-file-extension",
+	"./get-file-name",
+	"./get-query",
+	"./is-cross-origin",
+	"./parse-url",
+	"./path"
+],function(urls){
+	return urls;
+});
+define('skylark-langx-urls', ['skylark-langx-urls/main'], function (main) { return main; });
+
+define('skylark-langx/urls',[
+	"skylark-langx-urls"
+],function(urls){
+	return urls;
+});
 define('skylark-langx/langx',[
     "./skylark",
     "./arrays",
-    "./ArrayStore",
+    "./array-store",
     "./aspect",
     "./async",
     "./binary",
     "./constructs",
     "./datetimes",
-    "./Deferred",
-    "./Emitter",
-    "./Evented",
+    "./deferred",
+    "./emitter",
+    "./evented",
     "./events",
     "./funcs",
     "./globals",
@@ -11157,10 +11858,11 @@ define('skylark-langx/langx',[
     "./maths",
     "./numerics",
     "./objects",
-    "./Stateful",
+    "./stateful",
     "./strings",
     "./topic",
-    "./types"
+    "./types",
+    "./urls"
 ], function(
     skylark,
     arrays,
@@ -11184,7 +11886,8 @@ define('skylark-langx/langx',[
     Stateful,
     strings,
     topic,
-    types
+    types,
+    urls
 ) {
     "use strict";
     var toString = {}.toString,
@@ -11414,11 +12117,11 @@ define('skylark-domx-browser/support/css3',[
 });
 
 define('skylark-domx-browser/support/fullscreen',[
-	"../browser"
+    "../browser"
 ],function(browser){
 
     const FullscreenApi = { 
-    	prefixed: true 
+        prefixed: true 
     };
 
     const apiMap = [
@@ -11473,12 +12176,16 @@ define('skylark-domx-browser/support/fullscreen',[
         }
         FullscreenApi.prefixed = browserApi[0] !== specApi[0];
 
-        browser.requestFullscreen = document.body[FullscreenApi["requestFullscreen"]];
-        browser.exitFullscreen = document[FullscreenApi["exitFullscreen"]];
+        browser.requestFullscreen = function() {
+            return document.body[FullscreenApi["requestFullscreen"]].apply(this,arguments);
+        };
+        browser.exitFullscreen = function() {
+            return document[FullscreenApi["exitFullscreen"]].apply(this,arguments);
+        };
 
         browser.support.fullscreen = FullscreenApi;
     } else {
-	    browser.support.fullscreen = null;
+        browser.support.fullscreen = null;
     }
 
     return browser.support.fullscreen;
@@ -11503,17 +12210,23 @@ define('skylark-domx-browser/main',[
 });
 define('skylark-domx-browser', ['skylark-domx-browser/main'], function (main) { return main; });
 
+define('skylark-langx/main',[
+    "./langx"
+], function(langx) {
+    return langx;
+});
+
+define('skylark-langx', ['skylark-langx/main'], function (main) { return main; });
+
 define('skylark-langx-scripter/scripter',[
     "skylark-langx/skylark",
-    "skylark-langx/langx"
-], function(skylark, langx, noder) {
+    "skylark-langx"
+], function(skylark, langx) {
 
     var head = document.getElementsByTagName('head')[0],
         scriptsByUrl = {},
         scriptElementsById = {},
         count = 0;
-
-    var rscriptType = ( /^$|^module$|\/(?:java|ecma)script/i );
 
     function scripter() {
         return scripter;
@@ -11639,6 +12352,18 @@ define('skylark-langx-scripter/scripter',[
 
         evaluate : evaluate,
 
+        loadScript : function(url) {
+            var d = new langx.Deferred();
+
+            d.promise.scriptId = this.loadJavaScript(url,function(){
+                d.resolve();
+            },function(e){
+                d.reject(e);
+            });
+
+            return d.promise;
+        }
+
 
     });
 
@@ -11653,11 +12378,13 @@ define('skylark-langx-scripter/main',[
 define('skylark-langx-scripter', ['skylark-langx-scripter/main'], function (main) { return main; });
 
 define('skylark-domx-noder/noder',[
-    "skylark-langx/skylark",
-    "skylark-langx/langx",
+    "skylark-langx-ns",
+    "skylark-langx-types",
+    "skylark-langx-arrays",
+    "skylark-langx-strings",
     "skylark-langx-scripter",
     "skylark-domx-browser"
-], function(skylark, langx, scripter,browser) {
+], function(skylark, types, arrays, strings,scripter,browser) {
     var isIE = !!navigator.userAgent.match(/Trident/g) || !!navigator.userAgent.match(/MSIE/g),
         fragmentRE = /^\s*<(\w+|!)[^>]*>/,
         singleTagRE = /^<(\w+)\s*\/?>(?:<\/\1>|)$/,
@@ -11675,6 +12402,7 @@ define('skylark-domx-noder/noder',[
             '*': div
         },
         rootNodeRE = /^(?:body|html)$/i,
+        rscriptType = ( /^$|^module$|\/(?:java|ecma)script/i ),
         map = Array.prototype.map,
         slice = Array.prototype.slice;
 
@@ -11684,7 +12412,7 @@ define('skylark-domx-noder/noder',[
         if (typeof content === 'function') {
             content = content();
         }
-        return map.call(langx.isArrayLike(content) ? content : [content],value => {
+        return map.call(types.isArrayLike(content) ? content : [content],value => {
             if (typeof value === 'function') {
                 value = value();
             }
@@ -11701,7 +12429,7 @@ define('skylark-domx-noder/noder',[
         var nodes = normalizeContent(content);
 
 
-        //if (!langx.isArrayLike(nodes)) {
+        //if (!types.isArrayLike(nodes)) {
         //    nodes = [nodes];
         //}
         if (copyByClone) {
@@ -11709,7 +12437,7 @@ define('skylark-domx-noder/noder',[
                 return node.cloneNode(true);
             });
         }
-        return langx.flatten(nodes);
+        return arrays.flatten(nodes);
     }
 
     function nodeName(elm, chkName) {
@@ -11751,21 +12479,21 @@ define('skylark-domx-noder/noder',[
     };
 
     function enhancePlaceContent(placing,node) {
-        if (langx.isFunction(placing)) {
+        if (types.isFunction(placing)) {
             return placing.apply(node,[]);
         }
-        if (langx.isArrayLike(placing)) {
+        if (types.isArrayLike(placing)) {
             var neddsFlattern;
             for (var i=0;i<placing.length;i++) {
-                if (langx.isFunction(placing[i])) {
+                if (types.isFunction(placing[i])) {
                     placing[i] = placing[i].apply(node,[]);
-                    if (langx.isArrayLike(placing[i])) {
+                    if (types.isArrayLike(placing[i])) {
                         neddsFlattern = true;
                     }
                 }
             }
             if (neddsFlattern) {
-                placing = langx.flatten(placing);
+                placing = arrays.flatten(placing);
             }
         }
         return placing;
@@ -11837,11 +12565,11 @@ define('skylark-domx-noder/noder',[
             node = document.createElement(tag);
         }
 
-        if (langx.isHtmlNode(props)) {
+        if (types.isHtmlNode(props)) {
             parent = props;
             props = null;
             attrs = null;
-        } else if (langx.isHtmlNode(attrs)){
+        } else if (types.isHtmlNode(attrs)){
             parent = attrs;
             attrs = null;
         }
@@ -11879,7 +12607,7 @@ function removeSelfClosingTags(xml) {
      */
     function createFragment(html) {
         // A special case optimization for a single tag
-        html = langx.trim(html);
+        html = strings.trim(html);
         if (singleTagRE.test(html)) {
             return [createElement(RegExp.$1)];
         }
@@ -12060,12 +12788,12 @@ function removeSelfClosingTags(xml) {
         } else {
             empty(node);
             html = html || "";
-            if (langx.isString(html)) {
+            if (types.isString(html)) {
                 html = html.replace( rxhtmlTag, "<$1></$2>" );
             }
-            if (langx.isString(html) || langx.isNumber(html)) {               
+            if (types.isString(html) || types.isNumber(html)) {               
                 node.innerHTML = html;
-            } else if (langx.isArrayLike(html)) {
+            } else if (types.isArrayLike(html)) {
                 for (var i = 0; i < html.length; i++) {
                     node.appendChild(html[i]);
                 }
@@ -12240,7 +12968,7 @@ function removeSelfClosingTags(xml) {
     }
 
     function removeChild(node,children) {
-        if (!langx.isArrayLike(children)) {
+        if (!types.isArrayLike(children)) {
             children = [children];
         }
         for (var i=0;i<children.length;i++) {
@@ -12334,7 +13062,7 @@ function removeSelfClosingTags(xml) {
      * @param {Node} wrapperNode
      */
     function wrapper(node, wrapperNode) {
-        if (langx.isString(wrapperNode)) {
+        if (types.isString(wrapperNode)) {
             wrapperNode = this.createFragment(wrapperNode).firstChild;
         }
         node.parentNode.insertBefore(wrapperNode, node);
@@ -12387,7 +13115,7 @@ function removeSelfClosingTags(xml) {
         return noder;
     }
 
-    langx.mixin(noder, {
+    Object.assign(noder, {
         active  : activeElement,
 
         after: after,
@@ -12450,7 +13178,7 @@ function removeSelfClosingTags(xml) {
 
         isTextNode,
 
-        isWindow: langx.isWindow,
+        isWindow: types.isWindow,
 
         nodeName : nodeName,
 
@@ -16839,6 +17567,539 @@ define('skylark-io-caches/cookie',[
 });
 
 
+define('skylark-langx-events/Emitter',[
+  "skylark-langx-types",
+  "skylark-langx-objects",
+  "skylark-langx-arrays",
+  "skylark-langx-klass",
+  "./events",
+  "./event",
+  "./listener"
+],function(types,objects,arrays,klass,events,Event,Listener){
+    var slice = Array.prototype.slice,
+        compact = arrays.compact,
+        isDefined = types.isDefined,
+        isPlainObject = types.isPlainObject,
+        isFunction = types.isFunction,
+        isString = types.isString,
+        isEmptyObject = types.isEmptyObject,
+        mixin = objects.mixin,
+        safeMixin = objects.safeMixin;
+
+    function parse(event) {
+        var segs = ("" + event).split(".");
+        return {
+            name: segs[0],
+            ns: segs.slice(1).join(" ")
+        };
+    }
+
+    
+    var queues  = new Map();
+
+
+    var Emitter = Listener.inherit({
+        _prepareArgs : function(e,args) {
+            if (isDefined(args)) {
+                args = [e].concat(args);
+            } else {
+                args = [e];
+            }
+            return args;
+        },
+
+        on: function(events, selector, data, callback, ctx, /*used internally*/ one) {
+            var self = this,
+                _hub = this._hub || (this._hub = {});
+
+            if (isPlainObject(events)) {
+                ctx = callback;
+                each(events, function(type, fn) {
+                    self.on(type, selector, data, fn, ctx, one);
+                });
+                return this;
+            }
+
+            if (!isString(selector) && !isFunction(callback)) {
+                ctx = callback;
+                callback = data;
+                data = selector;
+                selector = undefined;
+            }
+
+            if (isFunction(data)) {
+                ctx = callback;
+                callback = data;
+                data = null;
+            }
+
+            if (!callback ) {
+                throw new Error("No callback function");
+            } else if (!isFunction(callback)) {
+                throw new Error("The callback  is not afunction");
+            }
+
+            if (isString(events)) {
+                events = events.split(/\s/)
+            }
+
+            events.forEach(function(event) {
+                var parsed = parse(event),
+                    name = parsed.name,
+                    ns = parsed.ns;
+
+                (_hub[name] || (_hub[name] = [])).push({
+                    fn: callback,
+                    selector: selector,
+                    data: data,
+                    ctx: ctx,
+                    ns : ns,
+                    one: one
+                });
+            });
+
+            return this;
+        },
+
+        one: function(events, selector, data, callback, ctx) {
+            return this.on(events, selector, data, callback, ctx, 1);
+        },
+
+        emit: function(e /*,argument list*/ ) {
+            if (!this._hub) {
+                return this;
+            }
+
+            var self = this;
+
+            if (isString(e)) {
+                e = new Event(e); //new CustomEvent(e);
+            }
+
+            Object.defineProperty(e,"target",{
+                value : this
+            });
+
+            var args = slice.call(arguments, 1);
+
+            args = this._prepareArgs(e,args);
+
+            [e.type || e.name, "all"].forEach(function(eventName) {
+                var parsed = parse(eventName),
+                    name = parsed.name,
+                    ns = parsed.ns;
+
+                var listeners = self._hub[name];
+                if (!listeners) {
+                    return;
+                }
+
+                var len = listeners.length,
+                    reCompact = false;
+
+                for (var i = 0; i < len; i++) {
+                    if (e.isImmediatePropagationStopped && e.isImmediatePropagationStopped()) {
+                        return this;
+                    }
+                    var listener = listeners[i];
+                    if (ns && (!listener.ns ||  !listener.ns.startsWith(ns))) {
+                        continue;
+                    }
+
+                    if (listener.data) {
+                        e.data = mixin({}, listener.data, e.data);
+                    }
+                    if (args.length == 2 && isPlainObject(args[1])) {
+                        e.data = e.data || {};
+                        mixin(e.data,args[1]);
+                    }
+
+                    listener.fn.apply(listener.ctx, args);
+                    if (listener.one) {
+                        listeners[i] = null;
+                        reCompact = true;
+                    }
+                }
+
+                if (reCompact) {
+                    self._hub[eventName] = compact(listeners);
+                }
+
+            });
+            return this;
+        },
+
+        queueEmit : function (event) {
+            const type = event.type || event;
+            let map = queues.get(this);
+            if (!map) {
+                map = new Map();
+                queues.set(this, map);
+            }
+            const oldTimeout = map.get(type);
+            map.delete(type);
+            window.clearTimeout(oldTimeout);
+            const timeout = window.setTimeout(() => {
+                if (map.size === 0) {
+                    map = null;
+                    queues.delete(this);
+                }
+                this.trigger(event);
+            }, 0);
+            map.set(type, timeout);
+        },
+
+        listened: function(event) {
+            var evtArr = ((this._hub || (this._events = {}))[event] || []);
+            return evtArr.length > 0;
+        },
+
+        off: function(events, callback) {
+            if (!events) {
+              this._hub = null;
+              return;
+            }
+            var _hub = this._hub || (this._hub = {});
+            if (isString(events)) {
+                events = events.split(/\s/)
+            }
+
+            events.forEach(function(event) {
+                var parsed = parse(event),
+                    name = parsed.name,
+                    ns = parsed.ns;
+
+                var evts = _hub[name];
+
+                if (evts) {
+                    var liveEvents = [];
+
+                    if (callback || ns) {
+                        for (var i = 0, len = evts.length; i < len; i++) {
+                            
+                            if (callback && evts[i].fn !== callback && evts[i].fn._ !== callback) {
+                                liveEvents.push(evts[i]);
+                                continue;
+                            } 
+
+                            if (ns && (!evts[i].ns || evts[i].ns.indexOf(ns)!=0)) {
+                                liveEvents.push(evts[i]);
+                                continue;
+                            }
+                        }
+                    }
+
+                    if (liveEvents.length) {
+                        _hub[name] = liveEvents;
+                    } else {
+                        delete _hub[name];
+                    }
+
+                }
+            });
+
+            return this;
+        },
+
+        trigger  : function() {
+            return this.emit.apply(this,arguments);
+        },
+
+        queueTrigger : function (event) {
+            return this.queueEmit.apply(this,arguments);
+        }
+
+    });
+
+
+    return events.Emitter = Emitter;
+
+});
+define('skylark-langx-async/Deferred',[
+    "skylark-langx-arrays",
+	"skylark-langx-funcs",
+    "skylark-langx-objects"
+],function(arrays,funcs,objects){
+    "use strict";
+
+    var slice = Array.prototype.slice,
+        proxy = funcs.proxy,
+        makeArray = arrays.makeArray,
+        result = objects.result,
+        mixin = objects.mixin;
+
+    mixin(Promise.prototype,{
+        always: function(handler) {
+            //this.done(handler);
+            //this.fail(handler);
+            this.then(handler,handler);
+            return this;
+        },
+        done : function() {
+            for (var i = 0;i<arguments.length;i++) {
+                this.then(arguments[i]);
+            }
+            return this;
+        },
+        fail : function(handler) { 
+            //return mixin(Promise.prototype.catch.call(this,handler),added);
+            //return this.then(null,handler);
+            this.catch(handler);
+            return this;
+         }
+    });
+
+
+    var Deferred = function() {
+        var self = this,
+            p = this.promise = makePromise2(new Promise(function(resolve, reject) {
+                self._resolve = resolve;
+                self._reject = reject;
+            }));
+
+        //wrapPromise(p,self);
+
+        //this[PGLISTENERS] = [];
+        //this[PGNOTIFIES] = [];
+
+        //this.resolve = Deferred.prototype.resolve.bind(this);
+        //this.reject = Deferred.prototype.reject.bind(this);
+        //this.progress = Deferred.prototype.progress.bind(this);
+
+    };
+
+   
+    function makePromise2(promise) {
+        // Don't modify any promise that has been already modified.
+        if (promise.isResolved) return promise;
+
+        // Set initial state
+        var isPending = true;
+        var isRejected = false;
+        var isResolved = false;
+
+        // Observe the promise, saving the fulfillment in a closure scope.
+        var result = promise.then(
+            function(v) {
+                isResolved = true;
+                isPending = false;
+                return v; 
+            }, 
+            function(e) {
+                isRejected = true;
+                isPending = false;
+                throw e; 
+            }
+        );
+
+        result.isResolved = function() { return isResolved; };
+        result.isPending = function() { return isPending; };
+        result.isRejected = function() { return isRejected; };
+
+        result.state = function() {
+            if (isResolved) {
+                return 'resolved';
+            }
+            if (isRejected) {
+                return 'rejected';
+            }
+            return 'pending';
+        };
+
+        var notified = [],
+            listeners = [];
+
+          
+        result.then = function(onResolved,onRejected,onProgress) {
+            if (onProgress) {
+                this.progress(onProgress);
+            }
+            return makePromise2(Promise.prototype.then.call(this,
+                onResolved && function(args) {
+                    if (args && args.__ctx__ !== undefined) {
+                        return onResolved.apply(args.__ctx__,args);
+                    } else {
+                        return onResolved(args);
+                    }
+                },
+                onRejected && function(args){
+                    if (args && args.__ctx__ !== undefined) {
+                        return onRejected.apply(args.__ctx__,args);
+                    } else {
+                        return onRejected(args);
+                    }
+                }
+            ));
+        };
+
+        result.progress = function(handler) {
+            notified.forEach(function (value) {
+                handler(value);
+            });
+            listeners.push(handler);
+            return this;
+        };
+
+        result.pipe = result.then;
+
+        result.notify = function(value) {
+            try {
+                notified.push(value);
+
+                return listeners.forEach(function (listener) {
+                    return listener(value);
+                });
+            } catch (error) {
+            this.reject(error);
+            }
+            return this;
+        };
+
+        return result;
+    }
+
+ 
+    Deferred.prototype.resolve = function(value) {
+        var args = slice.call(arguments);
+        return this.resolveWith(null,args);
+    };
+
+    Deferred.prototype.resolveWith = function(context,args) {
+        args = args ? makeArray(args) : []; 
+        args.__ctx__ = context;
+        this._resolve(args);
+        this._resolved = true;
+        return this;
+    };
+
+    Deferred.prototype.notify = function(value) {
+        var p = result(this,"promise");
+        p.notify(value);
+        return this;
+    };
+
+    Deferred.prototype.reject = function(reason) {
+        var args = slice.call(arguments);
+        return this.rejectWith(null,args);
+    };
+
+    Deferred.prototype.rejectWith = function(context,args) {
+        args = args ? makeArray(args) : []; 
+        args.__ctx__ = context;
+        this._reject(args);
+        this._rejected = true;
+        return this;
+    };
+
+    Deferred.prototype.isResolved = function() {
+        var p = result(this,"promise");
+        return p.isResolved();
+    };
+
+    Deferred.prototype.isRejected = function() {
+        var p = result(this,"promise");
+        return p.isRejected();
+    };
+
+    Deferred.prototype.state = function() {
+        var p = result(this,"promise");
+        return p.state();
+    };
+
+    Deferred.prototype.then = function(callback, errback, progback) {
+        var p = result(this,"promise");
+        return p.then(callback, errback, progback);
+    };
+
+    Deferred.prototype.progress = function(progback){
+        var p = result(this,"promise");
+        return p.progress(progback);
+    };
+   
+    Deferred.prototype.catch = function(errback) {
+        var p = result(this,"promise");
+        return p.catch(errback);
+    };
+
+
+    Deferred.prototype.always  = function() {
+        var p = result(this,"promise");
+        p.always.apply(p,arguments);
+        return this;
+    };
+
+    Deferred.prototype.done  = function() {
+        var p = result(this,"promise");
+        p.done.apply(p,arguments);
+        return this;
+    };
+
+    Deferred.prototype.fail = function(errback) {
+        var p = result(this,"promise");
+        p.fail(errback);
+        return this;
+    };
+
+
+    Deferred.all = function(array) {
+        //return wrapPromise(Promise.all(array));
+        var d = new Deferred();
+        Promise.all(array).then(d.resolve.bind(d),d.reject.bind(d));
+        return result(d,"promise");
+    };
+
+    Deferred.first = function(array) {
+        return makePromise2(Promise.race(array));
+    };
+
+
+    Deferred.when = function(valueOrPromise, callback, errback, progback) {
+        var receivedPromise = valueOrPromise && typeof valueOrPromise.then === "function";
+        var nativePromise = receivedPromise && valueOrPromise instanceof Promise;
+
+        if (!receivedPromise) {
+            if (arguments.length > 1) {
+                return callback ? callback(valueOrPromise) : valueOrPromise;
+            } else {
+                return new Deferred().resolve(valueOrPromise);
+            }
+        } else if (!nativePromise) {
+            var deferred = new Deferred(valueOrPromise.cancel);
+            valueOrPromise.then(proxy(deferred.resolve,deferred), proxy(deferred.reject,deferred), deferred.notify);
+            valueOrPromise = deferred.promise;
+        }
+
+        if (callback || errback || progback) {
+            return valueOrPromise.then(callback, errback, progback);
+        }
+        return valueOrPromise;
+    };
+
+    Deferred.reject = function(err) {
+        var d = new Deferred();
+        d.reject(err);
+        return d.promise;
+    };
+
+    Deferred.resolve = function(data) {
+        var d = new Deferred();
+        d.resolve.apply(d,arguments);
+        return d.promise;
+    };
+
+    Deferred.immediate = Deferred.resolve;
+
+
+    Deferred.promise = function(callback) {
+        var d = new Deferred();
+
+        callback(d.resolve.bind(d),d.reject.bind(d),d.progress.bind(d));
+
+        return d.promise;
+    };
+
+    return Deferred;
+});
 define('skylark-io-caches/local-file-system',[
     "skylark-langx-objects/mixin",
     "skylark-langx-events/Emitter",
@@ -17270,14 +18531,6 @@ define('skylark-slax-runtime/caches',[
 	//session
 	return slax.caches = caches;
 });
-define('skylark-langx/main',[
-    "./langx"
-], function(langx) {
-    return langx;
-});
-
-define('skylark-langx', ['skylark-langx/main'], function (main) { return main; });
-
 define('skylark-domx-animates/animates',[
     "skylark-langx/skylark",
     "skylark-langx/langx",
@@ -17332,7 +18585,6 @@ define('skylark-domx-geom/geom',[
         noder.append(document.body, div);
 
         w1 = innerDiv.offsetWidth;
-
         styler.css(div, "overflow", "scroll");
 
         w2 = innerDiv.offsetWidth;
@@ -17390,8 +18642,8 @@ define('skylark-domx-geom/geom',[
                 pbex = borderExtents(parent);
 
             relativePosition(elm, {
-                top: coords.top - parentOffset.top - mex.top - pbex.top,
-                left: coords.left - parentOffset.left - mex.left - pbex.left
+                top: coords.top - parentOffset.top - mex.top - pbex.top + (scrollTop(parent) || 0),
+                left: coords.left - parentOffset.left - mex.left - pbex.left + (scrollLeft(parent) || 0)
             });
             return this;
         }
@@ -17729,6 +18981,7 @@ define('skylark-domx-geom/geom',[
                 left: coords.left
             };
 
+            /*
             if (langx.isDefined(props.top)) {
                 props.top = props.top + (scrollTop(parent) || 0);
             }
@@ -17736,7 +18989,7 @@ define('skylark-domx-geom/geom',[
             if (langx.isDefined(props.left)) {
                 props.left = props.left + (scrollLeft(parent) || 0);
             } 
-
+            */ 
 
             if (styler.css(elm, "position") == "static") {
                 props['position'] = "relative";
@@ -19511,7 +20764,7 @@ define('skylark-domx-transits/bounce',[
 
     return transits.bounce = bounce;
 });
-define('skylark-domx-transits/emulateTransitionEnd',[
+define('skylark-domx-transits/emulate-transition-end',[
     "skylark-langx/langx",
     "skylark-domx-browser",
     "skylark-domx-eventer",
@@ -19721,7 +20974,7 @@ define('skylark-domx-transits/fade',[
 
     return transits.fade = fade;
 });
-define('skylark-domx-transits/fadeIn',[
+define('skylark-domx-transits/fade-in',[
     "skylark-langx/langx",
     "skylark-domx-styler",
     "./transits",
@@ -19751,7 +21004,7 @@ define('skylark-domx-transits/fadeIn',[
 
     return transits.fadeIn = fadeIn;
 });
-define('skylark-domx-transits/fadeOut',[
+define('skylark-domx-transits/fade-out',[
     "skylark-langx/langx",
     "skylark-domx-styler",
     "./transits",
@@ -19781,12 +21034,12 @@ define('skylark-domx-transits/fadeOut',[
 
     return transits.fadeOut = fadeOut;
 });
-define('skylark-domx-transits/fadeToggle',[
+define('skylark-domx-transits/fade-toggle',[
     "skylark-langx/langx",
     "skylark-domx-styler",
     "./transits",
-    "./fadeIn",
-    "./fadeOut"
+    "./fade-in",
+    "./fade-out"
 ],function(langx,styler,transits,fadeIn,fadeOut) {
 
     /*   
@@ -20142,7 +21395,7 @@ define('skylark-domx-transits/slide',[
 
 });
 
-define('skylark-domx-transits/slideDown',[
+define('skylark-domx-transits/slide-down',[
     "./transits",
     "./slide"
 ],function(transits,slide) {
@@ -20161,7 +21414,7 @@ define('skylark-domx-transits/slideDown',[
 
     return transits.slideDown = slideDown;
 });
-define('skylark-domx-transits/slideUp',[
+define('skylark-domx-transits/slide-up',[
     "./transits",
     "./slide"
 ],function(transits,slide) {
@@ -20182,12 +21435,12 @@ define('skylark-domx-transits/slideUp',[
 
     return transits.slideUp = slideUp;
 });
-define('skylark-domx-transits/slideToggle',[
+define('skylark-domx-transits/slide-toggle',[
     "skylark-langx/langx",
     "skylark-domx-geom",
     "./transits",
-    "./slideDown",
-    "./slideUp"
+    "./slide-down",
+    "./slide-up"
 ],function(langx,geom,transits,slideDown,slideUp) {
 
     /*   
@@ -20322,20 +21575,20 @@ define('skylark-domx-transits/main',[
 	"skylark-domx-query",
     "./transit",
     "./bounce",
-    "./emulateTransitionEnd",
+    "./emulate-transition-end",
     "./explode",
-    "./fadeIn",
-    "./fadeOut",
+    "./fade-in",
+    "./fade-out",
     "./fade",
-    "./fadeToggle",
+    "./fade-toggle",
     "./hide",
     "./pulsate",
     "./shake",
     "./show",
     "./slide",
-    "./slideDown",
-    "./slideToggle",
-    "./slideUp",
+    "./slide-down",
+    "./slide-toggle",
+    "./slide-up",
     "./throb",
     "./toggle"
 ],function(transits,velm,$){
@@ -21065,40 +22318,8 @@ define('skylark-domx-iframes/lazy-load',[
 
 	return iframes.lazyLoad = lazyLoad
 });
-define('skylark-langx-urls/getQuery',[
-    './urls'
-], function (urls) {
-    'use strict';
-	function getQuery(querystring) {
-		var query = {};
-
-		var pairs = querystring.split('&'),
-		    length = pairs.length,
-		    keyval = [],
-		    i = 0;
-
-		for (; i < length; i++) {
-		  keyval = pairs[i].split('=', 2);
-		  try {
-		    keyval[0] = decodeURIComponent(keyval[0]); // key
-		    keyval[1] = decodeURIComponent(keyval[1]); // value
-		  } catch (e) {}
-
-		  if (query[keyval[0]] === undefined) {
-		    query[keyval[0]] = keyval[1];
-		  } else {
-		    query[keyval[0]] += ',' + keyval[1];
-		  }
-		}
-
-		return query;
-	}
-
-	return urls.getQuery = getQuery;
-
-});
 define('skylark-domx-iframes/replace',[
-  "skylark-langx-urls/getQuery",
+  "skylark-langx-urls/get-query",
   "skylark-domx-noder",
   "skylark-domx-geom",
   "skylark-domx-styler",
@@ -21610,8 +22831,8 @@ define('skylark-io-diskfs/diskfs',[
     return skylark.attach("storages.diskfs", diskfs);
 });
  define('skylark-io-diskfs/webentry',[
-    "skylark-langx/arrays",
-    "skylark-langx/Deferred",
+    "skylark-langx-arrays",
+    "skylark-langx-async/deferred",
     "./diskfs"
 ],function(arrays,Deferred, diskfs){
     var concat = Array.prototype.concat;
@@ -21666,7 +22887,7 @@ define('skylark-io-diskfs/diskfs',[
 });
   define('skylark-domx-files/dropzone',[
     "skylark-langx/arrays",
-    "skylark-langx/Deferred",
+    "skylark-langx/deferred",
     "skylark-domx-styler",
     "skylark-domx-eventer",
     "skylark-domx-velm",
@@ -21906,7 +23127,7 @@ define('skylark-domx-images/images',[
   return skylark.attach("domx.images" , images);
 });
 
-define('skylark-domx-images/isCompleted',[
+define('skylark-domx-images/is-completed',[
 	"./images"
 ],function(images){
   function isCompleted(img) {
@@ -21915,7 +23136,7 @@ define('skylark-domx-images/isCompleted',[
 
   return images.isCompleted = isCompleted;
 });
-define('skylark-domx-images/isLoaded',[
+define('skylark-domx-images/is-loaded',[
 	"./images"
 ],function(images){
 
@@ -21928,8 +23149,8 @@ define('skylark-domx-images/watch',[
     "skylark-langx/langx",
     "skylark-domx-eventer",
     "./images",
-    "./isCompleted",
-    "./isLoaded"
+    "./is-completed",
+    "./is-loaded"
 ], function(langx,eventer,images,isCompleted,isLoaded) {
 
   function watch(imgs) {
@@ -22205,8 +23426,8 @@ define('skylark-domx-images/main',[
 	"skylark-domx-query",
 	"skylark-domx-velm",
 	"./images",
-	"./isCompleted",
-	"./isLoaded",
+	"./is-completed",
+	"./is-loaded",
 	"./loaded",
 	"./preload",
 	"./transform",
@@ -24133,7 +25354,7 @@ define('skylark-graphics-colors/_conversion',[
         strToRgb
 	};
 });
-define('skylark-graphics-colors/Color',[
+define('skylark-graphics-colors/color',[
     "skylark-langx-types",
     "skylark-langx-klass",
     "./colors",
@@ -24734,7 +25955,7 @@ define('skylark-graphics-colors/Color',[
 define('skylark-domx-plugins-colors/helper',[
     "skylark-domx-browser",
     "skylark-domx-query",
-    "skylark-graphics-colors/Color"    
+    "skylark-graphics-colors/color"    
 ],function(browser,$,Color){
     function paletteElementClick(e) {
         if (e.data && e.data.ignore) {
@@ -24789,7 +26010,7 @@ define('skylark-domx-plugins-colors/helper',[
     }
 });
 
-define('skylark-domx-plugins-colors/Indicator',[
+define('skylark-domx-plugins-colors/indicator',[
    "skylark-langx/skylark",
     "skylark-langx/langx",
     "skylark-domx-browser",
@@ -24984,7 +26205,7 @@ define('skylark-domx-plugins-colors/Indicator',[
 
 	return Indicator;
 });
-define('skylark-domx-plugins-colors/ColorPicker',[
+define('skylark-domx-plugins-colors/color-picker',[
     "skylark-langx/langx",
     "skylark-domx-browser",
     "skylark-domx-noder",
@@ -24993,10 +26214,10 @@ define('skylark-domx-plugins-colors/ColorPicker',[
     "skylark-domx-eventer",
     "skylark-domx-styler",
     "skylark-domx-plugins-base",
-    "skylark-graphics-colors/Color",
+    "skylark-graphics-colors/color",
     "./colors",
     "./helper",
-    "./Indicator"
+    "./indicator"
 ],function(langx, browser, noder, finder, $,eventer, styler,plugins,Color,colors,helper,Indicator) {
     "use strict";
 
@@ -25307,7 +26528,7 @@ define('skylark-domx-plugins-colors/ColorPicker',[
                 self.emit("choosed"); 
             });
           
-            this.$alphaSlider.plugin("domx.indicator", {
+            this.$alphaSlider.plugin("lark.colors.indicator", {
                 "onmove" :   function (dragX, dragY, e) {
                     self._currentAlpha = (dragX / self._alphaWidth);
                     self._isEmpty = false;
@@ -25322,7 +26543,7 @@ define('skylark-domx-plugins-colors/ColorPicker',[
                 "onstop" :dragStop
             });
 
-            this.$slider.plugin("domx.indicator", {
+            this.$slider.plugin("lark.colors.indicator", {
                 "onmove" :   function (dragX, dragY, e) {
                     self._currentHue = parseFloat(dragY / self._slideHeight);
                     self._isEmpty = false;
@@ -25335,7 +26556,7 @@ define('skylark-domx-plugins-colors/ColorPicker',[
                 "onstop" :dragStop
             });
 
-            this.$dragger.plugin("domx.indicator", {
+            this.$dragger.plugin("lark.colors.indicator", {
                 "onmove" :   function (dragX, dragY, e) {
 
                     // shift+drag should snap the movement to either the x or y axis.
@@ -25484,7 +26705,7 @@ define('skylark-domx-plugins-colors/ColorPicker',[
 
     return colors.ColorPicker = ColorPicker;
 });
-define('skylark-domx-plugins-colors/ColorPalette',[
+define('skylark-domx-plugins-colors/color-palette',[
    "skylark-langx/skylark",
     "skylark-langx/langx",
     "skylark-domx-browser",
@@ -25495,7 +26716,7 @@ define('skylark-domx-plugins-colors/ColorPalette',[
     "skylark-domx-styler",
     "skylark-domx-fx",
     "skylark-domx-plugins-base",
-    "skylark-graphics-colors/Color",
+    "skylark-graphics-colors/color",
     "./colors",
     "./helper"
 ],function(skylark, langx, browser, noder, finder, $,eventer, styler,fx,plugins,Color,colors,helper) {
@@ -25668,7 +26889,7 @@ define('skylark-domx-plugins-colors/ColorPalette',[
     return colors.ColorPalette = ColorPalette;
 
 });
-define('skylark-domx-plugins-colors/ColorPane',[
+define('skylark-domx-plugins-colors/Color-pane',[
     "skylark-langx/langx",
     "skylark-domx-browser",
     "skylark-domx-noder",
@@ -25679,10 +26900,10 @@ define('skylark-domx-plugins-colors/ColorPane',[
     "skylark-domx-fx",
     "skylark-domx-plugins-base",
     "skylark-domx-plugins-popups",
-    "skylark-graphics-colors/Color",
+    "skylark-graphics-colors/color",
     "./colors",
-    "./ColorPicker",
-    "./ColorPalette"
+    "./color-picker",
+    "./color-palette"
 ],function(langx, browser, noder, finder, $,eventer, styler,fx,plugins,popups,Color,colors,ColorPicker,ColorPalette) {
     "use strict";
 
@@ -25892,7 +27113,7 @@ define('skylark-domx-plugins-colors/ColorPane',[
 
     return colors.ColorPane = ColorPane;
 });
-define('skylark-domx-plugins-colors/ColorBox',[
+define('skylark-domx-plugins-colors/color-box',[
     "skylark-langx/langx",
     "skylark-domx-noder",
     "skylark-domx-finder",
@@ -25901,9 +27122,9 @@ define('skylark-domx-plugins-colors/ColorBox',[
     "skylark-domx-styler",
     "skylark-domx-plugins-base",
     "skylark-domx-plugins-popups",
-    "skylark-graphics-colors/Color",
+    "skylark-graphics-colors/color",
     "./colors",
-    "./ColorPane"
+    "./Color-pane"
    ],function(langx, noder, finder, $,eventer, styler,plugins,popups,Color,colors,ColorPane) {
     "use strict";
 
@@ -26075,13 +27296,237 @@ define('skylark-domx-plugins-colors/ColorBox',[
     return colors.ColorBox = ColorBox;
 
 });
+define('skylark-domx-plugins-colors/color-pane',[
+    "skylark-langx/langx",
+    "skylark-domx-browser",
+    "skylark-domx-noder",
+    "skylark-domx-finder",
+    "skylark-domx-query",
+    "skylark-domx-eventer",
+    "skylark-domx-styler",
+    "skylark-domx-fx",
+    "skylark-domx-plugins-base",
+    "skylark-domx-plugins-popups",
+    "skylark-graphics-colors/color",
+    "./colors",
+    "./color-picker",
+    "./color-palette"
+],function(langx, browser, noder, finder, $,eventer, styler,fx,plugins,popups,Color,colors,ColorPicker,ColorPalette) {
+    "use strict";
+
+    var ColorPane = plugins.Plugin.inherit({
+        klassName : "ColorPane",
+
+        pluginName : "lark.colors.pane",
+
+        options : {
+            selectors  : {
+                pickerContainer : ".sp-picker-container",
+                toggleButton : ".sp-palette-toggle",
+                paletteContainer : ".sp-palette"
+            },
+
+            draggingClass : "sp-dragging",           
+
+            texts : {
+                togglePaletteMoreText: "more",
+                togglePaletteLessText: "less",
+                clearText: "Clear Color Selection",
+                noColorSelectedText: "No Color Selected"
+            },
+
+            states : {
+                showPalette: false,
+                showPaletteOnly: false,
+                togglePaletteOnly: false,
+                showSelectionPalette: true,
+                showInput: false,
+                allowEmpty: false,
+                showButtons: true,
+                showInitial: false,
+                showAlpha: false
+            },
+
+            // Options
+            color: false,
+            maxSelectionSize: 7
+
+        },
+
+        _updateUI : function () {
+            if (this.stating("showPalette")) {
+                this.palette._updateUI();
+            }
+            this.picker._updateUI();
+        },
+
+
+        _applyOptions : function () {
+            var opts = this.options;
+
+            this._states = {
+                allowEmpty : opts.states.allowEmpty,
+                showInput : opts.states.showInput,
+                showAlpha : opts.states.showAlpha,
+                showButtons : opts.states.showButtons,
+                togglePaletteOnly : opts.states.togglePaletteOnly,
+                showPalette : opts.states.showPalette,
+                showPaletteOnly : opts.states.showPaletteOnly,
+                showSelectionPalette: opts.showSelectionPalette,
+                showInitial : opts.states.showInitial
+            };
+
+           this._applyStates();
+
+           this.reflow();
+        },
+
+         _construct: function(elm, options) {
+            plugins.Plugin.prototype._construct.call(this,elm,options);
+
+            var $el = this.$el = this.$();
+
+            var opts = this.options,
+                theme = opts.theme;
+
+
+            var 
+                //container = this.$container = $(markup,elm.ownerDocument).addClass(theme),
+                pickerContainer = this.$pickerContainer =  $el.find(opts.selectors.pickerContainer),
+                paletteContainer = this.$paletteContainer =  $el.find(opts.selectors.paletteContainer),
+                toggleButton = this.$toggleButton = $el.find(opts.selectors.toggleButton),
+                initialColor = this._initialColor =  opts.color,
+                isEmpty = this._isEmpty =  !initialColor;
+
+            if (paletteContainer[0]) {
+                this.palette = ColorPalette.instantiate(paletteContainer[0],{
+                    selectionPalette : opts.selectionPalette,
+                    color : opts.color,
+                    palette : opts.palette,
+                    selectionPalette : opts.selectionPalette
+                })
+            } 
+
+            if (pickerContainer[0]) {
+                this.picker = ColorPicker.instantiate(pickerContainer[0],{
+                    color : opts.color,
+                    states : {
+                        showInput: opts.states.showInput,
+                        allowEmpty: opts.states.allowEmpty,
+                        showButtons: opts.states.showButtons,
+                        showInitial: opts.states.showInitial,
+                        showAlpha: opts.states.showAlpha                                            
+                    }
+                }) ;
+
+                this.listenTo(this.picker,"canceled",(e) => {
+                    this.emit("canceled");
+                });    
+                this.listenTo(this.picker,"choosed",(e) => {
+                    this.emit("choosed");
+                });    
+                this.listenTo(this.picker,"picked",(e,color) => {
+                    this.emit("picked",color);
+                }); 
+            }
+            this._init();
+
+        },
+
+        _init : function () {
+            var self = this,
+                opts = this.options;
+           if (browser.isIE) {
+                this.$container.find("*:not(input)").attr("unselectable", "on");
+            }
+
+            this._applyOptions();
+
+
+          
+            this.listenTo(this.$toggleButton,"click", function (e) {
+                eventer.stop(e);
+
+                self.stating("showPaletteOnly",!self.stating("showPaletteOnly"));
+            });
+
+            this.listenTo(this.palette,"selected",function(e,color){
+                self.picker.current(color);
+            });
+        },
+
+        revert :  function () {
+            this.set(this._colorOnShow, true);
+            this._updateOriginalInput(true);
+        },
+
+
+        get : function () {
+            return this.picker.current();
+        },
+
+
+        set : function (color) {
+            this.picker.current(color);
+            this.palette.current(color);
+        },
+
+        _applyStates : function() {
+           var states = this._states ;
+
+            if (states.showPaletteOnly) {
+                states.showPalette = true;
+            }
+
+            this.$toggleButton.text(states.showPaletteOnly ? this.option("texts.togglePaletteMoreText"): this.option("texts.togglePaletteLessText"));
+
+
+            this.$el.toggleClass("sp-input-disabled", !states.showInput)
+                            .toggleClass("sp-clear-enabled", !!states.allowEmpty)
+                            .toggleClass("sp-alpha-enabled", states.showAlpha)
+                            .toggleClass("sp-buttons-disabled", !states.showButtons)
+                            .toggleClass("sp-palette-buttons-disabled", !states.togglePaletteOnly)
+                            .toggleClass("sp-palette-disabled", !states.showPalette)
+                            .toggleClass("sp-palette-only", states.showPaletteOnly)
+                            .toggleClass("sp-initial-disabled", !states.showInitial);
+
+            if (states.showPaletteOnly) {
+                this.$el.css('left', '-=' + (this.$pickerContainer.outerWidth(true) + 5));
+            }
+        },
+
+        stating : function(name,value) {
+            if (value !== undefined) {
+                this._states[name] = value;
+                this._applyStates();
+            } else {
+                return this._states[name];
+            }
+        },
+
+        reflow : function () {
+
+            if (this.stating("showPalette")) {
+                this.palette.reflow();
+            }
+
+            this.picker.reflow();
+
+        }
+    });
+
+
+    plugins.register(ColorPane);
+
+    return colors.ColorPane = ColorPane;
+});
 define('skylark-domx-plugins-colors/colorer',[
     "skylark-langx/langx",
     "skylark-domx-data",
     "skylark-domx-query",
 	"./colors",
-	"./ColorBox",
-	"./ColorPane"
+	"./color-box",
+	"./color-pane"
 ],function(langx,datax,$,colors,ColorBox,ColorPane){
    var pickers = [],
     replaceInput = [
@@ -26224,7 +27669,7 @@ define('skylark-domx-plugins-colors/colorer',[
   
 	return colors.colorer = colorer;
 });
-define('skylark-domx-plugins-colors/Drag',[],function() {
+define('skylark-domx-plugins-colors/drag',[],function() {
     /**************************************************
      * dom-drag.js
      * 09.25.2001
@@ -26382,7 +27827,7 @@ define('skylark-domx-plugins-colors/Drag',[],function() {
 
     return Drag;
 });
-define('skylark-domx-plugins-colors/Gradienter',[
+define('skylark-domx-plugins-colors/gradienter',[
     "skylark-langx/langx",
     "skylark-domx-browser",
     "skylark-domx-noder",
@@ -26390,10 +27835,10 @@ define('skylark-domx-plugins-colors/Gradienter',[
     "skylark-domx-finder",
     "skylark-domx-query",
     "skylark-domx-plugins-base",    
-    "skylark-graphics-colors/Color",
+    "skylark-graphics-colors/color",
     "./colors",
     "./colorer",
-    "./Drag"
+    "./drag"
 ],function( langx, browser, noder, eventer,finder, $, plugins,Color, colors,colorer,Drag) {
 
 
@@ -27152,10 +28597,10 @@ define('skylark-domx-plugins-colors/main',[
 	"skylark-domx-query",
 	"./colors",
   "./colorer",
-  "./ColorPalette",
-  "./ColorPicker",
-  "./ColorPane",
-  "./Gradienter"
+  "./color-palette",
+  "./color-picker",
+  "./color-pane",
+  "./gradienter"
 ], function($,colors,colorer) {
    
    return colors;
@@ -27418,7 +28863,7 @@ define('skylark-domx-forms/deserialize',[
 
   return forms.deserialize = deserialize;
 });
-define('skylark-domx-forms/serializeArray',[
+define('skylark-domx-forms/serialize-array',[
   "skylark-langx/langx",
   "skylark-domx-data",
   "./forms"
@@ -27442,10 +28887,10 @@ define('skylark-domx-forms/serializeArray',[
     return forms.serializeArray = serializeArray;
 });
 
-define('skylark-domx-forms/serializeObject',[
+define('skylark-domx-forms/serialize-object',[
   "skylark-langx/langx",
   "./forms",
-  "./serializeArray"
+  "./serialize-array"
 ],function(langx,forms,serializeArray){
 
   function serializeObject(formElm){
@@ -27468,7 +28913,7 @@ define('skylark-domx-forms/serializeObject',[
 define('skylark-domx-forms/serialize',[
   "skylark-langx/langx",
   "./forms",
-  "./serializeArray"
+  "./serialize-array"
 ],function(langx,forms,serializeArray){
     function serialize(formElm) {
         var result = []
@@ -27485,8 +28930,8 @@ define('skylark-domx-forms/main',[
     "skylark-domx-velm",
     "skylark-domx-query",
     "./deserialize",
-    "./serializeArray",
-    "./serializeObject",
+    "./serialize-array",
+    "./serialize-object",
     "./serialize"
 ],function(forms,velm,$){
 
@@ -27812,9 +29257,379 @@ define('skylark-jquery/core',[
     return window.jQuery = window.$ = query;
 });
 
+define('skylark-net-http/xhr',[
+  "skylark-langx-ns/ns",
+  "skylark-langx-types",
+  "skylark-langx-objects",
+  "skylark-langx-arrays",
+  "skylark-langx-funcs",
+  "skylark-langx-async/deferred",
+  "skylark-langx-emitter/evented",
+  "skylark-langx-urls/is-cross-origin",
+  "./http"
+],function(skylark,types,objects,arrays,funcs,Deferred,Evented,isCrossOrigin,http){
+
+    var each = objects.each,
+        mixin = objects.mixin,
+        noop = funcs.noop,
+        isArray = types.isArray,
+        isFunction = types.isFunction,
+        isPlainObject = types.isPlainObject,
+        type = types.type;
+ 
+     var getAbsoluteUrl = (function() {
+        var a;
+
+        return function(url) {
+            if (!a) a = document.createElement('a');
+            a.href = url;
+
+            return a.href;
+        };
+    })();
+   
+    var Xhr = (function(){
+        var jsonpID = 0,
+            key,
+            name,
+            rscript = /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+            scriptTypeRE = /^(?:text|application)\/javascript/i,
+            xmlTypeRE = /^(?:text|application)\/xml/i,
+            jsonType = 'application/json',
+            htmlType = 'text/html',
+            blankRE = /^\s*$/;
+
+        var XhrDefaultOptions = {
+            async: true,
+
+            // Default type of request
+            type: 'GET',
+            // Callback that is executed before request
+            beforeSend: noop,
+            // Callback that is executed if the request succeeds
+            success: noop,
+            // Callback that is executed the the server drops error
+            error: noop,
+            // Callback that is executed on request complete (both: error and success)
+            complete: noop,
+            // The context for the callbacks
+            context: null,
+            // Whether to trigger "global" Ajax events
+            global: true,
+
+            // MIME types mapping
+            // IIS returns Javascript as "application/x-javascript"
+            accepts: {
+                script: 'text/javascript, application/javascript, application/x-javascript',
+                json: 'application/json',
+                xml: 'application/xml, text/xml',
+                html: 'text/html',
+                text: 'text/plain'
+            },
+            // Whether the request is to another domain
+            crossDomain: false,
+            // Default timeout
+            timeout: 0,
+            // Whether data should be serialized to string
+            processData: false,
+            // Whether the browser should be allowed to cache GET responses
+            cache: true,
+
+            traditional : false,
+            
+            xhrFields : {
+                ///withCredentials : false
+            }
+        };
+
+        function mimeToDataType(mime) {
+            if (mime) {
+                mime = mime.split(';', 2)[0];
+            }
+            if (mime) {
+                if (mime == htmlType) {
+                    return "html";
+                } else if (mime == jsonType) {
+                    return "json";
+                } else if (scriptTypeRE.test(mime)) {
+                    return "script";
+                } else if (xmlTypeRE.test(mime)) {
+                    return "xml";
+                }
+            }
+            return "text";
+        }
+
+        function appendQuery(url, query) {
+            if (query == '') return url
+            return (url + '&' + query).replace(/[&?]{1,2}/, '?')
+        }
+
+        // serialize payload and append it to the URL for GET requests
+        function serializeData(options) {
+            options.data = options.data || options.query;
+            if (options.processData && options.data && type(options.data) != "string") {
+                options.data = param(options.data, options.traditional);
+            }
+            if (options.data && (!options.type || options.type.toUpperCase() == 'GET')) {
+                if (type(options.data) != "string") {
+                    options.data = param(options.data, options.traditional);
+                }
+                options.url = appendQuery(options.url, options.data);
+                options.data = undefined;
+            }
+        }
+        
+        function serialize(params, obj, traditional, scope) {
+            var t, array = isArray(obj),
+                hash = isPlainObject(obj)
+            each(obj, function(key, value) {
+                t =type(value);
+                if (scope) key = traditional ? scope :
+                    scope + '[' + (hash || t == 'object' || t == 'array' ? key : '') + ']'
+                // handle data in serializeArray() format
+                if (!scope && array) params.add(value.name, value.value)
+                // recurse into nested objects
+                else if (t == "array" || (!traditional && t == "object"))
+                    serialize(params, value, traditional, key)
+                else params.add(key, value)
+            })
+        }
+
+        var param = function(obj, traditional) {
+            var params = []
+            params.add = function(key, value) {
+                if (isFunction(value)) {
+                  value = value();
+                }
+                if (value == null) {
+                  value = "";
+                }
+                this.push(encodeURIComponent(key) + '=' + encodeURIComponent(value));
+            };
+            serialize(params, obj, traditional)
+            return params.join('&').replace(/%20/g, '+')
+        };
+
+        var Xhr = Evented.inherit({
+            klassName : "Xhr",
+
+            _request  : function(args) {
+                var _ = this._,
+                    self = this,
+                    options = mixin({},XhrDefaultOptions,_.options,args),
+                    xhr = _.xhr = new XMLHttpRequest();
+
+                serializeData(options)
+
+                if (options.beforeSend) {
+                    options.beforeSend.call(this, xhr, options);
+                }                
+
+                var dataType = options.dataType || options.handleAs,
+                    mime = options.mimeType || options.accepts[dataType],
+                    headers = options.headers,
+                    xhrFields = options.xhrFields,
+                    isFormData = options.data && options.data instanceof FormData,
+                    basicAuthorizationToken = options.basicAuthorizationToken,
+                    type = options.type,
+                    url = options.url,
+                    async = options.async,
+                    user = options.user , 
+                    password = options.password,
+                    deferred = new Deferred(),
+                    contentType = options.contentType || (isFormData ? false : 'application/x-www-form-urlencoded');
+
+                if (xhrFields) {
+                    for (name in xhrFields) {
+                        xhr[name] = xhrFields[name];
+                    }
+                }
+
+                if (mime && mime.indexOf(',') > -1) {
+                    mime = mime.split(',', 2)[0];
+                }
+                if (mime && xhr.overrideMimeType) {
+                    xhr.overrideMimeType(mime);
+                }
+
+                if (dataType == "blob" || dataType == "arraybuffer") {
+                    xhr.responseType = dataType;
+                }
+
+                var finish = function() {
+                    xhr.onloadend = noop;
+                    xhr.onabort = noop;
+                    xhr.onprogress = noop;
+                    xhr.ontimeout = noop;
+                    xhr = null;
+                }
+                var onloadend = function() {
+                    var result, error = false
+                    if ((xhr.status >= 200 && xhr.status < 300) || xhr.status == 304 || (xhr.status == 0 && getAbsoluteUrl(url).startsWith('file:'))) {
+                        dataType = dataType || mimeToDataType(options.mimeType || xhr.getResponseHeader('content-type'));
+
+                        //result = xhr.responseText;
+                        try {
+                            if (dataType == 'script') {
+                                eval(xhr.responseText);
+                            } else if (dataType == 'xml') {
+                                result = xhr.responseXML;
+                            } else if (dataType == 'json') {
+                                result = blankRE.test(xhr.responseText) ? null : JSON.parse(xhr.responseText);
+                            } else if (dataType == "blob") {
+                                result = xhr.response; // new Blob([xhr.response]);
+                            } else if (dataType == "arraybuffer") {
+                                result = xhr.response;
+                            } else {
+                                //if (dataType == "text" || dataType=="html")
+                                result = xhr.responseText;
+                            }
+                        } catch (e) { 
+                            error = e;
+                        }
+
+                        if (error) {
+                            deferred.reject(error,xhr.status,xhr);
+                        } else {
+                            deferred.resolve(result,xhr.status,xhr);
+                        }
+                    } else {
+                        deferred.reject(new Error(xhr.statusText),xhr.status,xhr);
+                    }
+                    finish();
+                };
+                
+                var onabort = function() {
+                    if (deferred) {
+                        deferred.reject(new Error("abort"),xhr.status,xhr);
+                    }
+                    finish();                 
+                }
+ 
+                var ontimeout = function() {
+                    if (deferred) {
+                        deferred.reject(new Error("timeout"),xhr.status,xhr);
+                    }
+                    finish();                 
+                }
+
+                var onprogress = function(evt) {
+                    if (deferred) {
+                        deferred.notify(evt,xhr.status,xhr);
+                    }
+                }
+
+                xhr.onloadend = onloadend;
+                xhr.onabort = onabort;
+                xhr.ontimeout = ontimeout;
+                xhr.onprogress = onprogress;
+
+                xhr.open(type, url, async, user, password);
+               
+                if (headers) {
+                    for ( var key in headers) {
+                        var value = headers[key];
+ 
+                        if(key.toLowerCase() === 'content-type'){
+                            contentType = value;
+                        } else {
+                           xhr.setRequestHeader(key, value);
+                        }
+                    }
+                }   
+
+                if  (contentType && contentType !== false){
+                    xhr.setRequestHeader('Content-Type', contentType);
+                }
+
+                if(!headers || !('X-Requested-With' in headers)){
+                    if (!isCrossOrigin(url)) {// for s02
+                      xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest'); 
+                    }
+                }
+
+
+                //If basicAuthorizationToken is defined set its value into "Authorization" header
+                if (basicAuthorizationToken) {
+                    xhr.setRequestHeader("Authorization", basicAuthorizationToken);
+                }
+
+                xhr.send(options.data ? options.data : null);
+
+                return deferred.promise;
+
+            },
+
+            "abort": function() {
+                var _ = this._,
+                    xhr = _.xhr;
+
+                if (xhr) {
+                    xhr.abort();
+                }    
+            },
+
+
+            "request": function(args) {
+                return this._request(args);
+            },
+
+            get : function(args) {
+                args = args || {};
+                args.type = "GET";
+                return this._request(args);
+            },
+
+            post : function(args) {
+                args = args || {};
+                args.type = "POST";
+                return this._request(args);
+            },
+
+            patch : function(args) {
+                args = args || {};
+                args.type = "PATCH";
+                return this._request(args);
+            },
+
+            put : function(args) {
+                args = args || {};
+                args.type = "PUT";
+                return this._request(args);
+            },
+
+            del : function(args) {
+                args = args || {};
+                args.type = "DELETE";
+                return this._request(args);
+            },
+
+            "init": function(options) {
+                this._ = {
+                    options : options || {}
+                };
+            }
+        });
+
+        ["request","get","post","put","del","patch"].forEach(function(name){
+            Xhr[name] = function(url,args) {
+                var xhr = new Xhr({"url" : url});
+                return xhr[name](args);
+            };
+        });
+
+        Xhr.defaultOptions = XhrDefaultOptions;
+        Xhr.param = param;
+
+        return Xhr;
+    })();
+
+    return http.Xhr = Xhr;  
+});
 define('skylark-jquery/ajax',[
     "skylark-langx/langx",
-    "skylark-net-http/Xhr",
+    "skylark-net-http/xhr",
     "./core",
 ], function(langx,Xhr,$) {
     var jsonpID = 0;
@@ -28657,7 +30472,7 @@ define('skylark-jquery/queue',[
 
 });
 
-define('skylark-jquery/JqueryPlugin',[
+define('skylark-jquery/jquery-plugin',[
 	"skylark-langx-types",
 	"skylark-langx-objects",
 	"skylark-langx-arrays",
@@ -28983,7 +30798,7 @@ define( 'skylark-jquery/widget',[
 	"skylark-langx/langx",
 	"skylark-domx-plugins-base",
 	"./core",
-	"./JqueryPlugin"
+	"./jquery-plugin"
 ],  function(langx,splugins, $,JqPlugin ) {
 
 	var widgetUuid = 0;
@@ -29378,7 +31193,7 @@ define('skylark-jquery/main',[
     "./callbacks",
     "./deferred",
     "./queue",
-    "./JqueryPlugin",
+    "./jquery-plugin",
     "./widget"
 ], function($) {
     return $;
@@ -30210,2515 +32025,6 @@ define('skylark-appify-spa/main',[
 });
 
 define('skylark-appify-spa', ['skylark-appify-spa/main'], function (main) { return main; });
-
-define('skylark-appify-shells/shells',[
-	"skylark-langx/skylark"
-],function(skylark){
-	return skylark.attach("appify.shells");
-
-});
-define('skylark-nprogress/nprogress',[],function(){
-  function nprogress() {
-    var NProgress = {};
-
-    NProgress.version = '0.2.0';
-
-    var Settings = NProgress.settings = {
-      minimum: 0.08,
-      easing: 'ease',
-      positionUsing: '',
-      speed: 200,
-      trickle: true,
-      trickleRate: 0.02,
-      trickleSpeed: 800,
-      showSpinner: true,
-      barSelector: '[role="bar"]',
-      spinnerSelector: '[role="spinner"]',
-      parent: 'body',
-      template: '<div class="bar" role="bar"><div class="peg"></div></div><div class="spinner" role="spinner"><div class="spinner-icon"></div></div>'
-    };
-
-    /**
-     * Updates configuration.
-     *
-     *     NProgress.configure({
-     *       minimum: 0.1
-     *     });
-     */
-    NProgress.configure = function(options) {
-      var key, value;
-      for (key in options) {
-        value = options[key];
-        if (value !== undefined && options.hasOwnProperty(key)) Settings[key] = value;
-      }
-
-      return this;
-    };
-
-    /**
-     * Last number.
-     */
-
-    NProgress.status = null;
-
-    /**
-     * Sets the progress bar status, where `n` is a number from `0.0` to `1.0`.
-     *
-     *     NProgress.set(0.4);
-     *     NProgress.set(1.0);
-     */
-
-    NProgress.set = function(n) {
-      var started = NProgress.isStarted();
-
-      n = clamp(n, Settings.minimum, 1);
-      NProgress.status = (n === 1 ? null : n);
-
-      var progress = NProgress.render(!started),
-          bar      = progress.querySelector(Settings.barSelector),
-          speed    = Settings.speed,
-          ease     = Settings.easing;
-
-      progress.offsetWidth; /* Repaint */
-
-      queue(function(next) {
-        // Set positionUsing if it hasn't already been set
-        if (Settings.positionUsing === '') Settings.positionUsing = NProgress.getPositioningCSS();
-
-        // Add transition
-        css(bar, barPositionCSS(n, speed, ease));
-
-        if (n === 1) {
-          // Fade out
-          css(progress, { 
-            transition: 'none', 
-            opacity: 1 
-          });
-          progress.offsetWidth; /* Repaint */
-
-          setTimeout(function() {
-            css(progress, { 
-              transition: 'all ' + speed + 'ms linear', 
-              opacity: 0 
-            });
-            setTimeout(function() {
-              NProgress.remove();
-              next();
-            }, speed);
-          }, speed);
-        } else {
-          setTimeout(next, speed);
-        }
-      });
-
-      return this;
-    };
-
-    NProgress.isStarted = function() {
-      return typeof NProgress.status === 'number';
-    };
-
-    /**
-     * Shows the progress bar.
-     * This is the same as setting the status to 0%, except that it doesn't go backwards.
-     *
-     *     NProgress.start();
-     *
-     */
-    NProgress.start = function() {
-      if (!NProgress.status) NProgress.set(0);
-
-      var work = function() {
-        setTimeout(function() {
-          if (!NProgress.status) return;
-          NProgress.trickle();
-          work();
-        }, Settings.trickleSpeed);
-      };
-
-      if (Settings.trickle) work();
-
-      return this;
-    };
-
-    /**
-     * Hides the progress bar.
-     * This is the *sort of* the same as setting the status to 100%, with the
-     * difference being `done()` makes some placebo effect of some realistic motion.
-     *
-     *     NProgress.done();
-     *
-     * If `true` is passed, it will show the progress bar even if its hidden.
-     *
-     *     NProgress.done(true);
-     */
-
-    NProgress.done = function(force) {
-      if (!force && !NProgress.status) return this;
-
-      return NProgress.inc(0.3 + 0.5 * Math.random()).set(1);
-    };
-
-    /**
-     * Increments by a random amount.
-     */
-
-    NProgress.inc = function(amount) {
-      var n = NProgress.status;
-
-      if (!n) {
-        return NProgress.start();
-      } else {
-        if (typeof amount !== 'number') {
-          amount = (1 - n) * clamp(Math.random() * n, 0.1, 0.95);
-        }
-
-        n = clamp(n + amount, 0, 0.994);
-        return NProgress.set(n);
-      }
-    };
-
-    NProgress.trickle = function() {
-      return NProgress.inc(Math.random() * Settings.trickleRate);
-    };
-
-    /**
-     * Waits for all supplied jQuery promises and
-     * increases the progress as the promises resolve.
-     *
-     * @param $promise jQUery Promise
-     */
-    (function() {
-      var initial = 0, current = 0;
-
-      NProgress.promise = function($promise) {
-        if (!$promise || $promise.state() === "resolved") {
-          return this;
-        }
-
-        if (current === 0) {
-          NProgress.start();
-        }
-
-        initial++;
-        current++;
-
-        $promise.always(function() {
-          current--;
-          if (current === 0) {
-              initial = 0;
-              NProgress.done();
-          } else {
-              NProgress.set((initial - current) / initial);
-          }
-        });
-
-        return this;
-      };
-
-    })();
-
-    /**
-     * (Internal) renders the progress bar markup based on the `template`
-     * setting.
-     */
-
-    NProgress.render = function(fromStart) {
-      if (NProgress.isRendered()) return document.getElementById('nprogress');
-
-      addClass(document.documentElement, 'nprogress-busy');
-      
-      var progress = document.createElement('div');
-      progress.id = 'nprogress';
-      progress.innerHTML = Settings.template;
-
-      var bar      = progress.querySelector(Settings.barSelector),
-          perc     = fromStart ? '-100' : toBarPerc(NProgress.status || 0),
-          parent   = document.querySelector(Settings.parent),
-          spinner;
-      
-      css(bar, {
-        transition: 'all 0 linear',
-        transform: 'translate3d(' + perc + '%,0,0)'
-      });
-
-      if (!Settings.showSpinner) {
-        spinner = progress.querySelector(Settings.spinnerSelector);
-        spinner && removeElement(spinner);
-      }
-
-      if (parent != document.body) {
-        addClass(parent, 'nprogress-custom-parent');
-      }
-
-      parent.appendChild(progress);
-      return progress;
-    };
-
-    /**
-     * Removes the element. Opposite of render().
-     */
-
-    NProgress.remove = function() {
-      removeClass(document.documentElement, 'nprogress-busy');
-      removeClass(document.querySelector(Settings.parent), 'nprogress-custom-parent');
-      var progress = document.getElementById('nprogress');
-      progress && removeElement(progress);
-    };
-
-    /**
-     * Checks if the progress bar is rendered.
-     */
-
-    NProgress.isRendered = function() {
-      return !!document.getElementById('nprogress');
-    };
-
-    /**
-     * Determine which positioning CSS rule to use.
-     */
-
-    NProgress.getPositioningCSS = function() {
-      // Sniff on document.body.style
-      var bodyStyle = document.body.style;
-
-      // Sniff prefixes
-      var vendorPrefix = ('WebkitTransform' in bodyStyle) ? 'Webkit' :
-                         ('MozTransform' in bodyStyle) ? 'Moz' :
-                         ('msTransform' in bodyStyle) ? 'ms' :
-                         ('OTransform' in bodyStyle) ? 'O' : '';
-
-      if (vendorPrefix + 'Perspective' in bodyStyle) {
-        // Modern browsers with 3D support, e.g. Webkit, IE10
-        return 'translate3d';
-      } else if (vendorPrefix + 'Transform' in bodyStyle) {
-        // Browsers without 3D support, e.g. IE9
-        return 'translate';
-      } else {
-        // Browsers without translate() support, e.g. IE7-8
-        return 'margin';
-      }
-    };
-
-    /**
-     * Helpers
-     */
-
-    function clamp(n, min, max) {
-      if (n < min) return min;
-      if (n > max) return max;
-      return n;
-    }
-
-    /**
-     * (Internal) converts a percentage (`0..1`) to a bar translateX
-     * percentage (`-100%..0%`).
-     */
-
-    function toBarPerc(n) {
-      return (-1 + n) * 100;
-    }
-
-
-    /**
-     * (Internal) returns the correct CSS for changing the bar's
-     * position given an n percentage, and speed and ease from Settings
-     */
-
-    function barPositionCSS(n, speed, ease) {
-      var barCSS;
-
-      if (Settings.positionUsing === 'translate3d') {
-        barCSS = { transform: 'translate3d('+toBarPerc(n)+'%,0,0)' };
-      } else if (Settings.positionUsing === 'translate') {
-        barCSS = { transform: 'translate('+toBarPerc(n)+'%,0)' };
-      } else {
-        barCSS = { 'margin-left': toBarPerc(n)+'%' };
-      }
-
-      barCSS.transition = 'all '+speed+'ms '+ease;
-
-      return barCSS;
-    }
-
-    /**
-     * (Internal) Queues a function to be executed.
-     */
-
-    var queue = (function() {
-      var pending = [];
-      
-      function next() {
-        var fn = pending.shift();
-        if (fn) {
-          fn(next);
-        }
-      }
-
-      return function(fn) {
-        pending.push(fn);
-        if (pending.length == 1) next();
-      };
-    })();
-
-    /**
-     * (Internal) Applies css properties to an element, similar to the jQuery 
-     * css method.
-     *
-     * While this helper does assist with vendor prefixed property names, it 
-     * does not perform any manipulation of values prior to setting styles.
-     */
-
-    var css = (function() {
-      var cssPrefixes = [ 'Webkit', 'O', 'Moz', 'ms' ],
-          cssProps    = {};
-
-      function camelCase(string) {
-        return string.replace(/^-ms-/, 'ms-').replace(/-([\da-z])/gi, function(match, letter) {
-          return letter.toUpperCase();
-        });
-      }
-
-      function getVendorProp(name) {
-        var style = document.body.style;
-        if (name in style) return name;
-
-        var i = cssPrefixes.length,
-            capName = name.charAt(0).toUpperCase() + name.slice(1),
-            vendorName;
-        while (i--) {
-          vendorName = cssPrefixes[i] + capName;
-          if (vendorName in style) return vendorName;
-        }
-
-        return name;
-      }
-
-      function getStyleProp(name) {
-        name = camelCase(name);
-        return cssProps[name] || (cssProps[name] = getVendorProp(name));
-      }
-
-      function applyCss(element, prop, value) {
-        prop = getStyleProp(prop);
-        element.style[prop] = value;
-      }
-
-      return function(element, properties) {
-        var args = arguments,
-            prop, 
-            value;
-
-        if (args.length == 2) {
-          for (prop in properties) {
-            value = properties[prop];
-            if (value !== undefined && properties.hasOwnProperty(prop)) applyCss(element, prop, value);
-          }
-        } else {
-          applyCss(element, args[1], args[2]);
-        }
-      }
-    })();
-
-    /**
-     * (Internal) Determines if an element or space separated list of class names contains a class name.
-     */
-
-    function hasClass(element, name) {
-      var list = typeof element == 'string' ? element : classList(element);
-      return list.indexOf(' ' + name + ' ') >= 0;
-    }
-
-    /**
-     * (Internal) Adds a class to an element.
-     */
-
-    function addClass(element, name) {
-      var oldList = classList(element),
-          newList = oldList + name;
-
-      if (hasClass(oldList, name)) return; 
-
-      // Trim the opening space.
-      element.className = newList.substring(1);
-    }
-
-    /**
-     * (Internal) Removes a class from an element.
-     */
-
-    function removeClass(element, name) {
-      var oldList = classList(element),
-          newList;
-
-      if (!hasClass(element, name)) return;
-
-      // Replace the class name.
-      newList = oldList.replace(' ' + name + ' ', ' ');
-
-      // Trim the opening and closing spaces.
-      element.className = newList.substring(1, newList.length - 1);
-    }
-
-    /**
-     * (Internal) Gets a space separated list of the class names on the element. 
-     * The list is wrapped with a single space on each end to facilitate finding 
-     * matches within the list.
-     */
-
-    function classList(element) {
-      return (' ' + (element.className || '') + ' ').replace(/\s+/gi, ' ');
-    }
-
-    /**
-     * (Internal) Removes an element from the DOM.
-     */
-
-    function removeElement(element) {
-      element && element.parentNode && element.parentNode.removeChild(element);
-    }
-
-    return NProgress;
-  }
-
-  return nprogress;
-
-});
-
-
-
-define('skylark-nprogress/main',[
-	"./nprogress"
-],function(nprogress){
-	return nprogress;
-});
-define('skylark-nprogress', ['skylark-nprogress/main'], function (main) { return main; });
-
-define('skylark-bootbox4/bootbox',[
-  "skylark-langx/skylark",
-  "skylark-langx/langx",
-  "skylark-domx-query",
-  "skylark-domx-data",
-  "skylark-domx-styler"
-],function(skylark,langx,$) {
-
-  "use strict";
-
-  // the base DOM structure needed to create a modal
-  var templates = {
-    dialog:
-      "<div class='bootbox modal' tabindex='-1' role='dialog'>" +
-        "<div class='modal-dialog'>" +
-          "<div class='modal-content'>" +
-            "<div class='modal-body'><div class='bootbox-body'></div></div>" +
-          "</div>" +
-        "</div>" +
-      "</div>",
-    header:
-      "<div class='modal-header'>" +
-        "<h4 class='modal-title'></h4>" +
-      "</div>",
-    footer:
-      "<div class='modal-footer'></div>",
-    closeButton:
-      "<button type='button' class='bootbox-close-button close' data-dismiss='modal' aria-hidden='true'>&times;</button>",
-    form:
-      "<form class='bootbox-form'></form>",
-    inputs: {
-      text:
-        "<input class='bootbox-input bootbox-input-text form-control' autocomplete=off type=text />",
-      textarea:
-        "<textarea class='bootbox-input bootbox-input-textarea form-control'></textarea>",
-      email:
-        "<input class='bootbox-input bootbox-input-email form-control' autocomplete='off' type='email' />",
-      select:
-        "<select class='bootbox-input bootbox-input-select form-control'></select>",
-      checkbox:
-        "<div class='checkbox'><label><input class='bootbox-input bootbox-input-checkbox' type='checkbox' /></label></div>",
-      date:
-        "<input class='bootbox-input bootbox-input-date form-control' autocomplete=off type='date' />",
-      time:
-        "<input class='bootbox-input bootbox-input-time form-control' autocomplete=off type='time' />",
-      number:
-        "<input class='bootbox-input bootbox-input-number form-control' autocomplete=off type='number' />",
-      password:
-        "<input class='bootbox-input bootbox-input-password form-control' autocomplete='off' type='password' />"
-    }
-  };
-
-  var defaults = {
-    // default language
-    locale: "en",
-    // show backdrop or not. Default to static so user has to interact with dialog
-    backdrop: "static",
-    // animate the modal in/out
-    animate: true,
-    // additional class string applied to the top level dialog
-    className: null,
-    // whether or not to include a close button
-    closeButton: true,
-    // show the dialog immediately by default
-    show: true,
-    // dialog container
-    container: "body"
-  };
-
-  // our public object; augmented after our private API
-  var bootbox = {};
-
-  /**
-   * @private
-   */
-  function _t(key) {
-    var locale = locales[defaults.locale];
-    return locale ? locale[key] : locales.en[key];
-  }
-
-  function processCallback(e, dialog, callback) {
-    e.stopPropagation();
-    e.preventDefault();
-
-    // by default we assume a callback will get rid of the dialog,
-    // although it is given the opportunity to override this
-
-    // so, if the callback can be invoked and it *explicitly returns false*
-    // then we'll set a flag to keep the dialog active...
-    var preserveDialog = langx.isFunction(callback) && callback.call(dialog, e) === false;
-
-    // ... otherwise we'll bin it
-    if (!preserveDialog) {
-      dialog.modal("hide");
-    }
-  }
-
-  function getKeyLength(obj) {
-    // @TODO defer to Object.keys(x).length if available?
-    var k, t = 0;
-    for (k in obj) {
-      t ++;
-    }
-    return t;
-  }
-
-  function each(collection, iterator) {
-    var index = 0;
-    langx.each(collection, function(key, value) {
-      iterator(key, value, index++);
-    });
-  }
-
-  function sanitize(options) {
-    var buttons;
-    var total;
-
-    if (typeof options !== "object") {
-      throw new Error("Please supply an object of options");
-    }
-
-    if (!options.message) {
-      throw new Error("Please specify a message");
-    }
-
-    // make sure any supplied options take precedence over defaults
-    options = langx.extend({}, defaults, options);
-
-    if (!options.buttons) {
-      options.buttons = {};
-    }
-
-    buttons = options.buttons;
-
-    total = getKeyLength(buttons);
-
-    each(buttons, function(key, button, index) {
-
-      if (langx.isFunction(button)) {
-        // short form, assume value is our callback. Since button
-        // isn't an object it isn't a reference either so re-assign it
-        button = buttons[key] = {
-          callback: button
-        };
-      }
-
-      // before any further checks make sure by now button is the correct type
-      if (langx.type(button) !== "object") {
-        throw new Error("button with key " + key + " must be an object");
-      }
-
-      if (!button.label) {
-        // the lack of an explicit label means we'll assume the key is good enough
-        button.label = key;
-      }
-
-      if (!button.className) {
-        if (total <= 2 && index === total-1) {
-          // always add a primary to the main option in a two-button dialog
-          button.className = "btn-primary";
-        } else {
-          button.className = "btn-default";
-        }
-      }
-    });
-
-    return options;
-  }
-
-  /**
-   * map a flexible set of arguments into a single returned object
-   * if args.length is already one just return it, otherwise
-   * use the properties argument to map the unnamed args to
-   * object properties
-   * so in the latter case:
-   * mapArguments(["foo", langx.noop], ["message", "callback"])
-   * -> { message: "foo", callback: langx.noop }
-   */
-  function mapArguments(args, properties) {
-    var argn = args.length;
-    var options = {};
-
-    if (argn < 1 || argn > 2) {
-      throw new Error("Invalid argument length");
-    }
-
-    if (argn === 2 || typeof args[0] === "string") {
-      options[properties[0]] = args[0];
-      options[properties[1]] = args[1];
-    } else {
-      options = args[0];
-    }
-
-    return options;
-  }
-
-  /**
-   * merge a set of default dialog options with user supplied arguments
-   */
-  function mergeArguments(defaults, args, properties) {
-    return langx.extend(
-      // deep merge
-      true,
-      // ensure the target is an empty, unreferenced object
-      {},
-      // the base options object for this type of dialog (often just buttons)
-      defaults,
-      // args could be an object or array; if it's an array properties will
-      // map it to a proper options object
-      mapArguments(
-        args,
-        properties
-      )
-    );
-  }
-
-  /**
-   * this entry-level method makes heavy use of composition to take a simple
-   * range of inputs and return valid options suitable for passing to bootbox.dialog
-   */
-  function mergeDialogOptions(className, labels, properties, args) {
-    //  build up a base set of dialog properties
-    var baseOptions = {
-      className: "bootbox-" + className,
-      buttons: createLabels.apply(null, labels)
-    };
-
-    // ensure the buttons properties generated, *after* merging
-    // with user args are still valid against the supplied labels
-    return validateButtons(
-      // merge the generated base properties with user supplied arguments
-      mergeArguments(
-        baseOptions,
-        args,
-        // if args.length > 1, properties specify how each arg maps to an object key
-        properties
-      ),
-      labels
-    );
-  }
-
-  /**
-   * from a given list of arguments return a suitable object of button labels
-   * all this does is normalise the given labels and translate them where possible
-   * e.g. "ok", "confirm" -> { ok: "OK, cancel: "Annuleren" }
-   */
-  function createLabels() {
-    var buttons = {};
-
-    for (var i = 0, j = arguments.length; i < j; i++) {
-      var argument = arguments[i];
-      var key = argument.toLowerCase();
-      var value = argument.toUpperCase();
-
-      buttons[key] = {
-        label: _t(value)
-      };
-    }
-
-    return buttons;
-  }
-
-  function validateButtons(options, buttons) {
-    var allowedButtons = {};
-    each(buttons, function(key, value) {
-      allowedButtons[value] = true;
-    });
-
-    each(options.buttons, function(key) {
-      if (allowedButtons[key] === undefined) {
-        throw new Error("button key " + key + " is not allowed (options are " + buttons.join("\n") + ")");
-      }
-    });
-
-    return options;
-  }
-
-  bootbox.alert = function() {
-    var options;
-
-    options = mergeDialogOptions("alert", ["ok"], ["message", "callback"], arguments);
-
-    if (options.callback && !langx.isFunction(options.callback)) {
-      throw new Error("alert requires callback property to be a function when provided");
-    }
-
-    /**
-     * overrides
-     */
-    options.buttons.ok.callback = options.onEscape = function() {
-      if (langx.isFunction(options.callback)) {
-        return options.callback.call(this);
-      }
-      return true;
-    };
-
-    return bootbox.dialog(options);
-  };
-
-  bootbox.confirm = function() {
-    var options;
-
-    options = mergeDialogOptions("confirm", ["cancel", "confirm"], ["message", "callback"], arguments);
-
-    /**
-     * overrides; undo anything the user tried to set they shouldn't have
-     */
-    options.buttons.cancel.callback = options.onEscape = function() {
-      return options.callback.call(this, false);
-    };
-
-    options.buttons.confirm.callback = function() {
-      return options.callback.call(this, true);
-    };
-
-    // confirm specific validation
-    if (!langx.isFunction(options.callback)) {
-      throw new Error("confirm requires a callback");
-    }
-
-    return bootbox.dialog(options);
-  };
-
-  bootbox.prompt = function() {
-    var options;
-    var defaults;
-    var dialog;
-    var form;
-    var input;
-    var shouldShow;
-    var inputOptions;
-
-    // we have to create our form first otherwise
-    // its value is undefined when gearing up our options
-    // @TODO this could be solved by allowing message to
-    // be a function instead...
-    form = $(templates.form);
-
-    // prompt defaults are more complex than others in that
-    // users can override more defaults
-    // @TODO I don't like that prompt has to do a lot of heavy
-    // lifting which mergeDialogOptions can *almost* support already
-    // just because of 'value' and 'inputType' - can we refactor?
-    defaults = {
-      className: "bootbox-prompt",
-      buttons: createLabels("cancel", "confirm"),
-      value: "",
-      inputType: "text"
-    };
-
-    options = validateButtons(
-      mergeArguments(defaults, arguments, ["title", "callback"]),
-      ["cancel", "confirm"]
-    );
-
-    // capture the user's show value; we always set this to false before
-    // spawning the dialog to give us a chance to attach some handlers to
-    // it, but we need to make sure we respect a preference not to show it
-    shouldShow = (options.show === undefined) ? true : options.show;
-
-    /**
-     * overrides; undo anything the user tried to set they shouldn't have
-     */
-    options.message = form;
-
-    options.buttons.cancel.callback = options.onEscape = function() {
-      return options.callback.call(this, null);
-    };
-
-    options.buttons.confirm.callback = function() {
-      var value;
-
-      switch (options.inputType) {
-        case "text":
-        case "textarea":
-        case "email":
-        case "select":
-        case "date":
-        case "time":
-        case "number":
-        case "password":
-          value = input.val();
-          break;
-
-        case "checkbox":
-          var checkedItems = input.find("input:checked");
-
-          // we assume that checkboxes are always multiple,
-          // hence we default to an empty array
-          value = [];
-
-          each(checkedItems, function(_, item) {
-            value.push($(item).val());
-          });
-          break;
-      }
-
-      return options.callback.call(this, value);
-    };
-
-    options.show = false;
-
-    // prompt specific validation
-    if (!options.title) {
-      throw new Error("prompt requires a title");
-    }
-
-    if (!langx.isFunction(options.callback)) {
-      throw new Error("prompt requires a callback");
-    }
-
-    if (!templates.inputs[options.inputType]) {
-      throw new Error("invalid prompt type");
-    }
-
-    // create the input based on the supplied type
-    input = $(templates.inputs[options.inputType]);
-
-    switch (options.inputType) {
-      case "text":
-      case "textarea":
-      case "email":
-      case "date":
-      case "time":
-      case "number":
-      case "password":
-        input.val(options.value);
-        break;
-
-      case "select":
-        var groups = {};
-        inputOptions = options.inputOptions || [];
-
-        if (!langx.isArray(inputOptions)) {
-          throw new Error("Please pass an array of input options");
-        }
-
-        if (!inputOptions.length) {
-          throw new Error("prompt with select requires options");
-        }
-
-        each(inputOptions, function(_, option) {
-
-          // assume the element to attach to is the input...
-          var elem = input;
-
-          if (option.value === undefined || option.text === undefined) {
-            throw new Error("given options in wrong format");
-          }
-
-          // ... but override that element if this option sits in a group
-
-          if (option.group) {
-            // initialise group if necessary
-            if (!groups[option.group]) {
-              groups[option.group] = $("<optgroup/>").attr("label", option.group);
-            }
-
-            elem = groups[option.group];
-          }
-
-          elem.append("<option value='" + option.value + "'>" + option.text + "</option>");
-        });
-
-        each(groups, function(_, group) {
-          input.append(group);
-        });
-
-        // safe to set a select's value as per a normal input
-        input.val(options.value);
-        break;
-
-      case "checkbox":
-        var values   = langx.isArray(options.value) ? options.value : [options.value];
-        inputOptions = options.inputOptions || [];
-
-        if (!inputOptions.length) {
-          throw new Error("prompt with checkbox requires options");
-        }
-
-        if (!inputOptions[0].value || !inputOptions[0].text) {
-          throw new Error("given options in wrong format");
-        }
-
-        // checkboxes have to nest within a containing element, so
-        // they break the rules a bit and we end up re-assigning
-        // our 'input' element to this container instead
-        input = $("<div/>");
-
-        each(inputOptions, function(_, option) {
-          var checkbox = $(templates.inputs[options.inputType]);
-
-          checkbox.find("input").attr("value", option.value);
-          checkbox.find("label").append(option.text);
-
-          // we've ensured values is an array so we can always iterate over it
-          each(values, function(_, value) {
-            if (value === option.value) {
-              checkbox.find("input").prop("checked", true);
-            }
-          });
-
-          input.append(checkbox);
-        });
-        break;
-    }
-
-    // @TODO provide an attributes option instead
-    // and simply map that as keys: vals
-    if (options.placeholder) {
-      input.attr("placeholder", options.placeholder);
-    }
-
-    if (options.pattern) {
-      input.attr("pattern", options.pattern);
-    }
-
-    if (options.maxlength) {
-      input.attr("maxlength", options.maxlength);
-    }
-
-    // now place it in our form
-    form.append(input);
-
-    form.on("submit", function(e) {
-      e.preventDefault();
-      // Fix for SammyJS (or similar JS routing library) hijacking the form post.
-      e.stopPropagation();
-      // @TODO can we actually click *the* button object instead?
-      // e.g. buttons.confirm.click() or similar
-      dialog.find(".btn-primary").click();
-    });
-
-    dialog = bootbox.dialog(options);
-
-    // clear the existing handler focusing the submit button...
-    dialog.off("shown.bs.modal");
-
-    // ...and replace it with one focusing our input, if possible
-    dialog.on("shown.bs.modal", function() {
-      // need the closure here since input isn't
-      // an object otherwise
-      input.focus();
-    });
-
-    if (shouldShow === true) {
-      dialog.modal("show");
-    }
-
-    return dialog;
-  };
-
-  bootbox.dialog = function(options) {
-    options = sanitize(options);
-
-    var dialog = $(templates.dialog);
-    var innerDialog = dialog.find(".modal-dialog");
-    var body = dialog.find(".modal-body");
-    var buttons = options.buttons;
-    var buttonStr = "";
-    var callbacks = {
-      onEscape: options.onEscape
-    };
-
-    if ($.fn.modal === undefined) {
-      throw new Error(
-        "$.fn.modal is not defined; please double check you have included " +
-        "the Bootstrap JavaScript library. See http://getbootstrap.com/javascript/ " +
-        "for more details."
-      );
-    }
-
-    each(buttons, function(key, button) {
-
-      // @TODO I don't like this string appending to itself; bit dirty. Needs reworking
-      // can we just build up button elements instead? slower but neater. Then button
-      // can just become a template too
-      buttonStr += "<button data-bb-handler='" + key + "' type='button' class='btn " + button.className + "'>" + button.label + "</button>";
-      callbacks[key] = button.callback;
-    });
-
-    body.find(".bootbox-body").html(options.message);
-
-    if (options.animate === true) {
-      dialog.addClass("fade");
-    }
-
-    if (options.className) {
-      dialog.addClass(options.className);
-    }
-
-    if (options.size === "large") {
-      innerDialog.addClass("modal-lg");
-    } else if (options.size === "small") {
-      innerDialog.addClass("modal-sm");
-    }
-
-    if (options.title) {
-      body.before(templates.header);
-    }
-
-    if (options.closeButton) {
-      var closeButton = $(templates.closeButton);
-
-      if (options.title) {
-        dialog.find(".modal-header").prepend(closeButton);
-      } else {
-        closeButton.css("margin-top", "-10px").prependTo(body);
-      }
-    }
-
-    if (options.title) {
-      dialog.find(".modal-title").html(options.title);
-    }
-
-    if (buttonStr.length) {
-      body.after(templates.footer);
-      dialog.find(".modal-footer").html(buttonStr);
-    }
-
-
-    /**
-     * Bootstrap event listeners; used handle extra
-     * setup & teardown required after the underlying
-     * modal has performed certain actions
-     */
-
-    dialog.on("hidden.bs.modal", function(e) {
-      // ensure we don't accidentally intercept hidden events triggered
-      // by children of the current dialog. We shouldn't anymore now BS
-      // namespaces its events; but still worth doing
-      if (e.target === this) {
-        dialog.remove();
-      }
-    });
-
-    /*
-    dialog.on("show.bs.modal", function() {
-      // sadly this doesn't work; show is called *just* before
-      // the backdrop is added so we'd need a setTimeout hack or
-      // otherwise... leaving in as would be nice
-      if (options.backdrop) {
-        dialog.next(".modal-backdrop").addClass("bootbox-backdrop");
-      }
-    });
-    */
-
-    dialog.on("shown.bs.modal", function() {
-      dialog.find(".btn-primary:first").focus();
-    });
-
-    /**
-     * Bootbox event listeners; experimental and may not last
-     * just an attempt to decouple some behaviours from their
-     * respective triggers
-     */
-
-    if (options.backdrop !== "static") {
-      // A boolean true/false according to the Bootstrap docs
-      // should show a dialog the user can dismiss by clicking on
-      // the background.
-      // We always only ever pass static/false to the actual
-      // $.modal function because with `true` we can't trap
-      // this event (the .modal-backdrop swallows it)
-      // However, we still want to sort of respect true
-      // and invoke the escape mechanism instead
-      dialog.on("click.dismiss.bs.modal", function(e) {
-        // @NOTE: the target varies in >= 3.3.x releases since the modal backdrop
-        // moved *inside* the outer dialog rather than *alongside* it
-        if (dialog.children(".modal-backdrop").length) {
-          e.currentTarget = dialog.children(".modal-backdrop").get(0);
-        }
-
-        if (e.target !== e.currentTarget) {
-          return;
-        }
-
-        dialog.trigger("escape.close.bb");
-      });
-    }
-
-    dialog.on("escape.close.bb", function(e) {
-      if (callbacks.onEscape) {
-        processCallback(e, dialog, callbacks.onEscape);
-      }
-    });
-
-    /**
-     * Standard jQuery event listeners; used to handle user
-     * interaction with our dialog
-     */
-
-    dialog.on("click", ".modal-footer button", function(e) {
-      var callbackKey = $(this).data("bb-handler");
-
-      processCallback(e, dialog, callbacks[callbackKey]);
-    });
-
-    dialog.on("click", ".bootbox-close-button", function(e) {
-      // onEscape might be falsy but that's fine; the fact is
-      // if the user has managed to click the close button we
-      // have to close the dialog, callback or not
-      processCallback(e, dialog, callbacks.onEscape);
-    });
-
-    dialog.on("keyup", function(e) {
-      if (e.which === 27) {
-        dialog.trigger("escape.close.bb");
-      }
-    });
-
-    // the remainder of this method simply deals with adding our
-    // dialogent to the DOM, augmenting it with Bootstrap's modal
-    // functionality and then giving the resulting object back
-    // to our caller
-
-    $(options.container).append(dialog);
-
-    dialog.modal({
-      backdrop: options.backdrop ? "static": false,
-      keyboard: false,
-      show: false
-    });
-
-    if (options.show) {
-      dialog.modal("show");
-    }
-
-    // @TODO should we return the raw element here or should
-    // we wrap it in an object on which we can expose some neater
-    // methods, e.g. var d = bootbox.alert(); d.hide(); instead
-    // of d.modal("hide");
-
-   /*
-    function BBDialog(elem) {
-      this.elem = elem;
-    }
-
-    BBDialog.prototype = {
-      hide: function() {
-        return this.elem.modal("hide");
-      },
-      show: function() {
-        return this.elem.modal("show");
-      }
-    };
-    */
-
-    return dialog;
-
-  };
-
-  bootbox.setDefaults = function() {
-    var values = {};
-
-    if (arguments.length === 2) {
-      // allow passing of single key/value...
-      values[arguments[0]] = arguments[1];
-    } else {
-      // ... and as an object too
-      values = arguments[0];
-    }
-
-    langx.extend(defaults, values);
-  };
-
-  bootbox.hideAll = function() {
-    $(".bootbox").modal("hide");
-
-    return bootbox;
-  };
-
-
-  /**
-   * standard locales. Please add more according to ISO 639-1 standard. Multiple language variants are
-   * unlikely to be required. If this gets too large it can be split out into separate JS files.
-   */
-  var locales = {
-    bg_BG : {
-      OK      : "Ок",
-      CANCEL  : "Отказ",
-      CONFIRM : "Потвърждавам"
-    },
-    br : {
-      OK      : "OK",
-      CANCEL  : "Cancelar",
-      CONFIRM : "Sim"
-    },
-    cs : {
-      OK      : "OK",
-      CANCEL  : "Zrušit",
-      CONFIRM : "Potvrdit"
-    },
-    da : {
-      OK      : "OK",
-      CANCEL  : "Annuller",
-      CONFIRM : "Accepter"
-    },
-    de : {
-      OK      : "OK",
-      CANCEL  : "Abbrechen",
-      CONFIRM : "Akzeptieren"
-    },
-    el : {
-      OK      : "Εντάξει",
-      CANCEL  : "Ακύρωση",
-      CONFIRM : "Επιβεβαίωση"
-    },
-    en : {
-      OK      : "OK",
-      CANCEL  : "Cancel",
-      CONFIRM : "OK"
-    },
-    es : {
-      OK      : "OK",
-      CANCEL  : "Cancelar",
-      CONFIRM : "Aceptar"
-    },
-    et : {
-      OK      : "OK",
-      CANCEL  : "Katkesta",
-      CONFIRM : "OK"
-    },
-    fa : {
-      OK      : "قبول",
-      CANCEL  : "لغو",
-      CONFIRM : "تایید"
-    },
-    fi : {
-      OK      : "OK",
-      CANCEL  : "Peruuta",
-      CONFIRM : "OK"
-    },
-    fr : {
-      OK      : "OK",
-      CANCEL  : "Annuler",
-      CONFIRM : "D'accord"
-    },
-    he : {
-      OK      : "אישור",
-      CANCEL  : "ביטול",
-      CONFIRM : "אישור"
-    },
-    hu : {
-      OK      : "OK",
-      CANCEL  : "Mégsem",
-      CONFIRM : "Megerősít"
-    },
-    hr : {
-      OK      : "OK",
-      CANCEL  : "Odustani",
-      CONFIRM : "Potvrdi"
-    },
-    id : {
-      OK      : "OK",
-      CANCEL  : "Batal",
-      CONFIRM : "OK"
-    },
-    it : {
-      OK      : "OK",
-      CANCEL  : "Annulla",
-      CONFIRM : "Conferma"
-    },
-    ja : {
-      OK      : "OK",
-      CANCEL  : "キャンセル",
-      CONFIRM : "確認"
-    },
-    lt : {
-      OK      : "Gerai",
-      CANCEL  : "Atšaukti",
-      CONFIRM : "Patvirtinti"
-    },
-    lv : {
-      OK      : "Labi",
-      CANCEL  : "Atcelt",
-      CONFIRM : "Apstiprināt"
-    },
-    nl : {
-      OK      : "OK",
-      CANCEL  : "Annuleren",
-      CONFIRM : "Accepteren"
-    },
-    no : {
-      OK      : "OK",
-      CANCEL  : "Avbryt",
-      CONFIRM : "OK"
-    },
-    pl : {
-      OK      : "OK",
-      CANCEL  : "Anuluj",
-      CONFIRM : "Potwierdź"
-    },
-    pt : {
-      OK      : "OK",
-      CANCEL  : "Cancelar",
-      CONFIRM : "Confirmar"
-    },
-    ru : {
-      OK      : "OK",
-      CANCEL  : "Отмена",
-      CONFIRM : "Применить"
-    },
-    sq : {
-      OK : "OK",
-      CANCEL : "Anulo",
-      CONFIRM : "Prano"
-    },
-    sv : {
-      OK      : "OK",
-      CANCEL  : "Avbryt",
-      CONFIRM : "OK"
-    },
-    th : {
-      OK      : "ตกลง",
-      CANCEL  : "ยกเลิก",
-      CONFIRM : "ยืนยัน"
-    },
-    tr : {
-      OK      : "Tamam",
-      CANCEL  : "İptal",
-      CONFIRM : "Onayla"
-    },
-    zh_CN : {
-      OK      : "OK",
-      CANCEL  : "取消",
-      CONFIRM : "确认"
-    },
-    zh_TW : {
-      OK      : "OK",
-      CANCEL  : "取消",
-      CONFIRM : "確認"
-    }
-  };
-
-  bootbox.addLocale = function(name, values) {
-    langx.each(["OK", "CANCEL", "CONFIRM"], function(_, v) {
-      if (!values[v]) {
-        throw new Error("Please supply a translation for '" + v + "'");
-      }
-    });
-
-    locales[name] = {
-      OK: values.OK,
-      CANCEL: values.CANCEL,
-      CONFIRM: values.CONFIRM
-    };
-
-    return bootbox;
-  };
-
-  bootbox.removeLocale = function(name) {
-    delete locales[name];
-
-    return bootbox;
-  };
-
-  bootbox.setLocale = function(name) {
-    return bootbox.setDefaults("locale", name);
-  };
-
-  bootbox.init = function(_$) {
-    return init(_$ || $);
-  };
-
-  return skylark.attach("itg.bootbox",bootbox);
-
-});
-
-define('skylark-bootbox4/main',[
-	"./bootbox"
-],function(bootbox){
-	return bootbox;
-});
-define('skylark-bootbox4', ['skylark-bootbox4/main'], function (main) { return main; });
-
-define('skylark-visibility/fallback',[],function(){
-    if ( document.visibilityState || document.webkitVisibilityState ) {
-        return;
-    }
-
-    document.hidden = false;
-    document.visibilityState = 'visible';
-
-    var event = null
-    var i = 0
-    var fireEvent = function () {
-        if( document.createEvent ) {
-            if ( !event ) {
-                event = document.createEvent('HTMLEvents');
-                event.initEvent('visibilitychange', true, true);
-            }
-            document.dispatchEvent(event);
-        } else {
-            if ( typeof(Visibility) == 'object' ) {
-                Visibility._change.call(Visibility, { });
-            }
-        }
-    }
-
-    var onFocus = function () {
-        document.hidden = false;
-        document.visibilityState = 'visible';
-        fireEvent();
-    };
-    var onBlur  = function () {
-        document.hidden = true;
-        document.visibilityState = 'hidden';
-        fireEvent();
-    }
-
-    if ( document.addEventListener ) {
-        window.addEventListener('focus', onFocus, true);
-        window.addEventListener('blur',  onBlur,  true);
-    } else {
-        document.attachEvent('onfocusin',  onFocus);
-        document.attachEvent('onfocusout', onBlur);
-    }
-});
-
-define('skylark-visibility/core',[
-    "./fallback"
-],function(){
-    if (window.Visibility) {
-        return window.Visibility;
-    }
-    var lastId = -1;
-
-    // Visibility.js allow you to know, that your web page is in the background
-    // tab and thus not visible to the user. This library is wrap under
-    // Page Visibility API. It fix problems with different vendor prefixes and
-    // add high-level useful functions.
-    var self = {
-
-        // Call callback only when page become to visible for user or
-        // call it now if page is visible now or Page Visibility API
-        // doesn’t supported.
-        //
-        // Return false if API isn’t supported, true if page is already visible
-        // or listener ID (you can use it in `unbind` method) if page isn’t
-        // visible now.
-        //
-        //   Visibility.onVisible(function () {
-        //       startIntroAnimation();
-        //   });
-        onVisible: function (callback) {
-            var support = self.isSupported();
-            if ( !support || !self.hidden() ) {
-                callback();
-                return support;
-            }
-
-            var listener = self.change(function (e, state) {
-                if ( !self.hidden() ) {
-                    self.unbind(listener);
-                    callback();
-                }
-            });
-            return listener;
-        },
-
-        // Call callback when visibility will be changed. First argument for
-        // callback will be original event object, second will be visibility
-        // state name.
-        //
-        // Return listener ID to unbind listener by `unbind` method.
-        //
-        // If Page Visibility API doesn’t supported method will be return false
-        // and callback never will be called.
-        //
-        //   Visibility.change(function(e, state) {
-        //       Statistics.visibilityChange(state);
-        //   });
-        //
-        // It is just proxy to `visibilitychange` event, but use vendor prefix.
-        change: function (callback) {
-            if ( !self.isSupported() ) {
-                return false;
-            }
-            lastId += 1;
-            var number = lastId;
-            self._callbacks[number] = callback;
-            self._listen();
-            return number;
-        },
-
-        // Remove `change` listener by it ID.
-        //
-        //   var id = Visibility.change(function(e, state) {
-        //       firstChangeCallback();
-        //       Visibility.unbind(id);
-        //   });
-        unbind: function (id) {
-            delete self._callbacks[id];
-        },
-
-        // Call `callback` in any state, expect “prerender”. If current state
-        // is “prerender” it will wait until state will be changed.
-        // If Page Visibility API doesn’t supported, it will call `callback`
-        // immediately.
-        //
-        // Return false if API isn’t supported, true if page is already after
-        // prerendering or listener ID (you can use it in `unbind` method)
-        // if page is prerended now.
-        //
-        //   Visibility.afterPrerendering(function () {
-        //       Statistics.countVisitor();
-        //   });
-        afterPrerendering: function (callback) {
-            var support   = self.isSupported();
-            var prerender = 'prerender';
-
-            if ( !support || prerender != self.state() ) {
-                callback();
-                return support;
-            }
-
-            var listener = self.change(function (e, state) {
-                if ( prerender != state ) {
-                    self.unbind(listener);
-                    callback();
-                }
-            });
-            return listener;
-        },
-
-        // Return true if page now isn’t visible to user.
-        //
-        //   if ( !Visibility.hidden() ) {
-        //       VideoPlayer.play();
-        //   }
-        //
-        // It is just proxy to `document.hidden`, but use vendor prefix.
-        hidden: function () {
-            return !!(self._doc.hidden || self._doc.webkitHidden);
-        },
-
-        // Return visibility state: 'visible', 'hidden' or 'prerender'.
-        //
-        //   if ( 'prerender' == Visibility.state() ) {
-        //       Statistics.pageIsPrerendering();
-        //   }
-        //
-        // Don’t use `Visibility.state()` to detect, is page visible, because
-        // visibility states can extend in next API versions.
-        // Use more simpler and general `Visibility.hidden()` for this cases.
-        //
-        // It is just proxy to `document.visibilityState`, but use
-        // vendor prefix.
-        state: function () {
-            return self._doc.visibilityState       ||
-                   self._doc.webkitVisibilityState ||
-                   'visible';
-        },
-
-        // Return true if browser support Page Visibility API.
-        // refs: https://developer.mozilla.org/en-US/docs/Web/API/Page_Visibility_API
-        //
-        //   if ( Visibility.isSupported() ) {
-        //       Statistics.startTrackingVisibility();
-        //       Visibility.change(function(e, state)) {
-        //           Statistics.trackVisibility(state);
-        //       });
-        //   }
-        isSupported: function () {
-            return self._doc.hidden !== undefined || self._doc.webkitHidden !== undefined;
-        },
-
-        // Link to document object to change it in tests.
-        _doc: document || {},
-
-        // Callbacks from `change` method, that wait visibility changes.
-        _callbacks: { },
-
-        // Listener for `visibilitychange` event.
-        _change: function(event) {
-            var state = self.state();
-
-            for ( var i in self._callbacks ) {
-                self._callbacks[i].call(self._doc, event, state);
-            }
-        },
-
-        // Set listener for `visibilitychange` event.
-        _listen: function () {
-            if ( self._init ) {
-                return;
-            }
-
-            var event = 'visibilitychange';
-            if ( self._doc.webkitVisibilityState ) {
-                event = 'webkit' + event;
-            }
-
-            var listener = function () {
-                self._change.apply(self, arguments);
-            };
-            if ( self._doc.addEventListener ) {
-                self._doc.addEventListener(event, listener);
-            } else {
-                self._doc.attachEvent(event, listener);
-            }
-            self._init = true;
-        }
-
-    };
-
-
-    return window.Visibility = self;
-
-});
-
-define('skylark-visibility/visibility',[
-    "./core"
-],function(core){
-    var lastTimer = -1;
-
-    var install = function (Visibility) {
-
-        // Run callback every `interval` milliseconds if page is visible and
-        // every `hiddenInterval` milliseconds if page is hidden.
-        //
-        //   Visibility.every(60 * 1000, 5 * 60 * 1000, function () {
-        //       checkNewMails();
-        //   });
-        //
-        // You can skip `hiddenInterval` and callback will be called only if
-        // page is visible.
-        //
-        //   Visibility.every(1000, function () {
-        //       updateCountdown();
-        //   });
-        //
-        // It is analog of `setInterval(callback, interval)` but use visibility
-        // state.
-        //
-        // It return timer ID, that you can use in `Visibility.stop(id)` to stop
-        // timer (`clearInterval` analog).
-        // Warning: timer ID is different from interval ID from `setInterval`,
-        // so don’t use it in `clearInterval`.
-        //
-        // On change state from hidden to visible timers will be execute.
-        Visibility.every = function (interval, hiddenInterval, callback) {
-            Visibility._time();
-
-            if ( !callback ) {
-                callback = hiddenInterval;
-                hiddenInterval = null;
-            }
-
-            lastTimer += 1;
-            var number = lastTimer;
-
-            Visibility._timers[number] = {
-                visible:  interval,
-                hidden:   hiddenInterval,
-                callback: callback
-            };
-            Visibility._run(number, false);
-
-            if ( Visibility.isSupported() ) {
-                Visibility._listen();
-            }
-            return number;
-        };
-
-        // Stop timer from `every` method by it ID (`every` method return it).
-        //
-        //   slideshow = Visibility.every(5 * 1000, function () {
-        //       changeSlide();
-        //   });
-        //   $('.stopSlideshow').click(function () {
-        //       Visibility.stop(slideshow);
-        //   });
-        Visibility.stop = function(id) {
-            if ( !Visibility._timers[id] ) {
-                return false;
-            }
-            Visibility._stop(id);
-            delete Visibility._timers[id];
-            return true;
-        };
-
-        // Callbacks and intervals added by `every` method.
-        Visibility._timers = { };
-
-        // Initialize variables on page loading.
-        Visibility._time = function () {
-            if ( Visibility._timed ) {
-                return;
-            }
-            Visibility._timed     = true;
-            Visibility._wasHidden = Visibility.hidden();
-
-            Visibility.change(function () {
-                Visibility._stopRun();
-                Visibility._wasHidden = Visibility.hidden();
-            });
-        };
-
-        // Try to run timer from every method by it’s ID. It will be use
-        // `interval` or `hiddenInterval` depending on visibility state.
-        // If page is hidden and `hiddenInterval` is null,
-        // it will not run timer.
-        //
-        // Argument `runNow` say, that timers must be execute now too.
-        Visibility._run = function (id, runNow) {
-            var interval,
-                timer = Visibility._timers[id];
-
-            if ( Visibility.hidden() ) {
-                if ( null === timer.hidden ) {
-                    return;
-                }
-                interval = timer.hidden;
-            } else {
-                interval = timer.visible;
-            }
-
-            var runner = function () {
-                timer.last = new Date();
-                timer.callback.call(window);
-            }
-
-            if ( runNow ) {
-                var now  = new Date();
-                var last = now - timer.last ;
-
-                if ( interval > last ) {
-                    timer.delay = setTimeout(function () {
-                        timer.id = setInterval(runner, interval);
-                        runner();
-                    }, interval - last);
-                } else {
-                    timer.id = setInterval(runner, interval);
-                    runner();
-                }
-
-            } else {
-              timer.id = setInterval(runner, interval);
-            }
-        };
-
-        // Stop timer from `every` method by it’s ID.
-        Visibility._stop = function (id) {
-            var timer = Visibility._timers[id];
-            clearInterval(timer.id);
-            clearTimeout(timer.delay);
-            delete timer.id;
-            delete timer.delay;
-        };
-
-        // Listener for `visibilitychange` event.
-        Visibility._stopRun = function (event) {
-            var isHidden  = Visibility.hidden(),
-                wasHidden = Visibility._wasHidden;
-
-            if ( (isHidden && !wasHidden) || (!isHidden && wasHidden) ) {
-                for ( var i in Visibility._timers ) {
-                    Visibility._stop(i);
-                    Visibility._run(i, !isHidden);
-                }
-            }
-        };
-
-        return Visibility;
-    }
-
-
-    return   install(core);
-    
-});
-
-define('skylark-visibility/main',[
-	"./visibility"
-],function(visibility){
-	return visibility;
-});
-define('skylark-visibility', ['skylark-visibility/main'], function (main) { return main; });
-
-define('skylark-tinycon/tinycon',[
-  "skylark-langx-ns"
-],function(skylark) {
-  var Tinycon = {};
-  var currentFavicon = null;
-  var originalFavicon = null;
-  var faviconImage = null;
-  var canvas = null;
-  var options = {};
-  var r = window.devicePixelRatio || 1;
-  var size = 16 * r;
-  var defaults = {
-    width: 7,
-    height: 9,
-    font: 10 * r + 'px arial',
-    color: '#ffffff',
-    background: '#F03D25',
-    fallback: true,
-    crossOrigin: true,
-    abbreviate: true
-  };
-
-  var ua = (function () {
-    var agent = navigator.userAgent.toLowerCase();
-    // New function has access to 'agent' via closure
-    return function (browser) {
-      return agent.indexOf(browser) !== -1;
-    };
-  }());
-
-  var browser = {
-    ie: ua('trident'),
-    chrome: ua('chrome'),
-    webkit: ua('chrome') || ua('safari'),
-    safari: ua('safari') && !ua('chrome'),
-    mozilla: ua('mozilla') && !ua('chrome') && !ua('safari')
-  };
-
-  // private methods
-  var getFaviconTag = function(){
-
-    var links = document.getElementsByTagName('link');
-
-    for(var i=0, len=links.length; i < len; i++) {
-      if ((links[i].getAttribute('rel') || '').match(/\bicon\b/i)) {
-        return links[i];
-      }
-    }
-
-    return false;
-  };
-
-  var removeFaviconTag = function(){
-
-    var links = document.getElementsByTagName('link');
-    var head = document.getElementsByTagName('head')[0];
-
-    for(var i=0, len=links.length; i < len; i++) {
-      var exists = (typeof(links[i]) !== 'undefined');
-      if (exists && (links[i].getAttribute('rel') || '').match(/\bicon\b/i)) {
-        head.removeChild(links[i]);
-      }
-    }
-  };
-
-  var getCurrentFavicon = function(){
-
-    if (!originalFavicon || !currentFavicon) {
-      var tag = getFaviconTag();
-      currentFavicon = tag ? tag.getAttribute('href') : '/favicon.ico';
-      if (!originalFavicon) {
-        originalFavicon = currentFavicon;
-      }
-    }
-
-    return currentFavicon;
-  };
-
-  var getCanvas = function (){
-
-    if (!canvas) {
-      canvas = document.createElement("canvas");
-      canvas.width = size;
-      canvas.height = size;
-    }
-
-    return canvas;
-  };
-
-  var setFaviconTag = function(url){
-    if(url){
-      removeFaviconTag();
-
-      var link = document.createElement('link');
-      link.type = 'image/x-icon';
-      link.rel = 'icon';
-      link.href = url;
-      document.getElementsByTagName('head')[0].appendChild(link);
-    }
-  };
-
-  var log = function(message){
-    if (window.console) window.console.log(message);
-  };
-
-  var drawFavicon = function(label, color) {
-
-    // fallback to updating the browser title if unsupported
-    if (!getCanvas().getContext || browser.ie || browser.safari || options.fallback === 'force') {
-      return updateTitle(label);
-    }
-
-    var context = getCanvas().getContext("2d");
-    var color = color || '#000000';
-    var src = getCurrentFavicon();
-
-    faviconImage = document.createElement('img');
-    faviconImage.onload = function() {
-
-      // clear canvas
-      context.clearRect(0, 0, size, size);
-
-      // draw the favicon
-      context.drawImage(faviconImage, 0, 0, faviconImage.width, faviconImage.height, 0, 0, size, size);
-
-      // draw bubble over the top
-      if ((label + '').length > 0) drawBubble(context, label, color);
-
-      // refresh tag in page
-      refreshFavicon();
-    };
-
-    // allow cross origin resource requests if the image is not a data:uri
-    // as detailed here: https://github.com/mrdoob/three.js/issues/1305
-    if (!src.match(/^data/) && options.crossOrigin) {
-      faviconImage.crossOrigin = 'anonymous';
-    }
-
-    faviconImage.src = src;
-  };
-
-  var updateTitle = function(label) {
-
-    if (options.fallback) {
-      // Grab the current title that we can prefix with the label
-      var originalTitle = document.title;
-
-      // Strip out the old label if there is one
-      if (originalTitle[0] === '(') {
-        originalTitle = originalTitle.slice(originalTitle.indexOf(' '));
-      }
-
-      if ((label + '').length > 0) {
-        document.title = '(' + label + ') ' + originalTitle;
-      } else {
-        document.title = originalTitle;
-      }
-    }
-  };
-
-  var drawBubble = function(context, label, color) {
-
-    // automatic abbreviation for long (>2 digits) numbers
-    if (typeof label == 'number' && label > 99 && options.abbreviate) {
-      label = abbreviateNumber(label);
-    }
-
-    // bubble needs to be larger for double digits
-    var len = (label + '').length-1;
-
-    var width = options.width * r + (6 * r * len),
-      height = options.height * r;
-
-    var top = size - height,
-            left = size - width - r,
-            bottom = 16 * r,
-            right = 16 * r,
-            radius = 2 * r;
-
-    // webkit seems to render fonts lighter than firefox
-    context.font = (browser.webkit ? 'bold ' : '') + options.font;
-    context.fillStyle = options.background;
-    context.strokeStyle = options.background;
-    context.lineWidth = r;
-
-    // bubble
-    context.beginPath();
-        context.moveTo(left + radius, top);
-    context.quadraticCurveTo(left, top, left, top + radius);
-    context.lineTo(left, bottom - radius);
-        context.quadraticCurveTo(left, bottom, left + radius, bottom);
-        context.lineTo(right - radius, bottom);
-        context.quadraticCurveTo(right, bottom, right, bottom - radius);
-        context.lineTo(right, top + radius);
-        context.quadraticCurveTo(right, top, right - radius, top);
-        context.closePath();
-        context.fill();
-
-    // bottom shadow
-    context.beginPath();
-    context.strokeStyle = "rgba(0,0,0,0.3)";
-    context.moveTo(left + radius / 2.0, bottom);
-    context.lineTo(right - radius / 2.0, bottom);
-    context.stroke();
-
-    // label
-    context.fillStyle = options.color;
-    context.textAlign = "right";
-    context.textBaseline = "top";
-
-    // unfortunately webkit/mozilla are a pixel different in text positioning
-    context.fillText(label, r === 2 ? 29 : 15, browser.mozilla ? 7*r : 6*r);
-  };
-
-  var refreshFavicon = function(){
-    // check support
-    if (!getCanvas().getContext) return;
-
-    setFaviconTag(getCanvas().toDataURL());
-  };
-
-  var abbreviateNumber = function(label) {
-    var metricPrefixes = [
-      ['G', 1000000000],
-      ['M',    1000000],
-      ['k',       1000]
-    ];
-
-    for(var i = 0; i < metricPrefixes.length; ++i) {
-      if (label >= metricPrefixes[i][1]) {
-        label = round(label / metricPrefixes[i][1]) + metricPrefixes[i][0];
-        break;
-      }
-    }
-
-    return label;
-  };
-
-  var round = function (value, precision) {
-    var number = new Number(value);
-    return number.toFixed(precision);
-  };
-
-  // public methods
-  Tinycon.setOptions = function(custom){
-    options = {};
-
-    // account for deprecated UK English spelling
-    if (custom.colour) {
-      custom.color = custom.colour;
-    }
-
-    for(var key in defaults){
-      options[key] = custom.hasOwnProperty(key) ? custom[key] : defaults[key];
-    }
-    return this;
-  };
-
-  Tinycon.setImage = function(url){
-    currentFavicon = url;
-    refreshFavicon();
-    return this;
-  };
-
-  Tinycon.setBubble = function(label, color) {
-    label = label || '';
-    drawFavicon(label, color);
-    return this;
-  };
-
-  Tinycon.reset = function(){
-    currentFavicon = originalFavicon;
-    setFaviconTag(originalFavicon);
-  };
-
-  Tinycon.setOptions(defaults);
-
-  return skylark.attach("itg.tinycon",Tinycon);
-});
-
-define('skylark-tinycon/main',[
-	"./tinycon"
-],function(tinycon){
-	return tinycon;
-});
-define('skylark-tinycon', ['skylark-tinycon/main'], function (main) { return main; });
-
-define('skylark-appify-shells/shell',[
-	"skylark-langx/langx",
-	"skylark-domx-css",
-	"skylark-langx-scripter",
-	"skylark-domx-finder",
-	"skylark-domx-query",
-	"skylark-domx-plugins-base",
-	"skylark-nprogress",
-	"skylark-bootbox4",
-    "skylark-visibility",
-    "skylark-tinycon",
-	"./shells"
-],function(langx, css, scripter, finder,$,plugins,nprogress,bootbox,Visibility, Tinycon,shells){
-	function createAlert(params,template) {
-	    params.parseTemplate('alert', params, function (alertTpl) {
-	      params.translate(alertTpl, function (translatedHTML) {				
-	        var alert = $('#' + params.alert_id);
-					if (alert.length) {
-						return updateAlert(alert, params);
-					}
-					alert = $(translatedHTML);
-					alert.fadeIn(200);
-
-					
-					params.container.prepend(alert);
-					//components.get('toaster/tray').prepend(alert);
-
-					alert.find('button').on('click', function () {
-						if (typeof params.closefn === 'function') {
-							params.closefn();
-						}
-						fadeOut(alert);
-						return false;
-					});
-
-
-					if (params.timeout) {
-						startTimeout(alert, params.timeout);
-					}
-
-					if (typeof params.clickfn === 'function') {
-						alert
-							.addClass('pointer')
-							.on('click', function (e) {
-								if (!$(e.target).is('.close')) {
-									params.clickfn();
-								}
-								fadeOut(alert);
-							});
-					}
-
-			  });
-	   });
-
-		//Benchpress.parse('alert', params, function (alertTpl) {
-		//	translator.translate(alertTpl, function (translatedHTML) {
-		//		...
-		//	});
-		//});
-	}
-
-	function updateAlert(alert, params) {
-		alert.find('strong').html(params.title);
-		alert.find('p').html(params.message);
-		alert.attr('class', 'alert alert-dismissable alert-' + params.type + ' clearfix');
-
-		clearTimeout(parseInt(alert.attr('timeoutId'), 10));
-		if (params.timeout) {
-			startTimeout(alert, params.timeout);
-		}
-
-		alert.children().fadeOut(100);
-		//translator.translate(alert.html(), function (translatedHTML) {
-		params.translate(alert.html(), function (translatedHTML) {
-			alert.children().fadeIn(100);
-			alert.html(translatedHTML);
-		});
-
-		// Handle changes in the clickfn
-		alert.off('click').removeClass('pointer');
-		if (typeof params.clickfn === 'function') {
-			alert
-				.addClass('pointer')
-				.on('click', function (e) {
-					if (!$(e.target).is('.close')) {
-						params.clickfn();
-					}
-					fadeOut(alert);
-				});
-		}
-	}
-
-	function fadeOut(alert) {
-		alert.fadeOut(500, function () {
-			$(this).remove();
-		});
-	}
-
-	function startTimeout(alert, timeout) {
-		var timeoutId = setTimeout(function () {
-			fadeOut(alert);
-		}, timeout);
-
-		alert.attr('timeoutId', timeoutId);
-
-		// Reset and start animation
-		alert.css('transition-property', 'none');
-		alert.removeClass('animate');
-
-		setTimeout(function () {
-			alert.css('transition-property', '');
-			alert.css('transition', 'width ' + (timeout + 450) + 'ms linear, background-color ' + (timeout + 450) + 'ms ease-in');
-			alert.addClass('animate');
-		}, 50);
-
-		// Handle mouseenter/mouseleave
-		alert
-			.on('mouseenter', function () {
-				$(this).css('transition-duration', 0);
-			});
-	}
-
-
-
-
-	var Shell = plugins.Plugin.inherit({
-		options : {
-	        i18n : {
-	            locale : "en",
-	            translate : function(txt) {
-	              return langx.Deferred.resolve(txt);
-	            }
-	        },
-			alerts : {
-				container : "",     // element,$elment or selector,
-				titles : {
-					success : '[[global:alert.success]]',
-					error :  '[[global:alert.error]]'
-				},
-			},
-			templator  : {
-				parse  : null,    // template function
-			},
-			skins : {
-
-			}
-		},
-
-		_construct : function(options) {
-			plugins.Plugin.prototype._construct.call(this,document.body,options);
-
-	      	this._titleObj = {
-	        	active: false,
-	        	interval: undefined,
-	        	titles: [],
-	      	};
-
-	     	var self = this;
-
-	     	self.isFocused = true;
-
-	      	Visibility.change(function (event, state) {
-	        	if (state === 'visible') {
-	          		self.isFocused = true;
-	         		self.alternatingTitle('');
-	        	} else if (state === 'hidden') {
-	          		self.isFocused = false;
-	        	}
-      		});      
-		},
-
-		progress : function() {
-			return nprogress;
-		},
-
-		alert : function (params) {
-			params.alert_id = 'alert_button_' + (params.alert_id ? params.alert_id : new Date().getTime());
-			params.title = params.title ? params.title.trim() || '' : '';
-			params.message = params.message ? params.message.trim() : '';
-			params.type = params.type || 'info';
-
-
-			var alert = $('#' + params.alert_id);
-
-      		params.translate = params.translate || this.option("i18n.translate");
-			if (alert.length) {
-				updateAlert(alert, params);
-			} else {
-        		params.parseTemplate = params.parseTemplate || this.option("templator.parse");
-        		params.container  = params.container || this.option("alerts.container");
-				createAlert(params);
-			}
-		},
-
-		removeAlert : function (id) {
-			$('#alert_button_' + id).remove();
-		},
-
-		alertSuccess : function (message, timeout) {
-			this.alert({
-				title: this.option("alerts.titles.success"),
-				message: message,
-				type: 'success',
-				timeout: timeout || 5000,
-			});
-		},
-
-		alertError : function (message, timeout) {
-			message = message.message || message;
-
-			this.alert({
-				title: this.option("alerts.titles.error"),
-				message: message,
-				type: 'danger',
-				timeout: timeout || 10000,
-			});
-		},
-
-    	alternatingTitle : function (title) {
-      		if (typeof title !== 'string') {
-        		return;
-      		}
-
-	      var titleObj = this._titleObj;
-
-	      if (title.length > 0 && !app.isFocused) {
-	        if (!titleObj.titles[0]) {
-	          titleObj.titles[0] = window.document.title;
-	        }
-
-	        var translate = this.option("i18n.translate");
-	        translate(title, function (translated) {
-	            titleObj.titles[1] = translated;
-	            if (titleObj.interval) {
-	              clearInterval(titleObj.interval);
-	            }
-
-	            titleObj.interval = setInterval(function () {
-	              var title = titleObj.titles[titleObj.titles.indexOf(window.document.title) ^ 1];
-	              if (title) {
-	                window.document.title = $('<div/>').html(title).text();
-	              }
-	            }, 2000);
-	        });
-	        
-	      } else {
-	        if (titleObj.interval) {
-	          clearInterval(titleObj.interval);
-	        }
-	        if (titleObj.titles[0]) {
-	          window.document.title = $('<div/>').html(titleObj.titles[0]).text();
-	        }
-	      }
-	    },
-
-	    refreshTitle : function (title) {
-	        var self = this,
-	            translate = this.option("i18n.translate"),
-	            titleObj = this._titleObj;
-
-	        translate(title, function (translated) {
-	          titleObj.titles[0] = translated;
-	          self.alternatingTitle('');
-	        });
-	    },
-
-
-	    /*
-	     * Manipulatethe favicon, in particular adding alert bubbles and changing images. 
-	     */
-	    tinycon : function(bubble,options) {
-
-	    	if (langx.isUndefined(options)){
-	    		if (langx.isPlainObject(bubble))	{
-	    			options = bubble;
-	    			bubble = undefined;
-	    		}
-	    	} 
-
-	    	if (langx.isDefined(options)) {
-	    		Tinycon.setOptions(options)
-	    	}
-	    	if (langx.isDefined(bubble)) {
-	    		Tinycon.setBubble(bubble);
-	    	}
-
-	    },
-
-
-		reskin : function (skinName,cssUrl,clientEl) {
-
-			if (!clientEl) {
-				clientEl = document.getElementById("skinSheet");
-				if (!clientEl) {
-					return;
-				}
-			}
-
-			var currentSkinClassName = $('body').attr('class').split(/\s+/).filter(function (className) {
-				return className.startsWith('skin-');
-			});
-			var currentSkin = currentSkinClassName[0].slice(5);
-			currentSkin = currentSkin !== 'noskin' ? currentSkin : '';
-
-			// Stop execution if skin didn't change
-			if (skinName === currentSkin) {
-				return;
-			}
-
-			var linkEl = document.createElement('link');
-			linkEl.rel = 'stylesheet';
-			linkEl.type = 'text/css';
-			linkEl.href = cssUrl;
-			linkEl.onload = function () {
-				clientEl.parentNode.removeChild(clientEl);
-
-				// Update body class with proper skin name
-				$('body').removeClass(currentSkinClassName.join(' '));
-				$('body').addClass('skin-' + (skinName || 'noskin'));
-			};
-
-			document.head.appendChild(linkEl);
-		},
-
-
-		loadStyleSheet : function(url,options,loadedCallback, errorCallback) {
-			return css.loadStyleSheet(url,options,loadedCallback, errorCallback);
-
-		},
-
-		removeStyleSheet : function(id) {
-			return css.removeStyleSheet(id);
-
-		},
-
-		loadScript : function(url, loadedCallback, errorCallback) {
-			return scripter.loadJavaScript(url,loadedCallback,errorCallback);
-		},
-
-		removeScript : function(id) {
-			return scripter.deleteJavaScript(id);
-		}
-
-
-	});
-
-
-	return shells.Shell = Shell;
-
-});
-
-define('skylark-appify-shells/main',[
-	"./shells",
-	"./shell"
-],function(shells){
-	return shells;
-});
-define('skylark-appify-shells', ['skylark-appify-shells/main'], function (main) { return main; });
 
 define('skylark-data-entities/entities',[
     "skylark-langx/langx"
@@ -35768,7 +35074,6 @@ define('skylark-slax-runtime/skylark',[
 	"skylark-domx-plugins-colors",
 	"skylark-jquery",
 	"skylark-appify-spa",
-	"skylark-appify-shells",
 	"skylark-data-entities",
 	"skylark-io-streams"
 ],function(slax,skylark){
