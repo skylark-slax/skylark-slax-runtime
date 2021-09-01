@@ -42,6 +42,8 @@ define([
                             }
                             slaxApp = script.getAttribute("data-slax-app");
                         }
+
+
                         break;
                     }
                 }
@@ -84,34 +86,40 @@ define([
             //  _cfg.baseUrl = cfg.contextPath;
             //}
 
-             require.config(cfg.runtime);
+            if (cfg.runtime) {
+                require.config(cfg.runtime);
+            }
 
-           
-            var initApp = function(spa, _cfg) {
-                _cfg = _cfg || cfg;
-  
-                var app = spa(_cfg);
-
-                hoster.global.go =  function(path, force) {
-                    app.go(path, force);
-                };
-
-                app.prepare().then(function(){
-                    app.run();
-                });
-            };
-            if(cfg.spaModule) {
-                require([cfg.spaModule], function(spa) {
-                    if(spa._start) {
-                        spa._start().then(function(_cfg){
-                            initApp(spa, _cfg);
-                        });
-                    } else {
-                        initApp(spa);
-                    }
-                });
+            if (cfg.boot) {
+                let bootFunc = window[cfg.boot];
+                bootFunc(cfg);
             } else {
-                initApp(skylark.spa);
+                var initApp = function(spa, _cfg) {
+                    _cfg = _cfg || cfg;
+      
+                    var app = spa(_cfg);
+
+                    hoster.global.go =  function(path, force) {
+                        app.go(path, force);
+                    };
+
+                    app.prepare().then(function(){
+                        app.run();
+                    });
+                };
+                if(cfg.spaModule) {
+                    require([cfg.spaModule], function(spa) {
+                        if(spa._start) {
+                            spa._start().then(function(_cfg){
+                                initApp(spa, _cfg);
+                            });
+                        } else {
+                            initApp(spa);
+                        }
+                    });
+                } else {
+                    initApp(skylark.spa);
+                }                
             }
         }
     };
