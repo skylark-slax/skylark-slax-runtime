@@ -245,6 +245,7 @@ define('skylark-slax-runtime/skylark',[
 	"skylark-domx-plugins-sandboxs",
 	"skylark-domx-plugins-menus",	
 	"skylark-domx-plugins-popups",	
+	"skylark-domx-plugins-uploads",
 	"skylark-devices-keyboard",	
 	"skylark-devices-orientation",	
 	"skylark-devices-points",	
