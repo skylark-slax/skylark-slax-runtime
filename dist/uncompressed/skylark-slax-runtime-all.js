@@ -18539,6 +18539,166 @@ define('skylark-slax-runtime/caches',[
 	//session
 	return slax.caches = caches;
 });
+define('skylark-langx-logging/logging',[
+  "skylark-langx-ns"
+],function(skylark){
+
+
+    return skylark.attach("langx.logging",{
+
+    });
+});
+define('skylark-langx-logging/levels',[
+	"./logging"
+],function(logging){
+    return logging.levels = {
+	    all: 'debug|info|warn|error',
+	    off: '',
+	    debug: 'debug|info|warn|error',
+	    info: 'info|warn|error',
+	    warn: 'warn|error',
+	    error: 'error',
+	    DEFAULT: "info"
+    };	
+});
+define('skylark-langx-logging/Logger',[
+    "skylark-langx-objects",
+    "skylark-langx-constructs/klass",
+    "./logging",
+    "./levels"
+],function(objects,klass,logging,levels){
+    'use strict';
+
+    let history = [];
+ 
+    const LogByTypeFactory = (name) => (type, level, args) => {
+        const lvl = levels[level];
+        const lvlRegExp = new RegExp(`^(${ lvl })$`);
+        if (type !== 'debug') {
+            args.unshift(type.toUpperCase() + ':');
+        }
+        args.unshift(name + ':');
+        if (history) {
+            history.push([].concat(args));
+            const splice = history.length - 1000;
+            history.splice(0, splice > 0 ? splice : 0);
+        }
+        if (!window.console) {
+            return;
+        }
+        let fn = window.console[type];
+        if (!fn && type === 'debug') {
+            fn = window.console.info || window.console.log;
+        }
+        if (!fn || !lvl || !lvlRegExp.test(type)) {
+            return;
+        }
+        fn[Array.isArray(args) ? 'apply' : 'call'](window.console, args);
+    };
+
+    var Logger = klass({
+        _level : "info",
+
+        _construct : function(name) {
+            this.name = name;
+
+            this._logByType = LogByTypeFactory(name);
+        },
+
+        level : function(lvl) {
+            if (typeof lvl === 'string') {
+                if (!levels.hasOwnProperty(lvl)) {
+                    throw new Error(`"${ lvl }" in not a valid log level`);
+                }
+                this._level = lvl;
+            }
+            return this._level;
+        },
+
+        error : function(...args){ 
+            this._logByType('error', this._level, args);
+        },
+
+        warn : function(...args){ 
+            this._logByType('warn', this._level, args);
+        },
+
+        debug : function(...args){ 
+            this._logByType('debug', this._level, args);
+        },
+
+        info : function(...args){ 
+            this._logByType('info', this._level, args);
+        },
+
+        history : function() {
+            return history ? [].concat(history) : [];
+        },
+
+        createLogger : function(subname) {
+            return new Logger(this.name ? this.name  + ': ' + subname : subname);   
+        }
+
+    });
+
+
+    objects.mixin(Logger.prototype.history,{
+        enable : function() {
+           if (history === null) {
+                history = [];
+            }            
+        },
+        
+        filter : function(fname) {
+            return (history || []).filter(historyItem => {
+                return new RegExp(`.*${ fname }.*`).test(historyItem[0]);
+            });
+        },
+        clear : function() {
+            if (history) {
+                history.length = 0;
+            }
+        },
+        disable : function()  {
+            if (history !== null) {
+                history.length = 0;
+                history = null;
+            }
+        }
+    });
+
+    Logger.root = new Logger("");
+
+    return logging.Logger = Logger;
+
+});
+define('skylark-langx-logging/main',[
+	"./logging",
+	"./Logger"
+],function(logging,Logger){
+	let rootLogger = Logger.root;
+
+	logging.debug = function(...args) {
+		rootLogger.debug(...args);
+	};
+
+	logging.info = function(...args) {
+		rootLogger.debug(...args);
+	};
+
+	logging.warn = function(...args) {
+		rootLogger.debug(...args);
+	};
+
+	logging.error = function(...args) {
+		rootLogger.debug(...args);
+	};
+
+
+	return logging;
+});
+define('skylark-langx-logging', ['skylark-langx-logging/main'], function (main) { return main; });
+
 define('skylark-domx-animates/animates',[
     "skylark-langx/skylark",
     "skylark-langx/langx",
@@ -40692,6 +40852,115 @@ define('skylark-io-mimes/main',[
 });
 define('skylark-io-mimes', ['skylark-io-mimes/main'], function (main) { return main; });
 
+define('skylark-io-diskfs/download',[
+    "skylark-langx/types",
+    "./diskfs"
+],function(types,diskfs){
+
+    function downloadFile(data, name) {
+        if (window.navigator.msSaveBlob) {
+            if (types.isString(data)) {
+                data = dataURItoBlob(data);
+            }
+            window.navigator.msSaveBlob(data, name);
+        } else {
+            var a = document.createElement('a');
+            if (data instanceof Blob) {
+                data = URL.createObjectURL(data);
+            }
+            a.href = data;
+            a.setAttribute('download', name || 'noname');
+            //a.dispatchEvent(new CustomEvent('click'));
+            a.click();
+        }
+    }
+
+    return diskfs.downlad = downloadFile;
+
+});
+
+define('skylark-io-diskfs/read',[
+    "skylark-langx-async/deferred",
+    "./diskfs"
+],function(Deferred, diskfs){
+
+    function readFile(file, params) {
+        params = params || {};
+        var d = new Deferred,
+            reader = new FileReader();
+
+        reader.onload = function(evt) {
+            d.resolve(evt.target.result);
+        };
+        reader.onerror = function(e) {
+            var code = e.target.error.code;
+            if (code === 2) {
+                alert('please don\'t open this page using protocol fill:///');
+            } else {
+                alert('error code: ' + code);
+            }
+        };
+
+        if (params.asArrayBuffer) {
+            reader.readAsArrayBuffer(file);
+        } else if (params.asDataUrl) {
+            reader.readAsDataURL(file);
+        } else if (params.asText) {
+            reader.readAsText(file);
+        } else {
+            reader.readAsArrayBuffer(file);
+        }
+
+        return d.promise;
+    }
+
+    return diskfs.read = diskfs.readFile = readFile;
+    
+});
+
+define('skylark-io-diskfs/read-image',[
+    "skylark-langx-async/deferred",
+    "./diskfs",
+    "./read"
+],function(Deferred, diskfs,read){
+
+	function readImage(fileObj) {
+        var d = new Deferred,
+	    	img = new Image();
+
+	    img.onload = function() {
+	      d.resolve(img);
+	    };
+	    img.onerror = function(e) {
+	      d.reject(e);
+	    };
+
+	    read(fileObj,{
+	    	asDataUrl : true
+	    }).then(function(dataUrl){
+	        img.src = dataUrl;
+	    }).catch(function(e){
+	    	d.reject(e);
+	    });
+
+	    return d.promise;
+	}
+
+	return diskfs.readImage = readImage;
+
+});
+define('skylark-io-diskfs/main',[
+	"./diskfs",
+	"./download",
+	"./read",
+	"./read-image",
+	"./select",
+	"./webentry"
+],function(diskfs){
+	return diskfs;
+});
+define('skylark-io-diskfs', ['skylark-io-diskfs/main'], function (main) { return main; });
+
 define('skylark-io-streams/streams',[
     "skylark-langx-ns"
 ], function(skylark) {
@@ -46921,6 +47190,7 @@ define('skylark-jquery', ['skylark-jquery/main'], function (main) { return main;
 define('skylark-slax-runtime/skylark',[
 	"./slax",
 	"skylark-langx",
+	"skylark-langx-logging",
 	"skylark-domx",
 	"skylark-domx-files",
 	"skylark-domx-images",
@@ -46942,6 +47212,7 @@ define('skylark-slax-runtime/skylark',[
 	"skylark-devices-webgl",
 	"skylark-io-mimes",
 	"skylark-io-caches",
+	"skylark-io-diskfs",
 	"skylark-io-streams",
 	"skylark-net-http",
 	"skylark-appify-routers",

@@ -231,6 +231,7 @@ define('skylark-slax-runtime/caches',[
 define('skylark-slax-runtime/skylark',[
 	"./slax",
 	"skylark-langx",
+	"skylark-langx-logging",
 	"skylark-domx",
 	"skylark-domx-files",
 	"skylark-domx-images",
@@ -252,6 +253,7 @@ define('skylark-slax-runtime/skylark',[
 	"skylark-devices-webgl",
 	"skylark-io-mimes",
 	"skylark-io-caches",
+	"skylark-io-diskfs",
 	"skylark-io-streams",
 	"skylark-net-http",
 	"skylark-appify-routers",
