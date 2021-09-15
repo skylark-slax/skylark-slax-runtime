@@ -23459,6 +23459,870 @@ define('skylark-domx-images/main',[
 });
 define('skylark-domx-images', ['skylark-domx-images/main'], function (main) { return main; });
 
+define('skylark-domx-i18n/i18n',[
+	"skylark-langx/skylark",
+	"skylark-domx-query",
+	"skylark-domx-data",
+	"skylark-domx-styler"	
+],function(skylark){
+	return skylark.attach("domx.i18n",{
+		/**
+		 * Escape translator patterns in text
+		 * @param {string} text
+		 * @returns {string}
+		 */
+		escape : function escape(text) {
+			return typeof text === 'string' ? text.replace(/\[\[/g, '&lsqb;&lsqb;').replace(/\]\]/g, '&rsqb;&rsqb;') : text;
+		},
+
+		/**
+		 * Unescape escaped translator patterns in text
+		 * @param {string} text
+		 * @returns {string}
+		 */
+		unescape : function unescape(text) {
+			return typeof text === 'string' ? text.replace(/&lsqb;|\\\[/g, '[').replace(/&rsqb;|\\\]/g, ']') : text;
+		},
+
+		/**
+		 * Construct a translator pattern
+		 * @param {string} name - Translation name
+		 * @param {...string} arg - Optional argument for the pattern
+		 */
+		compile : function compile() {
+			var args = Array.prototype.slice.call(arguments, 0).map(function (text) {
+				// escape commas and percent signs in arguments
+				return String(text).replace(/%/g, '&#37;').replace(/,/g, '&#44;');
+			});
+
+			return '[[' + args.join(', ') + ']]';
+		}
+	});
+});
+define('skylark-domx-i18n/Translator',[
+	"skylark-langx/langx",
+	"./i18n"
+],function(langx,i18n) {
+	var HTMLEntities = Object.freeze({
+		amp: '&',
+		gt: '>',
+		lt: '<',
+		quot: '"',
+		apos: "'",
+		AElig: 198,
+		Aacute: 193,
+		Acirc: 194,
+		Agrave: 192,
+		Aring: 197,
+		Atilde: 195,
+		Auml: 196,
+		Ccedil: 199,
+		ETH: 208,
+		Eacute: 201,
+		Ecirc: 202,
+		Egrave: 200,
+		Euml: 203,
+		Iacute: 205,
+		Icirc: 206,
+		Igrave: 204,
+		Iuml: 207,
+		Ntilde: 209,
+		Oacute: 211,
+		Ocirc: 212,
+		Ograve: 210,
+		Oslash: 216,
+		Otilde: 213,
+		Ouml: 214,
+		THORN: 222,
+		Uacute: 218,
+		Ucirc: 219,
+		Ugrave: 217,
+		Uuml: 220,
+		Yacute: 221,
+		aacute: 225,
+		acirc: 226,
+		aelig: 230,
+		agrave: 224,
+		aring: 229,
+		atilde: 227,
+		auml: 228,
+		ccedil: 231,
+		eacute: 233,
+		ecirc: 234,
+		egrave: 232,
+		eth: 240,
+		euml: 235,
+		iacute: 237,
+		icirc: 238,
+		igrave: 236,
+		iuml: 239,
+		ntilde: 241,
+		oacute: 243,
+		ocirc: 244,
+		ograve: 242,
+		oslash: 248,
+		otilde: 245,
+		ouml: 246,
+		szlig: 223,
+		thorn: 254,
+		uacute: 250,
+		ucirc: 251,
+		ugrave: 249,
+		uuml: 252,
+		yacute: 253,
+		yuml: 255,
+		copy: 169,
+		reg: 174,
+		nbsp: 160,
+		iexcl: 161,
+		cent: 162,
+		pound: 163,
+		curren: 164,
+		yen: 165,
+		brvbar: 166,
+		sect: 167,
+		uml: 168,
+		ordf: 170,
+		laquo: 171,
+		not: 172,
+		shy: 173,
+		macr: 175,
+		deg: 176,
+		plusmn: 177,
+		sup1: 185,
+		sup2: 178,
+		sup3: 179,
+		acute: 180,
+		micro: 181,
+		para: 182,
+		middot: 183,
+		cedil: 184,
+		ordm: 186,
+		raquo: 187,
+		frac14: 188,
+		frac12: 189,
+		frac34: 190,
+		iquest: 191,
+		times: 215,
+		divide: 247,
+		'OElig;': 338,
+		'oelig;': 339,
+		'Scaron;': 352,
+		'scaron;': 353,
+		'Yuml;': 376,
+		'fnof;': 402,
+		'circ;': 710,
+		'tilde;': 732,
+		'Alpha;': 913,
+		'Beta;': 914,
+		'Gamma;': 915,
+		'Delta;': 916,
+		'Epsilon;': 917,
+		'Zeta;': 918,
+		'Eta;': 919,
+		'Theta;': 920,
+		'Iota;': 921,
+		'Kappa;': 922,
+		'Lambda;': 923,
+		'Mu;': 924,
+		'Nu;': 925,
+		'Xi;': 926,
+		'Omicron;': 927,
+		'Pi;': 928,
+		'Rho;': 929,
+		'Sigma;': 931,
+		'Tau;': 932,
+		'Upsilon;': 933,
+		'Phi;': 934,
+		'Chi;': 935,
+		'Psi;': 936,
+		'Omega;': 937,
+		'alpha;': 945,
+		'beta;': 946,
+		'gamma;': 947,
+		'delta;': 948,
+		'epsilon;': 949,
+		'zeta;': 950,
+		'eta;': 951,
+		'theta;': 952,
+		'iota;': 953,
+		'kappa;': 954,
+		'lambda;': 955,
+		'mu;': 956,
+		'nu;': 957,
+		'xi;': 958,
+		'omicron;': 959,
+		'pi;': 960,
+		'rho;': 961,
+		'sigmaf;': 962,
+		'sigma;': 963,
+		'tau;': 964,
+		'upsilon;': 965,
+		'phi;': 966,
+		'chi;': 967,
+		'psi;': 968,
+		'omega;': 969,
+		'thetasym;': 977,
+		'upsih;': 978,
+		'piv;': 982,
+		'ensp;': 8194,
+		'emsp;': 8195,
+		'thinsp;': 8201,
+		'zwnj;': 8204,
+		'zwj;': 8205,
+		'lrm;': 8206,
+		'rlm;': 8207,
+		'ndash;': 8211,
+		'mdash;': 8212,
+		'lsquo;': 8216,
+		'rsquo;': 8217,
+		'sbquo;': 8218,
+		'ldquo;': 8220,
+		'rdquo;': 8221,
+		'bdquo;': 8222,
+		'dagger;': 8224,
+		'Dagger;': 8225,
+		'bull;': 8226,
+		'hellip;': 8230,
+		'permil;': 8240,
+		'prime;': 8242,
+		'Prime;': 8243,
+		'lsaquo;': 8249,
+		'rsaquo;': 8250,
+		'oline;': 8254,
+		'frasl;': 8260,
+		'euro;': 8364,
+		'image;': 8465,
+		'weierp;': 8472,
+		'real;': 8476,
+		'trade;': 8482,
+		'alefsym;': 8501,
+		'larr;': 8592,
+		'uarr;': 8593,
+		'rarr;': 8594,
+		'darr;': 8595,
+		'harr;': 8596,
+		'crarr;': 8629,
+		'lArr;': 8656,
+		'uArr;': 8657,
+		'rArr;': 8658,
+		'dArr;': 8659,
+		'hArr;': 8660,
+		'forall;': 8704,
+		'part;': 8706,
+		'exist;': 8707,
+		'empty;': 8709,
+		'nabla;': 8711,
+		'isin;': 8712,
+		'notin;': 8713,
+		'ni;': 8715,
+		'prod;': 8719,
+		'sum;': 8721,
+		'minus;': 8722,
+		'lowast;': 8727,
+		'radic;': 8730,
+		'prop;': 8733,
+		'infin;': 8734,
+		'ang;': 8736,
+		'and;': 8743,
+		'or;': 8744,
+		'cap;': 8745,
+		'cup;': 8746,
+		'int;': 8747,
+		'there4;': 8756,
+		'sim;': 8764,
+		'cong;': 8773,
+		'asymp;': 8776,
+		'ne;': 8800,
+		'equiv;': 8801,
+		'le;': 8804,
+		'ge;': 8805,
+		'sub;': 8834,
+		'sup;': 8835,
+		'nsub;': 8836,
+		'sube;': 8838,
+		'supe;': 8839,
+		'oplus;': 8853,
+		'otimes;': 8855,
+		'perp;': 8869,
+		'sdot;': 8901,
+		'lceil;': 8968,
+		'rceil;': 8969,
+		'lfloor;': 8970,
+		'rfloor;': 8971,
+		'lang;': 9001,
+		'rang;': 9002,
+		'loz;': 9674,
+		'spades;': 9824,
+		'clubs;': 9827,
+		'hearts;': 9829,
+		'diams;': 9830,
+	});
+
+	// https://github.com/substack/node-ent/blob/master/index.js
+	function decodeHTMLEntities(html) {
+		return String(html)
+			.replace(/&#(\d+);?/g, function (_, code) {
+				return String.fromCharCode(code);
+			})
+			.replace(/&#[xX]([A-Fa-f0-9]+);?/g, function (_, hex) {
+				return String.fromCharCode(parseInt(hex, 16));
+			})
+			.replace(/&([^;\W]+;?)/g, function (m, e) {
+				var ee = e.replace(/;$/, '');
+				var target = HTMLEntities[e] || (e.match(/;$/) && HTMLEntities[ee]);
+
+				if (typeof target === 'number') {
+					return String.fromCharCode(target);
+				} else if (typeof target === 'string') {
+					return target;
+				}
+
+				return m;
+			});
+	}	
+
+	function escapeHTML(str) {
+		return langx.escapeHTML(decodeHTMLEntities(
+			String(str)
+				.replace(/[\s\xa0]+/g, ' ')
+				.replace(/^\s+|\s+$/g, '')
+		));
+	}
+
+	//function load(language, namespace) {
+	//	return Promise.resolve(jQuery.getJSON(config.relative_path + '/assets/language/' + language + '/' + namespace + '.json?' + config['cache-buster']));
+	//}
+
+	var warn = function () { console.warn.apply(console, arguments); };
+
+	var assign = Object.assign || jQuery.extend;
+
+
+	/**
+	 * Construct a new Translator object
+	 * @param {string} language - Language code for this translator instance
+	 * @exports translator.Translator
+	 */
+	function Translator(language,load) {
+		var self = this;
+
+		if (!language) {
+			throw new TypeError('Parameter `language` must be a language string. Received ' + language + (language === '' ? '(empty string)' : ''));
+		}
+
+		self.modules = Object.keys(Translator.moduleFactories).map(function (namespace) {
+			var factory = Translator.moduleFactories[namespace];
+			return [namespace, factory(language)];
+		}).reduce(function (prev, elem) {
+			var namespace = elem[0];
+			var module = elem[1];
+			prev[namespace] = module;
+
+			return prev;
+		}, {});
+
+		self.lang = language;
+		self.translations = {};
+		self.load = load;
+	}
+
+	//Translator.prototype.load = load;
+
+	/**
+	 * Parse the translation instructions into the language of the Translator instance
+	 * @param {string} str - Source string
+	 * @returns {Promise<string>}
+	 */
+	Translator.prototype.translate = function translate(str) {
+		// regex for valid text in namespace / key
+		var validText = 'a-zA-Z0-9\\-_.\\/';
+		var validTextRegex = new RegExp('[' + validText + ']');
+		var invalidTextRegex = new RegExp('[^' + validText + '\\]]');
+
+		// current cursor position
+		var cursor = 0;
+		// last break of the input string
+		var lastBreak = 0;
+		// length of the input string
+		var len = str.length;
+		// array to hold the promises for the translations
+		// and the strings of untranslated text in between
+		var toTranslate = [];
+
+		// to store the state of if we're currently in a top-level token for later
+		var inToken = false;
+
+		// split a translator string into an array of tokens
+		// but don't split by commas inside other translator strings
+		function split(text) {
+			var len = text.length;
+			var arr = [];
+			var i = 0;
+			var brk = 0;
+			var level = 0;
+
+			while (i + 2 <= len) {
+				if (text[i] === '[' && text[i + 1] === '[') {
+					level += 1;
+					i += 1;
+				} else if (text[i] === ']' && text[i + 1] === ']') {
+					level -= 1;
+					i += 1;
+				} else if (level === 0 && text[i] === ',' && text[i - 1] !== '\\') {
+					arr.push(text.slice(brk, i).trim());
+					i += 1;
+					brk = i;
+				}
+				i += 1;
+			}
+			arr.push(text.slice(brk, i + 1).trim());
+			return arr;
+		}
+
+		// move to the first [[
+		cursor = str.indexOf('[[', cursor);
+
+		// the loooop, we'll go to where the cursor
+		// is equal to the length of the string since
+		// slice doesn't include the ending index
+		while (cursor + 2 <= len && cursor !== -1) {
+			// split the string from the last break
+			// to the character before the cursor
+			// add that to the result array
+			toTranslate.push(str.slice(lastBreak, cursor));
+			// set the cursor position past the beginning
+			// brackets of the translation string
+			cursor += 2;
+			// set the last break to our current
+			// spot since we just broke the string
+			lastBreak = cursor;
+			// we're in a token now
+			inToken = true;
+
+			// the current level of nesting of the translation strings
+			var level = 0;
+			var char0;
+			var char1;
+			// validating the current string is actually a translation
+			var textBeforeColonFound = false;
+			var colonFound = false;
+			var textAfterColonFound = false;
+			var commaAfterNameFound = false;
+
+			while (cursor + 2 <= len) {
+				char0 = str[cursor];
+				char1 = str[cursor + 1];
+				// found some text after the double bracket,
+				// so this is probably a translation string
+				if (!textBeforeColonFound && validTextRegex.test(char0)) {
+					textBeforeColonFound = true;
+					cursor += 1;
+				// found a colon, so this is probably a translation string
+				} else if (textBeforeColonFound && !colonFound && char0 === ':') {
+					colonFound = true;
+					cursor += 1;
+				// found some text after the colon,
+				// so this is probably a translation string
+				} else if (colonFound && !textAfterColonFound && validTextRegex.test(char0)) {
+					textAfterColonFound = true;
+					cursor += 1;
+				} else if (textAfterColonFound && !commaAfterNameFound && char0 === ',') {
+					commaAfterNameFound = true;
+					cursor += 1;
+				// a space or comma was found before the name
+				// this isn't a translation string, so back out
+				} else if (!(textBeforeColonFound && colonFound && textAfterColonFound && commaAfterNameFound) &&
+						invalidTextRegex.test(char0)) {
+					cursor += 1;
+					lastBreak -= 2;
+					// no longer in a token
+					inToken = false;
+					if (level > 0) {
+						level -= 1;
+					} else {
+						break;
+					}
+				// if we're at the beginning of another translation string,
+				// we're nested, so add to our level
+				} else if (char0 === '[' && char1 === '[') {
+					level += 1;
+					cursor += 2;
+				// if we're at the end of a translation string
+				} else if (char0 === ']' && char1 === ']') {
+					// if we're at the base level, then this is the end
+					if (level === 0) {
+						// so grab the name and args
+						var currentSlice = str.slice(lastBreak, cursor);
+						var result = split(currentSlice);
+						var name = result[0];
+						var args = result.slice(1);
+
+						// make a backup based on the raw string of the token
+						// if there are arguments to the token
+						var backup = '';
+						if (args && args.length) {
+							backup = this.translate(currentSlice);
+						}
+						// add the translation promise to the array
+						toTranslate.push(this.translateKey(name, args, backup));
+						// skip past the ending brackets
+						cursor += 2;
+						// set this as our last break
+						lastBreak = cursor;
+						// and we're no longer in a translation string,
+						// so continue with the main loop
+						inToken = false;
+						break;
+					}
+					// otherwise we lower the level
+					level -= 1;
+					// and skip past the ending brackets
+					cursor += 2;
+				} else {
+					// otherwise just move to the next character
+					cursor += 1;
+				}
+			}
+
+			// skip to the next [[
+			cursor = str.indexOf('[[', cursor);
+		}
+
+		// ending string of source
+		var last = str.slice(lastBreak);
+
+		// if we were mid-token, treat it as invalid
+		if (inToken) {
+			last = this.translate(last);
+		}
+
+		// add the remaining text after the last translation string
+		toTranslate.push(last);
+
+		// and return a promise for the concatenated translated string
+		return Promise.all(toTranslate).then(function (translated) {
+			return translated.join('');
+		});
+	};
+
+	/**
+	 * Translates a specific key and array of arguments
+	 * @param {string} name - Translation key (ex. 'global:home')
+	 * @param {string[]} args - Arguments for `%1`, `%2`, etc
+	 * @param {string|Promise<string>} backup - Text to use in case the key can't be found
+	 * @returns {Promise<string>}
+	 */
+	Translator.prototype.translateKey = function translateKey(name, args, backup) {
+		var self = this;
+
+		var result = name.split(':', 2);
+		var namespace = result[0];
+		var key = result[1];
+
+		if (self.modules[namespace]) {
+			return Promise.resolve(self.modules[namespace](key, args));
+		}
+
+		if (namespace && !key) {
+			warn('Missing key in translation token "' + name + '"');
+			return Promise.resolve('[[' + namespace + ']]');
+		}
+
+		var translation = this.getTranslation(namespace, key);
+		return translation.then(function (translated) {
+			// check if the translation is missing first
+			if (!translated) {
+				warn('Missing translation "' + name + '"');
+				return backup || key;
+			}
+
+			var argsToTranslate = args.map(function (arg) {
+				return self.translate(escapeHTML(arg));
+			});
+
+			return Promise.all(argsToTranslate).then(function (translatedArgs) {
+				var out = translated;
+				translatedArgs.forEach(function (arg, i) {
+					var escaped = arg.replace(/%(?=\d)/g, '&#37;').replace(/\\,/g, '&#44;');
+					out = out.replace(new RegExp('%' + (i + 1), 'g'), escaped);
+				});
+				return out;
+			});
+		});
+	};
+
+	/**
+	 * Load translation file (or use a cached version), and optionally return the translation of a certain key
+	 * @param {string} namespace - The file name of the translation namespace
+	 * @param {string} [key] - The key of the specific translation to getJSON
+	 * @returns {Promise<{ [key: string]: string } | string>}
+	 */
+	Translator.prototype.getTranslation = function getTranslation(namespace, key) {
+		var translation;
+		if (!namespace) {
+			warn('[translator] Parameter `namespace` is ' + namespace + (namespace === '' ? '(empty string)' : ''));
+			translation = Promise.resolve({});
+		} else {
+			this.translations[namespace] = this.translations[namespace] || this.load(this.lang, namespace).catch(function () { return {}; });
+			translation = this.translations[namespace];
+		}
+
+		if (key) {
+			return translation.then(function (x) {
+				return x && x[key]; // modified by lwf
+			});
+		}
+		return translation;
+	};
+
+	/**
+	 * @param {Node} node
+	 * @returns {Node[]}
+	 */
+	function descendantTextNodes(node) {
+		var textNodes = [];
+
+		function helper(node) {
+			if (node.nodeType === 3) {
+				textNodes.push(node);
+			} else {
+				for (var i = 0, c = node.childNodes, l = c.length; i < l; i += 1) {
+					helper(c[i]);
+				}
+			}
+		}
+
+		helper(node);
+		return textNodes;
+	}
+
+	/**
+	 * Recursively translate a DOM element in place
+	 * @param {Element} element - Root element to translate
+	 * @param {string[]} [attributes] - Array of node attributes to translate
+	 * @returns {Promise<void>}
+	 */
+	Translator.prototype.translateInPlace = function translateInPlace(element, attributes) {
+		attributes = attributes || ['placeholder', 'title'];
+
+		var nodes = descendantTextNodes(element);
+		var text = nodes.map(function (node) {
+			return node.nodeValue;
+		}).join('  ||  ');
+
+		var attrNodes = attributes.reduce(function (prev, attr) {
+			var tuples = Array.prototype.map.call(element.querySelectorAll('[' + attr + '*="[["]'), function (el) {
+				return [attr, el];
+			});
+			return prev.concat(tuples);
+		}, []);
+		var attrText = attrNodes.map(function (node) {
+			return node[1].getAttribute(node[0]);
+		}).join('  ||  ');
+
+		return Promise.all([
+			this.translate(text),
+			this.translate(attrText),
+		]).then(function (ref) {
+			var translated = ref[0];
+			var translatedAttrs = ref[1];
+			if (translated) {
+				translated.split('  ||  ').forEach(function (html, i) {
+					$(nodes[i]).replaceWith(html);
+				});
+			}
+			if (translatedAttrs) {
+				translatedAttrs.split('  ||  ').forEach(function (text, i) {
+					attrNodes[i][1].setAttribute(attrNodes[i][0], text);
+				});
+			}
+		});
+	};
+
+	/**
+	 * Get the language of the current environment, falling back to defaults
+	 * @returns {string}
+	 */
+	Translator.getLanguage = function getLanguage() {
+		//var lang;
+		//if (typeof window === 'object' && window.config && window.utils) {
+		//	lang = utils.params().lang || config.userLang || config.defaultLang || 'en-GB';
+		//} else {
+		//	var meta = require('./meta');
+		//	lang = meta.config && meta.config.defaultLang ? meta.config.defaultLang : 'en-GB';
+		//}
+		//return lang;
+
+		return 'en-GB';
+	};
+
+	/**
+	 * Create and cache a new Translator instance, or return a cached one
+	 * @param {string} [language] - ('en-GB') Language string
+	 * @returns {Translator}
+	 */
+	Translator.create = function create(language) {
+		if (!language) {
+			language = Translator.getLanguage();
+		}
+
+		Translator.cache[language] = Translator.cache[language] || new Translator(language);
+
+		return Translator.cache[language];
+	};
+
+	Translator.cache = {};
+
+	/**
+	 * Register a custom module to handle translations
+	 * @param {string} namespace - Namespace to handle translation for
+	 * @param {Function} factory - Function to return the translation function for this namespace
+	 */
+	Translator.registerModule = function registerModule(namespace, factory) {
+		Translator.moduleFactories[namespace] = factory;
+
+		Object.keys(Translator.cache).forEach(function (key) {
+			var translator = Translator.cache[key];
+			translator.modules[namespace] = factory(translator.lang);
+		});
+	};
+
+	Translator.moduleFactories = {};
+
+	/**
+	 * Remove the translator patterns from text
+	 * @param {string} text
+	 * @returns {string}
+	 */
+	Translator.removePatterns = function removePatterns(text) {
+		var len = text.length;
+		var cursor = 0;
+		var lastBreak = 0;
+		var level = 0;
+		var out = '';
+		var sub;
+
+		while (cursor < len) {
+			sub = text.slice(cursor, cursor + 2);
+			if (sub === '[[') {
+				if (level === 0) {
+					out += text.slice(lastBreak, cursor);
+				}
+				level += 1;
+				cursor += 2;
+			} else if (sub === ']]') {
+				level -= 1;
+				cursor += 2;
+				if (level === 0) {
+					lastBreak = cursor;
+				}
+			} else {
+				cursor += 1;
+			}
+		}
+		out += text.slice(lastBreak, cursor);
+		return out;
+	};
+
+
+	return i18n.Translator = Translator;
+
+
+});
+define('skylark-domx-i18n/translate',[
+	"./i18n",
+	"./Translator"
+],function(i18n,Translator){
+	/**
+	 * Legacy translator function for backwards compatibility
+	 */
+	function translate(text, language, callback) {
+		// TODO: deprecate?
+
+		var cb = callback;
+		var lang = language;
+		if (typeof language === 'function') {
+			cb = language;
+			lang = null;
+		}
+
+		if (!(typeof text === 'string' || text instanceof String) || text === '') {
+			return cb('');
+		}
+
+		return Translator.create(lang).translate(text).then(function (output) {
+			if (cb) {
+				setTimeout(cb, 0, output);
+			}
+			return output;
+		}, function (err) {
+			console.warn('Translation failed: ' + err.stack);
+		});
+	}
+
+	return i18n.translate = translate;
+	
+});
+define('skylark-domx-i18n/prepareDom',[
+	"skylark-domx-query",
+	"./i18n",
+	"./translate"
+],function($,i18n,translate){
+
+	return i18n.prepareDOM = function prepareDOM() {
+		// Add directional code if necessary
+		translate('[[language:dir]]', function (value) {
+			if (value && !$('html').attr('data-dir')) {
+				$('html').css('direction', value).attr('data-dir', value);
+			}
+		});
+	};
+	
+});
+define('skylark-domx-i18n/addTranslation',[
+	"skylark-domx-query",
+	"./i18n",
+	"./Translator"
+],function($,i18n,Translator){
+
+	/**
+	 * Add translations to the cache
+	 */
+	return i18n.addTranslation = function addTranslation(language, namespace, translation) {
+		Translator.create(language).getTranslation(namespace).then(function (translations) {
+			assign(translations, translation);
+		});
+	};
+	
+});
+define('skylark-domx-i18n/getTranslations',[
+	"skylark-domx-query",
+	"./i18n",
+	"./Translator"
+],function($,i18n,Translator){
+
+	/**
+	 * Get the translations object
+	 */
+	return i18n.getTranslations =  function getTranslations(language, namespace, callback) {
+		callback = callback || function () {};
+		Translator.create(language).getTranslation(namespace).then(callback);
+	};
+	
+});
+define('skylark-domx-i18n/main',[
+	"./i18n",
+	"./Translator",
+	"./prepareDom",
+	"./translate",
+	"./addTranslation",
+	"./getTranslations"
+],function(i18n){
+	return i18n;
+});
+define('skylark-domx-i18n', ['skylark-domx-i18n/main'], function (main) { return main; });
+
 define('skylark-domx-plugins-base/plugins',[
     "skylark-langx-ns"
 ], function(skylark) {
@@ -23473,15 +24337,6 @@ define('skylark-domx-plugins-base/plugins',[
         shortcuts
     });
 });
-define('skylark-domx-plugins-colors/colors',[
-    "skylark-domx-plugins-base/plugins"
-],function (plugins) {
-    'use strict';
-
-    return plugins.colores = {};
-
-});
-
 define('skylark-domx-plugins-base/plugin',[
     "skylark-langx-ns",
     "skylark-langx-types",
@@ -23916,6 +24771,15 @@ define('skylark-domx-plugins-base/main',[
 	return plugins;
 });
 define('skylark-domx-plugins-base', ['skylark-domx-plugins-base/main'], function (main) { return main; });
+
+define('skylark-domx-plugins-colors/colors',[
+    "skylark-domx-plugins-base/plugins"
+],function (plugins) {
+    'use strict';
+
+    return plugins.colores = {};
+
+});
 
 define('skylark-domx-plugins-popups/popups',[
 	"skylark-langx-ns",
@@ -28617,6 +29481,12865 @@ define('skylark-domx-plugins-colors/main',[
 
 define('skylark-domx-plugins-colors', ['skylark-domx-plugins-colors/main'], function (main) { return main; });
 
+define('skylark-domx-plugins-groups/groups',[
+    "skylark-domx-plugins-base/plugins"
+], function(plugins) {
+    'use strict';
+
+	return plugins.groups = {};
+});
+
+ define('skylark-domx-plugins-groups/group',[
+  "skylark-langx/langx",
+  "skylark-domx-query",
+  "skylark-domx-velm",
+  "skylark-domx-plugins-base",
+  "./groups"
+],function(langx,$,elmx,plugins,groups){
+  'use strict'
+
+    /*
+     * The base plugin class for grouping items.
+     */
+    var Group = plugins.Plugin.inherit({
+        klassName : "Group",
+
+        pluginName : "lark.groups.group",
+
+        options : {
+        	classes : {
+        	},
+
+        	selectors : {
+            //container : "ul", // 
+        	},
+
+          item : {
+            template : "<span><i class=\"glyphicon\"></i><a href=\"javascript: void(0);\"></a> </span>",
+            selector : "li",      // ".list-group-item"
+
+            selectable: false,
+            multiSelect: false,
+
+            classes : {
+              base : "item",
+              selected : "selected",
+              active : "active"
+            }
+          },
+
+          //active : 0,
+
+          //A collection or function that is used to generate the content of the group 
+          /*
+           * example1
+           *itemsSource : [{  
+           *  type: 'image',href : "https://xxx.com/1.jpg",title : "1"
+           *},{
+           *  type: 'image',href : "https://xxx.com/1.jpg",title : "1"
+           * }],
+           */
+          /*
+           * example2
+           *itemsSource :  function(){},
+           */
+        },
+
+        selected : null,
+ 
+        _construct : function(elm,options) {
+            this.overrided(elm,options);
+            var self = this,
+                velm = this._velm = elmx(this._elm),
+                itemSelector = this.options.item.selector;
+
+            velm.on('click', itemSelector, function () {
+                var veItem = elmx(this);
+                if (!veItem.hasClass('disabled')) {
+                    let value = self.getItemValue(this);
+                    self.setActiveItem(value);
+
+                  if (self.options.item.selectable) {
+
+                      if (self.options.item.multiSelect) {
+                        self.toggleSelectOneItem(value);
+                      } else {
+                        self.clearSelectedItems();
+                        self.selectOneItem(value);
+                      }
+                  }
+
+                }
+
+
+                //veItem.blur();
+                return false;
+            });
+
+            this.resetItems();
+
+            ///if (this.options.item.multiSelect) {
+            ///  this.selected = [];
+            ///} else {
+            ///  this.selected = null;
+            ///}
+            ///this.selected = this.options.selected;
+        },
+
+        resetItems : function() {
+            this._$items = this._velm.$(this.options.item.selector);
+        },
+
+        findItem : function (valueOrIdx) {
+          var $item;
+          if (langx.isNumber(valueOrIdx)) {
+            $item = this._$items.eq(valueOrIdx);
+          } else if (langx.isString(valueOrIdx)) {
+            $item = this._$items.filter('[data-value="' + valueOrIdx + '"]');
+          } else {
+            $item = $(valueOrIdx);
+          }
+          return $item[0];
+        },
+
+        getItems : function() {
+          return this._$items;
+        },
+
+        getItemValue : function(item) {
+          let $item = $(item),
+              value = $item.data("value");
+          if (value === undefined) {
+            value = this._$items.index($item[0]);
+          }
+          return value;
+        },
+
+        getItemsCount : function() {
+            return this._$items.size();
+        },
+
+        getItemIndex : function(item) {
+            return this._$items.index(item);
+        },
+
+        
+        isSelectedItem : function(valueOrIdx) {
+          return $(this.findItem(valueOrIdx)).hasClass(this.options.item.classes.selected);
+        },
+                 
+        selectOneItem : function (valueOrIdx) {
+          $(this.findItem(valueOrIdx)).addClass(this.options.item.classes.selected);
+        },
+
+        unselectOneItem : function (valueOrIdx) {
+          $(this.findItem(valueOrIdx)).removeClass(this.options.item.classes.selected);
+        },
+
+        /*
+         * clears the selected items.
+         */
+        clearSelectedItems : function() {
+          let selectedClass = this.options.item.classes.selected;
+          this._$items.filter(`.${selectedClass}`).removeClass(selectedClass);
+        },
+
+        getSelectedItemValues : function() {
+          let selectedClass = this.options.item.classes.selected;
+          return  this._$items.filter(`.${selectedClass}`).map( (el) => {
+            return this.getItemValue(el);
+          });
+        },
+
+        getSelectedItems : function() {
+          let selectedClass = this.options.item.classes.selected;
+          return  this._$items.filter(`.${selectedClass}`);
+        },
+
+        getActiveItem : function() {
+          let activeClass = this.options.item.classes.active,
+              $activeItem = this._$items.filter(`.${activeClass}`);
+          return $activeItem[0] || null;
+        },
+
+        setActiveItem : function(valueOrIdx) {
+          let current = this.getActiveItem(),
+              next = this.findItem(valueOrIdx);
+          if (next != current) {
+            let activeClass = this.options.item.classes.active;
+            $(current).removeClass(activeClass);
+            $(next).addClass(activeClass);
+          }
+        },
+
+
+        getSelectedItem : function() {
+          let selectedItems = this.getSelectedItems();
+          return selectedItems[0] || null;
+        },
+
+        toggleSelectOneItem : function(valueOrIdx) {
+          if (this.isSelectedItem(valueOrIdx)) {
+            this.unselectOneItem(valueOrIdx);
+          } else {
+            this.selectOneItem(valueOrIdx);
+          }
+        },
+
+        renderItemHtml : function(itemData) {
+          if (!this._renderItemHtml) {
+            let itemTpl = this.options.item.template;
+            if (langx.isString(itemTpl)) {
+              this._renderItemHtml = langx.template(itemTpl);
+            } else if (langx.isFunction(itemTpl)) {
+              this._renderItemHtml = itemTpl;
+            }
+          }
+
+          return this._renderItemHtml(itemData);
+        }
+
+  });
+
+
+  plugins.register(Group);
+
+  return groups.Group = Group;
+
+});
+
+
+
+
+ define('skylark-domx-plugins-groups/_carousel/indicators',[
+  "skylark-langx/langx",
+  "skylark-domx-browser",
+  "skylark-domx-eventer",
+  "skylark-domx-query",
+  "skylark-domx-velm",
+  "skylark-domx-plugins-base",
+  "../groups"
+],function(langx,browser,eventer,$,elmx,plugins,groups){
+
+
+  var Indicators = plugins.Plugin.inherit({
+    klassName : "Indicators",
+
+    pluginName : "lark.groups.carousel.indicators",
+
+
+    options : {
+      thumbnail : true,
+
+      indicator : {
+	      template : "<li/>",
+	      indexAttrName : "data-index",
+	      selector : "> li",
+	      classes : {
+	          active : "active"
+	      }
+      }
+    },
+
+    _construct: function(elm, options) {
+    	plugins.Plugin.prototype._construct.call(this,elm,options);
+
+      this._velm = this.elmx();
+    	this.$indicators = this._velm.query(this.options.indicator.selector);
+
+      this._velm.on("click", `[${this.options.indicator.indexAttrName}]`, (e) => {
+          var $indicator = $(e.target),
+              slideIndex = $indicator.attr(this.options.indicator.indexAttrName);
+
+          this.options.carousel.jump(slideIndex);
+          e.preventDefault();
+      });
+    },
+
+
+    createIndicator: function (itemData) {
+      if (!this._renderIndicatorHtml) {
+        this._renderIndicatorHtml = langx.template(this.options.indicator.template);
+      }
+
+      /*
+      var indicator = noder.createElement("li");
+      var title = itemData.title;
+      var thumbnailUrl
+      var thumbnail
+      if (this.options.thumbnail) {
+        thumbnailUrl = itemData["thumbnail"]
+
+        if (thumbnailUrl) {
+          indicator.style.backgroundImage = 'url("' + thumbnailUrl + '")'
+        }
+      }
+      if (title) {
+        indicator.title = title;
+      }
+      */
+
+      return $(this._renderIndicatorHtml(itemData))[0];
+    },
+
+    addIndicator: function (index,itemData) {
+        var indicator = this.createIndicator(itemData)
+        indicator.setAttribute('data-index', index)
+        this._velm.append(indicator)
+        this.$indicators = this.$indicators.add(indicator);
+    },
+
+    clearIndicators : function() {
+       this.$indicators.remove();
+    },
+    
+    setActiveIndicator: function (index) {
+      if (this.$indicators) {
+        let activeIndicatorClass = this.options.indicator.classes.active;
+        if (this.activeIndicator) {
+          this.activeIndicator.removeClass(activeIndicatorClass)
+        }
+        this.activeIndicator = $(this.$indicators[index])
+        this.activeIndicator.addClass(activeIndicatorClass)
+      }
+    }
+
+  });
+
+  return Indicators;
+});
+ define('skylark-domx-plugins-groups/_carousel/mode-slide',[
+  "skylark-langx/langx",
+  "skylark-langx-events",
+  "skylark-domx-eventer"
+],function(langx,events,eventer){
+  'use strict'
+
+
+  var ModeSlide = events.Emitter.inherit({
+
+
+    _construct : function(carsouel) {
+    	this.carsouel = carsouel;
+    },
+
+    jump : function(toIndex,currentIndex,type,ended) {
+    	let carsouel = this.carsouel,
+    		velm = carsouel.elmx(),
+    		options = carsouel.options,
+
+            $active =  carsouel.$(carsouel.findItem(currentIndex)),
+        	$next = carsouel.$(carsouel.findItem(toIndex)),
+        	isCycling = carsouel.interval,
+        	direction = type == 'next' ? 'left' : 'right';
+
+        ///if ($next.hasClass('active')) {
+        ///	return (carsouel.moving = false)
+        ///}
+
+        isCycling && carsouel.pause();
+
+        /*
+        if (this._$indicators.length) {
+            this._$indicators.find('.active').removeClass('active');
+            var $nextIndicator = $(this._$indicators.children()[this.getItemIndex($next)]);
+            $nextIndicator && $nextIndicator.addClass('active');
+        }
+        */
+
+        $next.addClass(type);
+        $next.reflow(); // [0].offsetWidth; // force reflow
+        $active.addClass(direction);
+        $next.addClass(direction);
+        $next
+            .one('transitionEnd', function() {
+                ///$next.removeClass([type, direction].join(' ')).addClass('active')
+                ///$active.removeClass(['active', direction].join(' '))
+                $next.removeClass([type, direction].join(' '));
+                $active.removeClass(direction);
+                ended();
+            })
+            .emulateTransitionEnd();
+
+        isCycling && carsouel.cycle();
+
+        return this
+    }
+
+  });
+
+
+  return ModeSlide;	
+});
+define('skylark-domx-plugins-interact/interact',[
+    "skylark-domx-plugins-base/plugins"
+], function(plugins) {
+    'use strict';
+
+	return plugins.interact = {};
+});
+
+define('skylark-domx-plugins-interact/rotatable',[
+    "skylark-langx/langx",
+    "skylark-domx-noder",
+    "skylark-domx-data",
+    "skylark-domx-geom",
+    "skylark-domx-eventer",
+    "skylark-domx-styler",
+    "skylark-domx-plugins-base",
+    "./interact"
+],function(langx,noder,datax,geom,eventer,styler,plugins,interact){
+    var on = eventer.on,
+        off = eventer.off,
+        attr = datax.attr,
+        removeAttr = datax.removeAttr,
+        offset = geom.pagePosition,
+        addClass = styler.addClass,
+        height = geom.height,
+        some = Array.prototype.some,
+        map = Array.prototype.map;
+
+
+
+    function applyTranform(obj,tX,tY) {
+        // Constrain the angle of camera (between 0 and 180)
+        if (tY > 180) tY = 180;
+        if (tY < 0) tY = 0;
+
+        // Apply the angle
+        obj.style.transform = "rotateX(" + -tY + "deg) rotateY(" + tX + "deg)";
+    }
+
+
+    var Rotatable = plugins.Plugin.inherit({
+        klassName: "Rotatable",
+
+        pluginName : "lark.interact.rotatable",
+
+
+        _construct : function (elm, options) {
+            this.overrided(elm,options);
+
+
+            options = this.options;
+            var self = this,
+                handleEl = options.handle || elm,
+                overlayDiv,
+                doc = options.document || document,
+                downButton,
+                start,
+                stop,
+                prevX,
+                prevY,
+                startingCallback = options.starting,
+                startedCallback = options.started,
+                movingCallback = options.moving,
+                stoppedCallback = options.stopped,
+
+                tX = 0,
+                tY = 10,
+                deltaX = 0,
+                deltaY = 0,
+
+                timer,
+
+                start = function(e) {
+                    if (e.pointerType=="mouse" &&  e.button !== 0) {
+                        return stop(e);
+                    }
+                    
+                    var docSize = geom.getDocumentSize(doc),
+                        cursor;
+
+                    if (startingCallback) {
+                        var ret = startingCallback(e)
+                        if ( ret === false) {
+                            return;
+                        } else if (langx.isPlainObject(ret)) {
+                            if (ret.started) {
+                                startedCallback = ret.started;
+                            }
+                            if (ret.moving) {
+                                movingCallback = ret.moving;
+                            }                            
+                            if (ret.stopped) {
+                                stoppedCallback = ret.stopped;
+                            }     
+                        }
+                    }
+
+                    e.preventDefault();
+
+                    downButton = e.button;
+
+                    //handleEl = getHandleEl();
+                    prevX = e.clientX;
+                    prevY = e.clientY;
+
+                    // Grab cursor from handle so we can place it on overlay
+                    cursor = styler.css(handleEl, "cursor");
+
+                    overlayDiv = noder.createElement("div");
+                    styler.css(overlayDiv, {
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        width: docSize.width,
+                        height: docSize.height,
+                        zIndex: 0x7FFFFFFF,
+                        opacity: 0.0001,
+                        cursor: cursor
+                    });
+                    noder.append(doc.body, overlayDiv);
+
+                    clearInterval(timer);
+
+                    eventer.on(doc, "pointermove", move).on(doc, "pointerup", stop);
+
+                    if (startedCallback) {
+                        startedCallback(e);
+                    }
+                },
+
+                move = function(e) {
+
+
+                    deltaX = e.deltaX = e.clientX - prevX;
+                    deltaY = e.deltaY = e.clientY - prevY;
+
+                    prevX = e.clientX;
+                    prevY = e.clientY;
+
+
+                    tX += deltaX * 0.1;
+                    tY += deltaY * 0.1;
+                    applyTranform(elm,tX,tY);
+
+                    e.preventDefault();
+
+                    if (movingCallback) {
+                        movingCallback(e);
+                    }
+                },
+
+                stop = function(e) { 
+                    eventer.off(doc, "pointermove", move).off(doc, "pointerup", stop);
+
+                    let deta
+
+                    timer = setInterval(function() {
+                        deltaX *= 0.95;
+                        deltaY *= 0.95;
+                        tX += deltaX * 0.1;
+                        tY += deltaX * 0.1;
+                        applyTranform(elm,tX,tY);
+
+                        ///playSpin(false);
+                        if (Math.abs(deltaX) < 0.5 && Math.abs(deltaY) < 0.5) {
+                          clearInterval(timer);
+                          //playSpin(true);
+                        }
+                    }, 17);
+
+                    noder.remove(overlayDiv);
+
+                    if (stoppedCallback) {
+                        stoppedCallback(e);
+                    }
+                };
+
+            eventer.on(handleEl, "pointerdown", start);
+
+            this._handleEl = handleEl;
+
+        },
+
+        remove : function() {
+            eventer.off(this._handleEl);
+        }
+    });
+
+    plugins.register(Rotatable,"rotatable");
+
+    return interact.Rotatable = Rotatable;
+});
+
+define('skylark-domx-plugins-interact/scalable',[
+    "skylark-langx/langx",
+    "skylark-domx-noder",
+    "skylark-domx-data",
+    "skylark-domx-geom",
+    "skylark-domx-eventer",
+    "skylark-domx-styler",
+    "skylark-domx-query",
+    "skylark-domx-plugins-base",
+    "./interact"
+],function(langx,noder,datax,geom,eventer,styler,$,plugins,interact){
+    var on = eventer.on,
+        off = eventer.off,
+        attr = datax.attr,
+        removeAttr = datax.removeAttr,
+        offset = geom.pagePosition,
+        addClass = styler.addClass,
+        height = geom.height,
+        some = Array.prototype.some,
+        map = Array.prototype.map;
+
+
+
+    function applyTranform(elms,radius) {
+        // Apply the angle
+        $(elms).forEach(function(elm){
+            let $elm = $(elm);
+            var originalTransform = $elm.data("originalTransform");
+            if (!originalTransform) {
+                originalTransform = $elm.css("transform");
+                $elm.data("originalTransform",originalTransform);
+            }
+            $elm.css("transform",originalTransform +" translateZ(" +  radius +"px");
+        });
+    }
+
+
+    var Scalable = plugins.Plugin.inherit({
+        klassName: "Scalable",
+
+        pluginName : "lark.interact.scalable",
+
+
+        _construct : function (elm, options) {
+            this.overrided(elm,options);
+
+            let radius = this.options.radius || 0,
+                targets = this.options.targets || elm;
+
+            eventer.on(elm,"mousewheel", function(e) {
+                var d = e.wheelDelta / 20 || -e.detail;
+                radius += d;
+                applyTranform(targets,radius);
+            });
+
+            applyTranform(targets,radius);
+        }
+    });
+
+    plugins.register(Scalable,"scalable");
+
+    return interact.Scalable = Scalable;
+});
+
+ define('skylark-domx-plugins-groups/_carousel/mode-rotate',[
+  "skylark-langx/langx",
+  "skylark-langx-events",
+  "skylark-domx-eventer",
+  "skylark-domx-query",
+  "skylark-domx-styler",
+  "skylark-domx-plugins-interact/rotatable",
+  "skylark-domx-plugins-interact/scalable"
+],function(langx,events,eventer,$,styler,Rotatable,Scalable){
+  'use strict'
+
+
+  var ModeRotate = events.Emitter.inherit({
+
+    options : {
+
+    },
+
+
+    _construct : function(carsouel) {
+      this.carsouel = carsouel;
+
+      this.resetItems();
+
+      this._$threedContainer = carsouel.$(`.${carsouel.options.modes.rotate.classes.threedContainer}`)
+
+      this._rotatable = new Rotatable(this._$threedContainer[0],{
+          starting : function(e) {
+            return $(e.target).closest(carsouel.options.item.selector).length==0;
+          },
+
+          started : function() {
+              //playSpin(false);
+          },
+
+          stopped : function() {
+              //playSpin(true);
+          }
+      });
+
+      this._scalable = new Scalable(this._$threedContainer[0],{
+        radius : carsouel.options.modes.rotate.radius,
+        targets : carsouel.getItems()
+      });
+
+      this._start = 0;
+
+    },
+
+    resetItems : function(delayTime) {
+      let items = this.carsouel.getItems();
+      if (items) {
+        let itemsCount = this._itemsCount = items.length,
+          deltaDeg = this._deltaDeg = 360 / itemsCount;
+
+        for (var i = 0; i < itemsCount; i++) {
+          styler.css(items[i],{
+            transform : "rotateY(" + (i * deltaDeg) + "deg)"
+          });
+        }       
+      }
+    },
+
+    jump : function(toIndex,currentIndex,type,ended) {
+        let carsouel = this.carsouel,
+            velm = carsouel.elmx(),
+            options = carsouel.options,
+
+            $active =  carsouel.$(carsouel.findItem(currentIndex)),
+            $next = carsouel.$(carsouel.findItem(toIndex));
+
+        $next.addClass(type);
+        $next.reflow(); // [0].offsetWidth; // force reflow
+
+        let $itemsContainer = carsouel._$itemsContainer;
+
+        $itemsContainer
+            .one('transitionEnd', function() {
+                $next.removeClass(type);
+                ended();
+            })
+            .css("transform","rotateY(" + (toIndex * this._deltaDeg) + "deg)")
+            .emulateTransitionEnd();
+
+        return this;
+    }
+
+
+  });
+
+
+  return ModeRotate;  
+});
+ define('skylark-domx-plugins-groups/_carousel/mode-coverflow',[
+  "skylark-langx/langx",
+  "skylark-langx-events",
+  "skylark-domx-query",
+],function(langx,events,$){
+  'use strict'
+
+
+  var ModeCoverflow = events.Emitter.inherit({
+
+
+    _construct : function(carsouel) {
+    	this.carsouel = carsouel;
+
+    	this._itemOffsets = [];
+    	this._currentIndex = -1;
+
+    	let classes = this.carsouel.options.modes.coverflow.classes;
+
+        this._classRemover = new RegExp('\\b(' + classes.itemCurrent + '|' + classes.itemPast + '|' + classes.itemFuture + ')(.*?)(\\s|$)', 'g');
+        this._whiteSpaceRemover = new RegExp('\\s\\s+', 'g');
+
+    	this.resetItems();
+    },
+
+
+    resetItems : function () {
+    	let classes = this.carsouel.options.modes.coverflow.classes,
+    		$itemsContainer = this.carsouel._$itemsContainer,
+    		$items = this.carsouel.getItems(),
+    		spacing = this.carsouel.options.modes.coverflow.spacing;
+
+
+
+        function noTransition() {
+            $itemsContainer.css('transition', 'none');
+            $items.css('transition', 'none');
+        }
+
+        function resetTransition() {
+            $itemsContainer.css('transition', '');
+            $items.css('transition', '');
+        }
+
+	    function calculateBiggestItemHeight() {
+	        var biggestHeight = 0,
+	            itemHeight;
+
+	        $items.each(function() {
+	            itemHeight = $(this).height();
+	            if ( itemHeight > biggestHeight ) { biggestHeight = itemHeight; }
+	        });
+	        return biggestHeight;
+	    }
+
+
+        let skipTransition = true;
+        if ( skipTransition ) { 
+        	noTransition(); 
+        }
+
+         $items.each((i,item) => {
+            let $item = $(item);
+
+            $item.attr('class', function(i, c) {
+                return c && c.replace(this._classRemover, '').replace(this._whiteSpaceRemover, ' ');
+            });
+
+            if ( !$item.children('.' + classes.itemContent ).length) {
+                $item.wrapInner('<div class="' + classes.itemContent + '" />');
+            }
+            let width = $item.outerWidth();
+
+            if ( spacing !== 0 ) {
+               $item.css('margin-right', ( width * spacing ) + 'px');
+             }
+        });
+
+
+        this._itemOffsets = [];
+        let containerWidth = $itemsContainer.width();
+        $itemsContainer.height(calculateBiggestItemHeight());
+        ///$itemsContainer.height("300px");
+
+        $items.each((i,item) => {
+            let $item = $(item),
+                width,
+                left;
+            width = $item.outerWidth();
+            left = $item.position().left;
+            this._itemOffsets[i] = -1 * ((left + (width / 2)) - (containerWidth / 2));
+
+        });
+
+        if ( skipTransition ) { 
+        	setTimeout(resetTransition, 1); 
+        }
+    },
+
+    center : function (currentIndex) {
+    	if (currentIndex !== undefined) {
+	        this._currentIndex = currentIndex;
+    	} else {
+    		currentIndex = this._currentIndex;
+    	}
+    	if (currentIndex>=0)  {
+	        var classes = this.carsouel.options.modes.coverflow.classes,
+	        	$itemsContainer = this.carsouel._$itemsContainer,
+	        	$items =  this.carsouel.getItems(),
+	        	total = $items.length;
+	        var $item;
+	        var newClass;
+	        var zIndex;
+
+	        $items.each((i,item) => {
+	            $item = $(item);
+	            newClass = ' ';
+
+	            if (i === currentIndex)  {
+	                newClass += classes.itemCurrent;
+	                zIndex = (total + 1);
+	            }
+	            else if (i < currentIndex) {
+	                newClass += classes.itemPast + ' ' +
+	                    classes.itemPast + '-' + (currentIndex - i);
+	                zIndex = total - (currentIndex - i);
+	            } else  {
+	                newClass += classes.itemFuture + ' ' +
+	                    classes.itemFuture + '-' + (i - currentIndex);
+	                
+	                zIndex = total -  (i - currentIndex);
+	            }
+
+	            $item.css('z-index', zIndex )
+	              .attr('class',(i, c) => {
+	                return c && c.replace(this._classRemover, '').replace(this._whiteSpaceRemover,' ') + newClass;
+	              });
+	        });
+
+
+	        $itemsContainer.css('transform', 'translateX(' + this._itemOffsets[currentIndex] + 'px)');
+    	}
+    },
+
+    jump : function(toIndex,currentIndex,type,ended) {
+        var $itemsContainer = this.carsouel._$itemsContainer;
+        this.center(toIndex);
+        $itemsContainer
+            .one('transitionEnd', function() {
+                ended();
+            })
+            .emulateTransitionEnd();
+
+        return this;
+    }
+
+  });
+
+
+  return ModeCoverflow;	
+});
+ define('skylark-domx-plugins-groups/carousel',[
+  "skylark-langx/langx",
+  "skylark-domx-browser",
+  "skylark-domx-eventer",
+  "skylark-domx-query",
+  "skylark-domx-velm",
+  "skylark-domx-plugins-base",
+  "./groups",
+  "./group",
+  "./_carousel/indicators",
+  "./_carousel/mode-slide",
+  "./_carousel/mode-rotate",
+  "./_carousel/mode-coverflow"
+],function(langx,browser,eventer,$,elmx,plugins,groups,Group,Indicators,ModeSlide,ModeRotate,ModeCoverflow){
+  'use strict'
+
+ 
+  var Carousel = Group.inherit({
+    klassName : "Carousel",
+
+    pluginName : "lark.groups.carousel",
+
+        options : {
+            classes : {
+             // The class to add when the carousel is visible:
+              display: 'display',
+              // The class to add when the carousel only displays one item:
+              single: 'single',
+              // The class to add when the left edge has been reached:
+              leftEdge: 'left',
+              // The class to add when the right edge has been reached:
+              rightEdge: 'right',
+              // The class to add when the automatic slideshow is active:
+              cycling: 'cycling',
+
+              // The class to add when the carousel controls are visible:
+              controls: 'controls',
+            },
+
+            cycle : {
+              // [milliseconds]
+              // If a positive number, Carousel will automatically advance to next item after that number of milliseconds
+              interval: 5000,
+
+              pause: 'hover',
+            },
+
+            loop : true,
+
+            wrap: true,
+            keyboard: true,
+
+            controls : {
+              selectors : {
+               // The class for the "toggle" control:
+                toggle: '.toggle',
+                // The class for the "prev" control:
+                prev: '.prev',
+                // The class for the "next" control:
+                next: '.next',
+                // The class for the "close" control:
+                close: '.close',
+                // The class for the "play-pause" toggle control:
+                cycleStop: '.cycle-stop'
+              }
+            },
+
+            indicators : {
+                indicator : {
+                  template : "<li/>",
+                  indexAttrName : "data-index"
+                },
+
+            },
+
+            selectors :{
+              itemsContainer : ".items",
+              indicatorsContainer : ".indicators"
+            },
+
+            item : {
+              selector : ".item",
+              classes : {
+                base : "item"
+              }
+            },
+
+            data : {
+              //items : ".carousel-item",  // the items are from dom elements
+              //items : [{                 // the items are from json object
+              //  type: 'image',href : "https://xxx.com/1.jpg",title : "1"
+              //},{
+              //  type: 'image',href : "https://xxx.com/1.jpg",title : "1"
+              // }],
+            },
+
+            mode : "slide",
+
+            //start : "center", //ex:0
+
+            modes : {
+              slide : {
+                classes : {
+                  base : "slide"
+                }
+              },
+
+              rotate : {
+                classes : {
+                  base : "rotate",
+                  threedContainer : "items-container"
+                },
+                radius : 240
+              },
+
+              coverflow : {
+                classes : {
+                  base : "coverflow",
+                  itemPast : "past",
+                  itemFuture : "future",
+                  itemCurrent : "current",
+                  itemContent : "content"
+                },
+                spacing :-0.6
+              }
+            },
+
+            onjumped : null,
+            onjumping : null
+        },
+
+        _construct: function(elm, options) {
+            //this.options = options
+            Group.prototype._construct.call(this,elm,options);
+
+            this.options.item.selectable = true;
+            this.options.item.multiSelect = false;
+
+
+            this._$elm = this.$();
+            this._$itemsContainer = this._$elm.find(this.options.selectors.itemsContainer);
+            
+            let $indicators = this._$elm.find(this.options.selectors.indicatorsContainer); 
+            if ($indicators.length>0) {
+              this._indicators = new Indicators($indicators[0],langx.mixin({
+                carousel : this,
+                active : 0
+              },this.options.indicators));
+              this._indicators.setActiveIndicator(0);
+            }
+
+            this.paused = null;
+            this.moving = null;
+            this.interval = null;
+            this.$active = null;
+
+            if (this.options.cycle.interval >0) {
+              this.cycle(true);
+            } else {
+              this.cycle(false);
+            }
+
+            var self = this;
+            this.options.keyboard && this._$elm.on('keydown.lark.carousel', langx.proxy(this.keydown, this))
+
+            this.options.cycle.pause == 'hover' && !('ontouchstart' in document.documentElement) && this._$elm
+                .on('mouseenter.lark.carousel', (e) => {
+                  this.pause(true);
+                }).on('mouseleave.lark.carousel', (e) => {
+                  this.pause(false)
+                });
+
+            this._$elm.find(this.options.controls.selectors.prev).on("click",(e)=>{
+                this.prev();
+                eventer.stop(e);
+            });
+
+            this._$elm.find(this.options.controls.selectors.next).on("click",(e)=>{
+                this.next();
+                eventer.stop(e);
+            });
+
+            this._$elm.find(this.options.controls.selectors.cycleStop).on("click",(e)=>{
+                this.cycle(!this.cycled);
+                eventer.stop(e);
+            });
+
+
+            if (this.options.data.items) {
+                this.addItems(this.options.data.items);
+            }
+            
+            this._mode = new modes[this.options.mode](this);
+
+
+            let startIndex = this.options.start;
+            if (startIndex !== undefined) {
+              if (startIndex === 'center' ) {
+                startIndex = Math.floor(this.getItemsCount() / 2)
+              } 
+
+              this.jump(startIndex)              
+            }
+
+            if (this.options.onjumped) {
+              this.on("jumped",this.options.onjumped)
+            }
+
+            if (this.options.onjumping) {
+              this.on("jumping",this.options.onjumping)
+            }
+        },
+
+        changeMode : function(mode) {
+          if (mode == this.options.mode) {
+            return;
+          }
+
+          this.options.mode = mode;
+
+          if (this._mode && this._mode.dispose) {
+            this._mode.dispose();
+          }
+          this._mode = null;
+          this.clearItems();
+
+          this.$().removeClass("slide rotate coverflow").addClass(this.options.modes[mode].classes.base);
+          this.$items
+
+          this.addItems(this.options.data.items);
+
+          this._mode = new modes[this.options.mode](this);
+
+          let startIndex = this.options.start;
+          if (startIndex !== undefined) {
+            if (startIndex === 'center' ) {
+              startIndex = Math.floor(this.getItemsCount() / 2)
+            } 
+            this.jump(startIndex)              
+          }
+        },
+
+        keydown : function(e) {
+            if (/input|textarea/i.test(e.target.tagName)) return
+            switch (e.which) {
+                case 37:
+                    this.prev();
+                    break
+                case 39:
+                    this.next();
+                    break
+                default:
+                    return
+            }
+
+            e.preventDefault()
+        },
+
+
+        /*
+         * Cycles through the carousel items from left to right.
+         */
+        cycle : function(cycling) {
+            if (langx.isDefined(cycling)) {
+              this.cycled = !!cycling;
+             ///  e || (this.paused = false)
+              if (this.cycled) {
+                 this._velm.addClass(this.options.classes.cycling)
+              } else {
+                 this._velm.removeClass(this.options.classes.cycling)
+              }
+            } 
+
+            if (this.interval){
+              clearInterval(this.interval);
+            }
+
+            if (this.options.cycle.interval && this.cycled && !this.paused ) {
+                this.interval = setInterval(langx.proxy(this.next, this), this.options.cycle.interval);
+            }
+
+            return this;
+        },
+
+
+        getItemForDirection : function(direction, active) {
+            var activeIndex = this.getItemIndex(active)
+            var willWrap = (direction == 'prev' && activeIndex === 0) ||
+                (direction == 'next' && activeIndex == (this._$items.length - 1))
+            if (willWrap && !this.options.wrap) return active
+            var delta = direction == 'prev' ? -1 : 1
+            var itemIndex = (activeIndex + delta) % this._$items.length
+            return this._$items.eq(itemIndex);
+        },
+
+        setActiveItem : function(toIndex) {
+            Group.prototype.setActiveItem.call(this,toIndex);
+
+            if (this._indicators) {
+              this._indicators.setActiveIndicator(toIndex);
+            }  
+        },
+
+        jump : function (to) {
+          if (this.jumping) {
+            return
+          }
+
+          let itemsCount = this.getItemsCount();
+          if (itemsCount<=1) {
+            return;
+          } 
+
+          let currentItem = this.getActiveItem(),
+              currentIndex = currentItem ? this.getItemIndex(currentItem) : -1,
+              toItem,
+              toIndex,
+              type;
+
+          if (to === 'prev') {
+              type = to;
+              if (currentIndex > 0 ) { 
+                toIndex = currentIndex -1; 
+              } else if ( this.options.loop ) { 
+                toIndex = itemsCount - 1; 
+              }
+          } else if (to === 'next') {
+              type = to;
+              if ( currentIndex < itemsCount - 1 ) { 
+                toIndex = currentIndex + 1; 
+              } else if ( this.options.loop ) { 
+                toIndex = 0; 
+              }
+          } else if (typeof to === 'number') {
+              toIndex = to;
+          } else if ( typeof to == 'string') {
+              toIndex = parseInt(to);
+          } else if ( to !== undefined ) {
+              // if object is sent, get its index
+              toIndex = this.getItemIndex(to);
+          }
+
+          if (toIndex<0 || toIndex==currentIndex) {
+            return;
+          }
+
+          if (!type) {
+            type = toIndex > currentIndex ? 'next' : 'prev';
+          }
+
+          this.jumping =true;
+
+          var jumpingEvent = eventer.create('jumping.lark.carousel', {
+              toIndex,
+              currentIndex,
+              type
+          });
+
+          this.trigger(jumpingEvent);
+          if (jumpingEvent.isDefaultPrevented()) {
+            this.jumping =false;
+            return;
+          }
+
+          this._mode.jump(toIndex,currentIndex,type,() => {
+            //    $next.removeClass([type, direction].join(' ')).addClass('active')
+            //    $active.removeClass(['active', direction].join(' '))
+            this.setActiveItem(toIndex);
+
+            var jumpedEvent = eventer.create('jumped.lark.carousel', { 
+              toIndex,
+              currentIndex,
+              type
+            });
+
+            setTimeout(()=> {
+              this.trigger(jumpedEvent)
+            }, 0)
+
+
+            this.jumping  = false;
+
+          });
+
+          return this;
+        },
+
+        /*
+         *Cycles the carousel to a particular frame (0 based, similar to an array). Returns to the caller before the target item has been shown
+        jump : function(pos) {
+            var that = this;
+
+            var activeItem = this.getActiveItem(),
+                activeIndex = activeItem ? this.getItemIndex(activeItem) : -1;
+
+            if (pos > (this._$items.length - 1) || pos < 0) return
+
+            if (this.moving) return this._$elm.one('jumped.lark.carousel', function() { that.jump(pos) }) // yes, "slid"
+            if (activeIndex == pos)  return this.pause().cycle()
+
+            return this._mode.jump(pos > activeIndex ? 'next' : 'prev', this._$items.eq(pos))
+        },
+         */
+
+        /*
+         * Stops the carousel from cycling through items.
+         */
+        pause : function(pausing) {
+            if (langx.isUndefined(pausing)) {
+              pausing = true;
+            }
+            this.paused = !!pausing;
+
+            ///e || (this.paused = true)
+
+            ///if (this._$elm.find(this.options.controls.selectors.next + ","+ this.options.controls.selectors.prev).length) { //.next,.prev
+                ///this._$elm.trigger(browser.support.transition.end)
+                ///this.cycle(true)
+            ///}
+
+            ///this.interval = clearInterval(this.interval)
+            this.cycle();
+
+            return this
+        },
+
+        /*
+         * Cycles to the next item. Returns to the caller before the next item has been shown
+         */
+        next : function() {
+            return this.jump('next')
+        },
+
+        /*
+         * Cycles to the previous item. Returns to the caller before the previous item has been shown.
+         */
+        prev : function() {
+            return this.jump('prev')
+        },
+
+        resetItems : function() {
+          Group.prototype.resetItems.call(this);
+
+          if (this._mode && this._mode.resetItems) {
+            this._mode.resetItems();
+          }
+        },
+
+        addItems : function(items) {
+            let index = this.getItemsCount();
+            for (var i=0; i<items.length;i++) {
+              this.addItem(index++,items[i]);
+            }
+            this.resetItems();
+        },
+
+        addItem : function(index,itemData) {
+          let itemHtml = this.renderItemHtml(itemData),
+              baseClass = this.options.item.classes.base;
+
+
+          let $item = $(itemHtml);
+          if (baseClass) {
+            $item.addClass(baseClass);
+          }
+
+          if (this._$itemsContainer) {
+            this._$itemsContainer.append($item);
+          }
+          if (this._indicators) {
+            this._indicators.addIndicator(index,itemData);
+          }
+        },
+
+        clearItems : function() {
+          if (this._$itemsContainer) {
+            this._$itemsContainer.attr("style","");
+          }
+          this._$items.remove();
+          this._$items = $();
+
+          if (this._indicators) {
+            this._indicators.clearIndicators();
+          }
+        }
+  });
+
+  var modes = Carousel.modes = {
+    "slide" : ModeSlide,
+    "rotate" : ModeRotate,
+    "coverflow" : ModeCoverflow
+  };
+
+  plugins.register(Carousel);
+
+  return groups.Carousel = Carousel;	
+});
+define('skylark-domx-plugins-toggles/toggles',[
+    "skylark-domx-plugins-base/plugins"
+], function(plugins) {
+    'use strict';
+
+	return plugins.toggles = {};
+});
+define('skylark-domx-plugins-toggles/collapse',[
+    "skylark-langx/langx",
+    "skylark-domx-browser",
+    "skylark-domx-eventer",
+    "skylark-domx-query",
+    "skylark-domx-plugins-base",
+    "./toggles"
+], function(langx, browser, eventer,  $, plugins, toggles) {
+
+
+  'use strict';
+
+  // COLLAPSE PUBLIC CLASS DEFINITION
+  // ================================
+
+  var Collapse =  plugins.Plugin.inherit({
+    klassName: "Collapse",
+
+    pluginName : "lark.toggles.collapse",
+
+    options : {
+      toggle: true
+    },
+
+    _construct : function(elm,options) {
+      ////options = langx.mixin({}, Collapse.DEFAULTS, $(element).data(), options)
+      this.overrided(elm,options);
+      this.$element      = this.$();
+      //this.$trigger      = $('[data-toggle="collapse"][href="#' + elm.id + '"],' +
+      //                     '[data-toggle="collapse"][data-target="#' + elm.id + '"]')
+      this.transitioning = null
+
+      //if (this.options.parent) {
+      //  this.$parent = this.getParent()
+      //} else {
+      //  this.addAriaAndCollapsedClass(this.$element, this.$trigger)
+      //}
+
+      if (this.options.toggle) {
+        this.toggle();
+      }
+    },
+
+    dimension : function () {
+      var hasWidth = this.$element.hasClass('width');
+      return hasWidth ? 'width' : 'height';
+    },
+
+    show : function () {
+      if (this.transitioning || this.$element.hasClass('in')) {
+        return;
+      }
+
+      //var activesData;
+      //var actives = this.$parent && this.$parent.children('.collapsable').children('.in, .collapsing')
+
+      //if (actives && actives.length) {
+      //  activesData = actives.data('collapse')
+      //  if (activesData && activesData.transitioning) return
+      //}
+
+      var startEvent = eventer.create('show.collapse');
+      this.$element.trigger(startEvent)
+      if (startEvent.isDefaultPrevented()) return
+
+      //if (actives && actives.length) {
+      //  //Plugin.call(actives, 'hide')
+      //  actives.plugin("domx.collapse").hide();
+      //  activesData || actives.data('collapse', null)
+      //}
+
+      var dimension = this.dimension();
+
+      this.$element
+        .removeClass('collapse')
+        .addClass('collapsing')[dimension](0)
+        .attr('aria-expanded', true)
+
+      //this.$trigger
+      //  .removeClass('collapsed')
+      //  .attr('aria-expanded', true)
+
+      this.transitioning = 1
+
+      var complete = function () {
+        this.$element
+          .removeClass('collapsing')
+          .addClass('collapse in')[dimension]('')
+        this.transitioning = 0
+        this.$element
+          .trigger('shown.collapse')
+      }
+
+      if (!browser.support.transition) {
+        return complete.call(this);
+      }
+
+      var scrollSize = langx.camelCase(['scroll', dimension].join('-'));
+
+      this.$element
+        .one('transitionEnd', langx.proxy(complete, this))
+        .emulateTransitionEnd(Collapse.TRANSITION_DURATION)[dimension](this.$element[0][scrollSize]);
+    },
+
+    hide : function () {
+      if (this.transitioning || !this.$element.hasClass('in')) {
+        return ;
+      }
+
+      var startEvent = eventer.create('hide.collapse');
+      this.$element.trigger(startEvent);
+      if (startEvent.isDefaultPrevented()) {
+        return ;
+      } 
+
+      var dimension = this.dimension();
+
+      this.$element[dimension](this.$element[dimension]())[0].offsetHeight;
+
+      this.$element
+        .addClass('collapsing')
+        .removeClass('collapse in')
+        .attr('aria-expanded', false);
+
+      //this.$trigger
+      //  .addClass('collapsed')
+      //  .attr('aria-expanded', false);
+
+      this.transitioning = 1;
+
+      var complete = function () {
+        this.transitioning = 0;
+        this.$element
+          .removeClass('collapsing')
+          .addClass('collapse')
+          .trigger('hidden.collapse');
+      }
+
+      if (!browser.support.transition) {
+        return complete.call(this);
+      }
+
+      this.$element
+        [dimension](0)
+        .one('transitionEnd', langx.proxy(complete, this))
+        .emulateTransitionEnd(Collapse.TRANSITION_DURATION)
+    },
+
+    toggle : function () {
+      this[this.$element.hasClass('in') ? 'hide' : 'show']();
+    }
+
+    /*
+    getParent : function () {
+      return $(this.options.parent)
+        .find('[data-toggle="collapse"][data-parent="' + this.options.parent + '"]')
+        .each(langx.proxy(function (i, element) {
+          var $element = $(element)
+          this.addAriaAndCollapsedClass(getTargetFromTrigger($element), $element)
+        }, this))
+        .end()
+    },
+
+    addAriaAndCollapsedClass : function ($element, $trigger) {
+      var isOpen = $element.hasClass('in');
+
+      $element.attr('aria-expanded', isOpen);
+      $trigger
+        .toggleClass('collapsed', !isOpen)
+        .attr('aria-expanded', isOpen);
+    }
+    */
+  });
+
+  Collapse.TRANSITION_DURATION = 350;
+
+  /*
+  function getTargetFromTrigger($trigger) {
+    var href
+    var target = $trigger.attr('data-target')
+      || (href = $trigger.attr('href')) && href.replace(/.*(?=#[^\s]+$)/, '') // strip for ie7
+
+    return $(target)
+  }
+  */
+
+  plugins.register(Collapse);
+
+  return toggles.Collapse = Collapse;
+
+});
+
+ define('skylark-domx-plugins-groups/linear',[
+  "skylark-langx/langx",
+  "skylark-domx-query",
+  "skylark-domx-velm",
+  "skylark-domx-plugins-base",
+  "skylark-domx-plugins-toggles/collapse",
+  "./groups",
+  "./group"
+],function(langx,$,elmx,plugins,Collapse,groups,Group){
+  'use strict'
+
+  var Linear = Group.inherit({
+    klassName : "Linear",
+
+    pluginName : "lark.groups.linear",
+
+    options: {
+        item : {
+          selectable: true
+        },
+        data : {}
+    },
+
+    _construct: function (elm, options) {
+      this.overrided(elm, options);
+
+      if (this.options.data.items) {
+          this.addItems(this.options.data.items);
+      }
+    }
+
+  });
+
+  plugins.register(Linear);
+
+  return groups.Linear = Linear;
+
+});
+
+
+
+
+define('skylark-domx-plugins-dnd/dnd',[
+    "skylark-domx-plugins-base/plugins"
+], function(plugins) {
+
+	return plugins.dnd = {};
+});
+
+
+define('skylark-domx-plugins-dnd/manager',[
+    "./dnd",
+    "skylark-langx/langx",
+    "skylark-domx-noder",
+    "skylark-domx-data",
+    "skylark-domx-finder",
+    "skylark-domx-geom",
+    "skylark-domx-eventer",
+    "skylark-domx-styler"
+], function(dnd, langx, noder, datax, finder, geom, eventer, styler) {
+    var on = eventer.on,
+        off = eventer.off,
+        attr = datax.attr,
+        removeAttr = datax.removeAttr,
+        offset = geom.pagePosition,
+        addClass = styler.addClass,
+        height = geom.height;
+
+
+    var Manager = dnd.Manager = langx.Evented.inherit({
+        klassName: "Manager",
+
+        init: function() {
+
+        },
+
+        prepare: function(draggable) {
+            var e = eventer.create("preparing", {
+                dragSource: draggable.dragSource,
+                dragHandle: draggable.dragHandle
+            });
+            draggable.trigger(e);
+            draggable.dragSource = e.dragSource;
+        },
+
+        start: function(draggable, event) {
+
+            var p = geom.pagePosition(draggable.dragSource);
+            this.draggingOffsetX = parseInt(event.pageX - p.left);
+            this.draggingOffsetY = parseInt(event.pageY - p.top)
+
+            var e = eventer.create("started", {
+                elm: draggable.elm,
+                dragSource: draggable.dragSource,
+                dragHandle: draggable.dragHandle,
+                ghost: null,
+
+                transfer: {}
+            });
+
+            draggable.trigger(e);
+
+
+            this.dragging = draggable;
+
+            if (draggable.draggingClass) {
+                styler.addClass(draggable.dragSource, draggable.draggingClass);
+            }
+
+            this.draggingGhost = e.ghost;
+            if (!this.draggingGhost) {
+                this.draggingGhost = draggable.elm;
+            }
+
+            this.draggingTransfer = e.transfer;
+            if (this.draggingTransfer) {
+
+                langx.each(this.draggingTransfer, function(key, value) {
+                    event.dataTransfer.setData(key, value);
+                });
+            }
+
+            event.dataTransfer.setDragImage(this.draggingGhost, this.draggingOffsetX, this.draggingOffsetY);
+
+            event.dataTransfer.effectAllowed = "copyMove";
+
+            var e1 = eventer.create("dndStarted", {
+                elm: e.elm,
+                dragSource: e.dragSource,
+                dragHandle: e.dragHandle,
+                ghost: e.ghost,
+                transfer: e.transfer
+            });
+
+            this.trigger(e1);
+        },
+
+        over: function() {
+
+        },
+
+        end: function(dropped) {
+            var dragging = this.dragging;
+            if (dragging) {
+                if (dragging.draggingClass) {
+                    styler.removeClass(dragging.dragSource, dragging.draggingClass);
+                }
+            }
+
+            var e = eventer.create("dndEnded", {});
+            this.trigger(e);
+
+
+            this.dragging = null;
+            this.draggingTransfer = null;
+            this.draggingGhost = null;
+            this.draggingOffsetX = null;
+            this.draggingOffsetY = null;
+        }
+    });
+
+    var manager = new Manager();
+
+
+    return manager;
+});
+define('skylark-domx-plugins-dnd/draggable',[
+    "skylark-langx/langx",
+    "skylark-domx-noder",
+    "skylark-domx-data",
+    "skylark-domx-finder",
+    "skylark-domx-geom",
+    "skylark-domx-eventer",
+    "skylark-domx-styler",
+    "skylark-domx-plugins-base",
+    "./dnd",
+    "./manager"
+], function(langx, noder, datax, finder, geom, eventer, styler, plugins, dnd,manager) {
+    var on = eventer.on,
+        off = eventer.off,
+        attr = datax.attr,
+        removeAttr = datax.removeAttr,
+        offset = geom.pagePosition,
+        addClass = styler.addClass,
+        height = geom.height;
+
+
+
+    var Draggable = plugins.Plugin.inherit({
+        klassName: "Draggable",
+        
+        pluginName : "lark.dnd.draggable",
+
+        options : {
+            draggingClass : "dragging"
+        },
+
+        _construct: function(elm, options) {
+            this.overrided(elm,options);
+
+            var self = this,
+                options = this.options;
+
+            self.draggingClass = options.draggingClass;
+
+            ["preparing", "started", "ended", "moving"].forEach(function(eventName) {
+                if (langx.isFunction(options[eventName])) {
+                    self.on(eventName, options[eventName]);
+                }
+            });
+
+
+            eventer.on(elm, {
+                "mousedown": function(e) {
+                    var options = self.options;
+                    if (options.handle) {
+                        self.dragHandle = finder.closest(e.target, options.handle);
+                        if (!self.dragHandle) {
+                            return;
+                        }
+                    }
+                    if (options.source) {
+                        self.dragSource = finder.closest(e.target, options.source);
+                    } else {
+                        self.dragSource = self._elm;
+                    }
+                    manager.prepare(self);
+                    if (self.dragSource) {
+                        datax.attr(self.dragSource, "draggable", 'true');
+                    }
+                },
+
+                "mouseup": function(e) {
+                    if (self.dragSource) {
+                        //datax.attr(self.dragSource, "draggable", 'false');
+                        self.dragSource = null;
+                        self.dragHandle = null;
+                    }
+                },
+
+                "dragstart": function(e) {
+                    datax.attr(self.dragSource, "draggable", 'false');
+                    manager.start(self, e);
+                },
+
+                "dragend": function(e) {
+                    eventer.stop(e);
+
+                    if (!manager.dragging) {
+                        return;
+                    }
+
+                    manager.end(false);
+                }
+            });
+
+        }
+
+    });
+
+    plugins.register(Draggable,"draggable");
+
+    return dnd.Draggable = Draggable;
+});
+define('skylark-domx-plugins-dnd/droppable',[
+    "skylark-langx/langx",
+    "skylark-domx-noder",
+    "skylark-domx-data",
+    "skylark-domx-finder",
+    "skylark-domx-geom",
+    "skylark-domx-eventer",
+    "skylark-domx-styler",
+    "skylark-domx-plugins-base",
+    "./dnd",
+    "./manager"
+], function(langx, noder, datax, finder, geom, eventer, styler, plugins, dnd,manager) {
+    var on = eventer.on,
+        off = eventer.off,
+        attr = datax.attr,
+        removeAttr = datax.removeAttr,
+        offset = geom.pagePosition,
+        addClass = styler.addClass,
+        height = geom.height;
+
+
+    var Droppable = plugins.Plugin.inherit({
+        klassName: "Droppable",
+
+        pluginName : "lark.dnd.droppable",
+
+        options : {
+            draggingClass : "dragging"
+        },
+
+        _construct: function(elm, options) {
+            this.overrided(elm,options);
+
+            var self = this,
+                options = self.options,
+                draggingClass = options.draggingClass,
+                hoverClass,
+                activeClass,
+                acceptable = true;
+
+            ["started", "entered", "leaved", "dropped", "overing"].forEach(function(eventName) {
+                if (langx.isFunction(options[eventName])) {
+                    self.on(eventName, options[eventName]);
+                }
+            });
+
+            eventer.on(elm, {
+                "dragover": function(e) {
+                    e.stopPropagation()
+
+                    if (!acceptable) {
+                        return
+                    }
+
+                    var e2 = eventer.create("overing", {
+                        overElm: e.target,
+                        transfer: manager.draggingTransfer,
+                        acceptable: true
+                    });
+                    self.trigger(e2);
+
+                    if (e2.acceptable) {
+                        e.preventDefault() // allow drop
+
+                        e.dataTransfer.dropEffect = "copyMove";
+                    }
+
+                },
+
+                "dragenter": function(e) {
+                    var options = self.options,
+                        elm = self._elm;
+
+                    var e2 = eventer.create("entered", {
+                        transfer: manager.draggingTransfer
+                    });
+
+                    self.trigger(e2);
+
+                    e.stopPropagation()
+
+                    if (hoverClass && acceptable) {
+                        styler.addClass(elm, hoverClass)
+                    }
+                },
+
+                "dragleave": function(e) {
+                    var options = self.options,
+                        elm = self._elm;
+                    if (!acceptable) return false
+
+                    var e2 = eventer.create("leaved", {
+                        transfer: manager.draggingTransfer
+                    });
+
+                    self.trigger(e2);
+
+                    e.stopPropagation()
+
+                    if (hoverClass && acceptable) {
+                        styler.removeClass(elm, hoverClass);
+                    }
+                },
+
+                "drop": function(e) {
+                    var options = self.options,
+                        elm = self._elm;
+
+                    eventer.stop(e); // stops the browser from redirecting.
+
+                    if (!manager.dragging) return
+
+                    // manager.dragging.elm.removeClass('dragging');
+
+                    if (hoverClass && acceptable) {
+                        styler.addClass(elm, hoverClass)
+                    }
+
+                    var e2 = eventer.create("dropped", {
+                        transfer: manager.draggingTransfer
+                    });
+
+                    self.trigger(e2);
+
+                    manager.end(true)
+                }
+            });
+
+            manager.on("dndStarted", function(e) {
+                var e2 = eventer.create("started", {
+                    transfer: manager.draggingTransfer,
+                    acceptable: false
+                });
+
+                self.trigger(e2);
+
+                acceptable = e2.acceptable;
+                hoverClass = e2.hoverClass;
+                activeClass = e2.activeClass;
+
+                if (activeClass && acceptable) {
+                    styler.addClass(elm, activeClass);
+                }
+
+            }).on("dndEnded", function(e) {
+                var e2 = eventer.create("ended", {
+                    transfer: manager.draggingTransfer,
+                    acceptable: false
+                });
+
+                self.trigger(e2);
+
+                if (hoverClass && acceptable) {
+                    styler.removeClass(elm, hoverClass);
+                }
+                if (activeClass && acceptable) {
+                    styler.removeClass(elm, activeClass);
+                }
+
+                acceptable = false;
+                activeClass = null;
+                hoverClass = null;
+            });
+
+        }
+    });
+
+    plugins.register(Droppable,"droppable");
+
+    return dnd.Droppable = Droppable;
+});
+define('skylark-domx-plugins-groups/sortable',[
+    "./groups",
+    "skylark-langx/langx",
+    "skylark-domx-noder",
+    "skylark-domx-data",
+    "skylark-domx-geom",
+    "skylark-domx-eventer",
+    "skylark-domx-styler",
+    "skylark-domx-query",
+    "skylark-domx-plugins-base",
+    "skylark-domx-plugins-dnd/draggable",
+    "skylark-domx-plugins-dnd/droppable"
+],function(groups, langx,noder,datax,geom,eventer,styler,$,plugins,Draggable,Droppable){
+   'use strict'
+
+    var on = eventer.on,
+        off = eventer.off,
+        attr = datax.attr,
+        removeAttr = datax.removeAttr,
+        offset = geom.pagePosition,
+        addClass = styler.addClass,
+        height = geom.height,
+        some = Array.prototype.some,
+        map = Array.prototype.map;
+
+    var Sorter = plugins.Plugin.inherit({
+        "klassName" : "Sorter",
+
+        enable : function() {
+
+        },
+        
+        disable : function() {
+
+        },
+
+        destory : function() {
+
+        }
+    });
+
+
+    var dragging, placeholders = $();
+
+
+    var Sortable = plugins.Plugin.inherit({
+        klassName: "Sortable",
+
+        pluginName : "lark.groups.sortable",
+        
+        options : {
+            connectWith: false,
+            placeholder: null,
+            placeholderClass: 'sortable-placeholder',
+            draggingClass: 'sortable-dragging',
+            items : null
+        },
+
+        /*
+         * @param {HTMLElement} container  the element to use as a sortable container
+         * @param {Object} options  options object
+         * @param {String} [options.items = ""] 
+         * @param {Object} [options.connectWith =] the selector to create connected groups
+         * @param {Object} [options
+         * @param {Object} [options
+         */
+        _construct : function (container,options) {
+            this.overrided(container,options);
+
+            options = this.options;
+
+            var isHandle, index, 
+                $container = $(container), 
+                $items = $container.children(options.items);
+            var placeholder = $(options.placeholder || noder.createElement(/^(ul|ol)$/i.test(container.tagName) ? 'li' : 'div',{
+                "class" : options.placeholderClass
+            }));
+
+            Draggable(container,{
+                source : options.items,
+                handle : options.handle,
+                draggingClass : options.draggingClass,
+                preparing : function(e) {
+                    //e.dragSource = e.handleElm;
+                },
+                started :function(e) {
+                    e.ghost = e.dragSource;
+                    e.transfer = {
+                        "text": "dummy"
+                    };
+                    index = (dragging = $(e.dragSource)).index();
+                },
+                ended : function(e) {
+                    if (!dragging) {
+                        return;
+                    }
+                    dragging.show();
+                    placeholders.detach();
+                    if (index != dragging.index()) {
+                        dragging.parent().trigger('sortupdate', {item: dragging});
+                    }
+                    dragging = null;                
+                }
+
+            });
+
+            
+            Droppable(container,{
+                started: function(e) {
+                    e.acceptable = true;
+                    e.activeClass = "active";
+                    e.hoverClass = "over";
+                },
+                overing : function(e) {
+                    if ($items.is(e.overElm)) {
+                        if (options.forcePlaceholderSize) {
+                            placeholder.height(dragging.outerHeight());
+                        }
+                        dragging.hide();
+                        $(e.overElm)[placeholder.index() < $(e.overElm).index() ? 'after' : 'before'](placeholder);
+                        placeholders.not(placeholder).detach();
+                    } else if (!placeholders.is(e.overElm) && !$(e.overElm).children(options.items).length) {
+                        placeholders.detach();
+                        $(e.overElm).append(placeholder);
+                    }                
+                },
+                dropped : function(e) {
+                    placeholders.filter(':visible').after(dragging);
+                    dragging.show();
+                    placeholders.detach();
+
+                    dragging = null;                
+                  }
+            });
+
+            $container.data('items', options.items)
+            placeholders = placeholders.add(placeholder);
+            if (options.connectWith) {
+                $(options.connectWith).add(this).data('connectWith', options.connectWith);
+            }
+            
+        }
+    });
+
+    plugins.register(Sortable,"sortable");
+
+    return groups.Sortable = Sortable;
+});
+
+ define('skylark-domx-plugins-groups/tiler',[
+  "skylark-langx/langx",
+  "skylark-domx-query",
+  "skylark-domx-velm",
+  "skylark-domx-plugins-base",
+  "./groups",
+  "./group"
+],function(langx,$,elmx,plugins,groups,Group){
+  'use strict'
+
+  var Tiler = Group.inherit({
+    klassName : "Tiler",
+
+    pluginName : "lark.groups.tiler",
+
+    options: {
+        alignment: 'left',
+        infiniteScroll: false,
+        itemRendered: null,
+        noItemsHTML: 'no items found',
+        selectable: false,
+        viewClass: "repeater-tile",
+        template : '<div class="clearfix repeater-tile" data-container="true" data-infinite="true" data-preserve="shallow"></div>',
+        item : {
+            template: '<div class="thumbnail"><img height="75" src="<%= href %>" width="65"><span><%= title %></span></div>',
+            selectable : true
+        },
+        renderItem : null
+    },
+
+    _construct: function (elm, options) {
+      this.overrided(elm, options);
+
+      this._renderItem = langx.template(this.options.item.template);
+
+      for (var i=0;i<options.items.length;i++) {
+        var itemHtml = this._renderItem(options.items[i]);
+        this._velm.append($(itemHtml));
+      }
+    }
+
+  });
+
+
+  plugins.register(Tiler);
+
+  return groups.Tiler = Tiler;	
+});
+define('skylark-domx-plugins-groups/main',[
+    "./groups",
+    "./group",
+    "./carousel",
+    "./linear",
+    "./sortable",
+    "./tiler"
+], function(groups) {
+    return groups;
+});
+define('skylark-domx-plugins-groups', ['skylark-domx-plugins-groups/main'], function (main) { return main; });
+
+define('skylark-domx-plugins-pictures/pictures',[
+    "skylark-domx-plugins-base/plugins"
+], function(plugins) {
+    'use strict';
+
+	return plugins.pictures = {};
+});
+
+
+define('skylark-domx-plugins-interact/movable',[
+    "skylark-langx/langx",
+    "skylark-domx-noder",
+    "skylark-domx-data",
+    "skylark-domx-geom",
+    "skylark-domx-eventer",
+    "skylark-domx-styler",
+    "skylark-domx-plugins-base",
+    "./interact"
+],function(langx,noder,datax,geom,eventer,styler,plugins,interact){
+    var on = eventer.on,
+        off = eventer.off,
+        attr = datax.attr,
+        removeAttr = datax.removeAttr,
+        offset = geom.pagePosition,
+        addClass = styler.addClass,
+        height = geom.height,
+        some = Array.prototype.some,
+        map = Array.prototype.map;
+
+    var Movable = plugins.Plugin.inherit({
+        klassName: "Movable",
+
+        pluginName : "lark.interact.movable",
+
+
+        _construct : function (elm, options) {
+            this.overrided(elm,options);
+
+
+
+            function updateWithTouchData(e) {
+                var keys, i;
+
+                if (e.changedTouches) {
+                    keys = "screenX screenY pageX pageY clientX clientY".split(' ');
+                    for (i = 0; i < keys.length; i++) {
+                        e[keys[i]] = e.changedTouches[0][keys[i]];
+                    }
+                }
+            }
+
+            function updateWithMoveData(e) {
+                e.movable = self;
+                e.moveEl = elm;
+                e.handleEl = handleEl;
+            }
+
+            options = this.options;
+            var self = this,
+                handleEl = options.handle || elm,
+                auto = options.auto === false ? false : true,
+                constraints = options.constraints,
+                overlayDiv,
+                doc = options.document || document,
+                downButton,
+                start,
+                stop,
+                startX,
+                startY,
+                originalPos,
+                drag,
+                size,
+                startingCallback = options.starting,
+                startedCallback = options.started,
+                movingCallback = options.moving,
+                stoppedCallback = options.stopped,
+
+                start = function(e) {
+                    var docSize = geom.getDocumentSize(doc),
+                        cursor;
+
+                    updateWithTouchData(e);
+                    updateWithMoveData(e);
+
+                    if (startingCallback) {
+                        var ret = startingCallback(e)
+                        if ( ret === false) {
+                            return;
+                        } else if (langx.isPlainObject(ret)) {
+                            if (ret.constraints) {
+                                constraints = ret.constraints;
+                            }
+                            if (ret.started) {
+                                startedCallback = ret.started;
+                            }
+                            if (ret.moving) {
+                                movingCallback = ret.moving;
+                            }                            
+                            if (ret.stopped) {
+                                stoppedCallback = ret.stopped;
+                            }     
+                        }
+                    }
+
+                    e.preventDefault();
+
+                    downButton = e.button;
+                    //handleEl = getHandleEl();
+                    startX = e.screenX;
+                    startY = e.screenY;
+
+                    originalPos = geom.relativePosition(elm);
+                    size = geom.size(elm);
+
+                    // Grab cursor from handle so we can place it on overlay
+                    cursor = styler.css(handleEl, "cursor");
+
+                    overlayDiv = noder.createElement("div");
+                    styler.css(overlayDiv, {
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        width: docSize.width,
+                        height: docSize.height,
+                        zIndex: 0x7FFFFFFF,
+                        opacity: 0.0001,
+                        cursor: cursor
+                    });
+                    noder.append(doc.body, overlayDiv);
+
+                    eventer.on(doc, "mousemove touchmove", move).on(doc, "mouseup touchend", stop);
+
+                    if (startedCallback) {
+                        startedCallback(e);
+                    }
+                },
+
+                move = function(e) {
+                    updateWithTouchData(e);
+                    updateWithMoveData(e);
+
+                    if (e.button !== 0) {
+                        return stop(e);
+                    }
+
+                    e.deltaX = e.screenX - startX;
+                    e.deltaY = e.screenY - startY;
+
+                    if (auto) {
+                        var l = originalPos.left + e.deltaX,
+                            t = originalPos.top + e.deltaY;
+                        if (constraints) {
+
+                            if (l < constraints.minX) {
+                                l = constraints.minX;
+                            }
+
+                            if (l > constraints.maxX) {
+                                l = constraints.maxX;
+                            }
+
+                            if (t < constraints.minY) {
+                                t = constraints.minY;
+                            }
+
+                            if (t > constraints.maxY) {
+                                t = constraints.maxY;
+                            }
+                        }
+                    }
+
+                    geom.relativePosition(elm, {
+                        left: l,
+                        top: t
+                    })
+
+                    e.preventDefault();
+                    if (movingCallback) {
+                        movingCallback(e);
+                    }
+                },
+
+                stop = function(e) {
+                    updateWithTouchData(e);
+
+                    eventer.off(doc, "mousemove touchmove", move).off(doc, "mouseup touchend", stop);
+
+                    noder.remove(overlayDiv);
+
+                    if (stoppedCallback) {
+                        stoppedCallback(e);
+                    }
+                };
+
+            eventer.on(handleEl, "mousedown touchstart", start);
+
+            this._handleEl = handleEl;
+
+        },
+
+        remove : function() {
+            eventer.off(this._handleEl);
+        }
+    });
+
+    plugins.register(Movable,"movable");
+
+    return interact.Movable = Movable;
+});
+
+define('skylark-domx-plugins-pictures/viewer',[
+    "skylark-langx",
+    "skylark-domx/eventer",
+    "skylark-domx/geom",
+    "skylark-domx/query",
+    "skylark-domx-images/preload",
+    "skylark-domx-plugins-base",
+    "skylark-domx-plugins-interact/movable",
+    "./pictures"
+], function (langx,eventer,geom,$,preload,plugins,Movable,pictures) {
+    'use strict';
+
+    var PictureViewer = plugins.Plugin.inherit({
+        klassName : "PictureViewer",
+
+        pluginName : "lark.pictures.pictureviewer",
+
+        options : {
+            ratioThreshold: 0.1,
+            minRatio: 0.05,
+            maxRatio: 16,
+            movable : true,
+
+            classes : {
+                grab : null,
+                loader : null
+            }
+        },
+
+        _construct : function(elm,options) {
+            plugins.Plugin.prototype._construct.call(this,elm,options);
+
+            this.$stage = this.$();
+            this.$image = this.$stage.find("img");
+            
+
+            this.$stage.off("wheel").on("wheel", e => {
+                this._handleWheel(e);
+            });
+
+            if (this.options.movable) {
+                this._movable = new Movable(this.$image[0],{
+                    starting : (e) => {
+                        const imageWidth = this.$image.width();
+                        const imageHeight = this.$image.height();
+                        const stageWidth = this.$stage.width();
+                        const stageHeight = this.$stage.height();
+                        let minX,minY,maxX,maxY;
+
+                        if (stageWidth>=imageWidth && stageHeight>=imageHeight) {
+                            return false;
+                        }
+
+                        if (stageWidth>=imageWidth) {
+                            minX=maxX=(stageWidth-imageWidth) / 2;
+                        } else {
+                            minX = stageWidth - imageWidth;
+                            maxX = 0;
+                        }
+
+                        if (stageHeight>=imageHeight) {
+                            minY=maxY=(stageHeight-imageHeight) / 2;
+                        } else {
+                            minY = stageHeight - imageHeight;
+                            maxY = 0;
+                        }
+
+                        return {
+                            constraints : {
+                                minX,
+                                maxX,
+                                minY,
+                                maxY
+                            }
+                        };
+                    },
+                    started : function(e) {
+                        eventer.stop(e);
+                    }
+                });
+            }
+
+        }, 
+
+        getImageScaleToStage : function(stageWidth, stageHeight) {
+            let scale = 1;
+            if (!this.isRotated) {
+                scale = Math.min(stageWidth / this.img.width, stageHeight / this.img.height, 1);
+            } else {
+                scale = Math.min(stageWidth / this.img.height, stageHeight / this.img.width, 1);
+            }
+            return scale;
+        },
+
+        setGrabCursor : function (imageData, stageData, isRotated) {
+            const imageWidth = !isRotated ? imageData.w : imageData.h;
+            const imageHeight = !isRotated ? imageData.h : imageData.w;
+            if (imageHeight > stageData.h || imageWidth > stageData.w) {
+                this.$stage.addClass('is-grab');
+            }
+            if (imageHeight <= stageData.h && imageWidth <= stageData.w) {
+                this.$stage.removeClass('is-grab');
+            }
+        },
+
+        setImageSize: function(img) {
+            const stageData = {
+                w: this.$stage.width(),
+                h: this.$stage.height()
+            };
+            const scale = this.getImageScaleToStage(stageData.w, stageData.h);
+            this.$image.css({
+                width: Math.ceil(img.width * scale) + 'px',
+                height: Math.ceil(img.height * scale) + 'px',
+                left: (stageData.w - Math.ceil(img.width * scale)) / 2 + 'px',
+                top: (stageData.h - Math.ceil(img.height * scale)) / 2 + 'px'
+            });
+            langx.mixin(this.imageData, {
+                initWidth: img.width * scale,
+                initHeight: img.height * scale,
+                initLeft: (stageData.w - img.width * scale) / 2,
+                initTop: (stageData.h - img.height * scale) / 2,
+                width: img.width * scale,
+                height: img.height * scale,
+                left: (stageData.w - img.width * scale) / 2,
+                top: (stageData.h - img.height * scale) / 2
+            });
+            this.setGrabCursor({
+                w: this.$image.width(),
+                h: this.$image.height()
+            }, {
+                w: this.$stage.width(),
+                h: this.$stage.height()
+            }, this.isRotated);
+            if (!this.imageLoaded) {
+                this.$stage.find(".${ this.options.classes.loader }").remove();
+                this.$stage.removeClass('stage-ready');
+                this.$image.removeClass('image-ready');
+                if (this.options.initAnimation && !this.options.progressiveLoading) {
+                    this.$image.fadeIn();
+                }
+                this.imageLoaded = true;
+            }
+        },
+
+        loadImage : function(imgSrc, fn, err) {
+            this.$image.removeAttr('style').attr('src', '');
+            this.isRotated = false;
+            this.rotateAngle = 0;
+            this.imageLoaded = false;
+            this.$stage.append(`<div class="${ this.options.classes.loader }"></div>`);
+            this.$stage.addClass('stage-ready');
+            this.$image.addClass('image-ready');
+            if (this.options.initAnimation && !this.options.progressiveLoading) {
+                this.$image.hide();
+            }
+            this.$image.attr('src', imgSrc);
+            preload(imgSrc).then((data) => {
+                var img = data.imgs[0];
+                this.img = img;
+                this.imageData = {
+                    originalWidth: img.width,
+                    originalHeight: img.height
+                };
+                ///if (this.isMaximized || this.isOpened && this.options.fixedModalPos) {
+                ///    this.setImageSize(img);
+                ///} else {
+                ///    this.setModalSize(img);
+                ///}
+                if (fn) {
+                    fn(img);
+                }
+            }, () => {
+                this.$photoviewer.find(".${ this.options.classes.loader }").remove();
+                if (err) {
+                    err.call();
+                }
+            });
+
+        },
+
+        _handleWheel : function(e) {
+            e.preventDefault();
+            let delta = 1;
+            if (e.deltaY) {
+                delta = e.deltaY > 0 ? 1 : -1;
+            } else if (e.wheelDelta) {
+                delta = -e.wheelDelta / 120;
+            } else if (e.detail) {
+                delta = e.detail > 0 ? 1 : -1;
+            }
+            const ratio = -delta * this.options.ratioThreshold;
+            const pointer = {
+                x: e.clientX - this.$stage.offset().left + geom.scrollLeft(document.body),
+                y: e.clientY - this.$stage.offset().top + geom.scrollTop(document.body)
+            };
+            this.zoom(ratio, pointer, e);
+        },
+
+        zoom : function(ratio, origin, e) {
+            ratio = ratio < 0 ? 1 / (1 - ratio) : 1 + ratio;
+            ratio = this.$image.width() / this.imageData.originalWidth * ratio;
+            if (ratio > this.options.maxRatio || ratio < this.options.minRatio) {
+                return;
+            }
+            this.zoomTo(ratio, origin, e);
+        },
+
+        zoomTo : function(ratio, origin, e) {
+            const $image = this.$image;
+            const $stage = this.$stage;
+            const imgData = {
+                w: this.imageData.width,
+                h: this.imageData.height,
+                x: this.imageData.left,
+                y: this.imageData.top
+            };
+            const stageData = {
+                w: $stage.width(),
+                h: $stage.height(),
+                x: $stage.offset().left,
+                y: $stage.offset().top
+            };
+            const newWidth = this.imageData.originalWidth * ratio;
+            const newHeight = this.imageData.originalHeight * ratio;
+            let newLeft = origin.x - (origin.x - imgData.x) / imgData.w * newWidth;
+            let newTop = origin.y - (origin.y - imgData.y) / imgData.h * newHeight;
+            const δ = !this.isRotated ? 0 : (newWidth - newHeight) / 2;
+            const imgNewWidth = !this.isRotated ? newWidth : newHeight;
+            const imgNewHeight = !this.isRotated ? newHeight : newWidth;
+            const offsetX = stageData.w - newWidth;
+            const offsetY = stageData.h - newHeight;
+            if (imgNewHeight <= stageData.h) {
+                newTop = (stageData.h - newHeight) / 2;
+            } else {
+                newTop = newTop > δ ? δ : newTop > offsetY - δ ? newTop : offsetY - δ;
+            }
+            if (imgNewWidth <= stageData.w) {
+                newLeft = (stageData.w - newWidth) / 2;
+            } else {
+                newLeft = newLeft > -δ ? -δ : newLeft > offsetX + δ ? newLeft : offsetX + δ;
+            }
+            if (Math.abs(this.imageData.initWidth - newWidth) < this.imageData.initWidth * 0.05) {
+                this.setImageSize(this.img);
+            } else {
+                $image.css({
+                    width: Math.round(newWidth) + 'px',
+                    height: Math.round(newHeight) + 'px',
+                    left: Math.round(newLeft) + 'px',
+                    top: Math.round(newTop) + 'px'
+                });
+                this.setGrabCursor({
+                    w: Math.round(imgNewWidth),
+                    h: Math.round(imgNewHeight)
+                }, {
+                    w: stageData.w,
+                    h: stageData.h
+                });
+            }
+            $.extend(this.imageData, {
+                width: newWidth,
+                height: newHeight,
+                left: newLeft,
+                top: newTop
+            });
+        },
+
+        rotate : function(angle) {
+            this.rotateAngle = this.rotateAngle + angle;
+            if (this.rotateAngle / 90 % 2 === 0) {
+                this.isRotated = false;
+            } else {
+                this.isRotated = true;
+            }
+            this.rotateTo(this.rotateAngle);
+        },
+        rotateTo: function(angle) {
+            this.$image.css({ transform: 'rotate(' + angle + 'deg)' });
+            this.setImageSize({
+                width: this.imageData.originalWidth,
+                height: this.imageData.originalHeight
+            });
+            this.$stage.removeClass('is-grab');
+        },
+        resize: function() {
+            const imageWidth = this.$image.width();
+            const imageHeight = this.$image.height();
+            const stageWidth = this.$stage.width();
+            const stageHeight = this.$stage.height();
+            const left = (stageWidth - imageWidth) /2;
+            const top = (stageHeight- imageHeight) /2;
+            this.$image.css({
+                left,
+                top
+            });
+        },
+
+        shortcut: function(keyCode,ctrlKey,altKey) {
+            var handled = false;
+            switch (keyCode) {
+                // +
+                case 187:
+                    this.zoom(this.options.ratioThreshold * 3, {
+                        x: this.$stage.width() / 2,
+                        y: this.$stage.height() / 2
+                    }, e);
+                    handled = true;
+                    break;
+                // -
+                case 189:
+                    this.zoom(-this.options.ratioThreshold * 3, {
+                        x: this.$stage.width() / 2,
+                        y: this.$stage.height() / 2
+                    }, e);
+                    handled = true;
+                    break;
+                // + Firefox
+                case 61:
+                    this.zoom(this.options.ratioThreshold * 3, {
+                        x: this.$stage.width() / 2,
+                        y: this.$stage.height() / 2
+                    }, e);
+                    handled = true;
+                    break;
+                // - Firefox
+                case 173:
+                    this.zoom(-this.options.ratioThreshold * 3, {
+                        x: this.$stage.width() / 2,
+                        y: this.$stage.height() / 2
+                    }, e);
+                    handled = true;
+                    break;
+                // Ctrl + Alt + 0
+                case 48:
+                    if (ctrlKey && altKey) {
+                        this.zoomTo(1, {
+                            x: this.$stage.width() / 2,
+                            y: this.$stage.height() / 2
+                        }, e);
+                    }
+                    handled = true;
+                    break;
+                // Ctrl + ,
+                case 188:
+                    if (ctrlKey) {
+                        this.rotate(-90);
+                    }
+                    break;
+                // Ctrl + .
+                case 190:
+                    if (ctrlKey) {
+                        this.rotate(90);
+                    }
+                    handled = true;
+                    break;
+                default:
+            }
+
+            return handled;
+        }
+    });
+
+    return pictures.PictureViewer = PictureViewer;
+});
+define('skylark-domx-plugins-pictures/main',[
+	'./pictures',
+	"./viewer"
+], function (pictures) {
+    'use strict';
+    return pictures;
+});
+define('skylark-domx-plugins-pictures', ['skylark-domx-plugins-pictures/main'], function (main) { return main; });
+
+define('skylark-domx-plugins-players/players',[
+    "skylark-domx-plugins-base/plugins"
+], function(plugins) {
+    'use strict';
+
+	return plugins.players = {};
+});
+
+define('skylark-domx-plugins-players/video-player',[
+  "skylark-langx/langx",
+  "skylark-domx-noder",
+  "skylark-domx-eventer",
+  "skylark-domx-query",
+  "skylark-domx-plugins-base",
+  './players',
+],function(langx,noder, eventer,$ , plugins, players) {
+
+  'use strict'
+
+  var VideoPlayer = plugins.Plugin.inherit({
+    klassName : "VideoPlayer",
+
+    pluginName : "lark.players.video",
+   
+    options : {
+      classes : {
+        // The class for video content elements:
+        videoContent: 'video-content',
+        // The class for video when it is loading:
+        videoLoading: 'video-loading',
+        // The class for video when it is playing:
+        videoPlaying: 'video-playing'
+
+      },
+      // The list object property (or data attribute) for the video poster URL:
+      videoPosterProperty: 'poster',
+      // The list object property (or data attribute) for the video sources array:
+      videoSourcesProperty: 'sources',
+
+      ///media  : {
+      ///  title : null,
+      ///  url : null,
+      ///  type : null,
+      ///  posterUrl : null        
+      ///}
+
+    },
+
+
+    _construct: function(elm, options) {
+      //this.options = options
+      plugins.Plugin.prototype._construct.call(this,elm,options);
+
+      let $el = this.$(),
+          $video = $('<video/>'),
+          video = this._video = $video[0],
+          isLoading,
+          hasControls;
+
+      $el.addClass(this.options.classes.videoContent);
+
+      var $poster = this._$poster = $('<img/>');
+      ///$poster.addClass(options.toggleClass)
+      $poster.prop("draggable",false);
+
+      $el.append($poster)
+
+      $poster.css({
+          "maxWidth" : "100%",
+          "maxHeight" : "100%"
+      });
+            
+
+      var $play = this._$play = $('<a/>');
+
+      $play.prop('target','_blank');
+      
+      video.controls = true;
+     
+      this.listenTo($video,'error', function () {
+            ///callback(errorArgs[0]);
+      });
+
+      this.listenTo($video,'pause', function () {
+        if (video.seeking) return
+        isLoading = false;
+        this.$().removeClass(this.options.classes.videoLoading)
+                .removeClass(this.options.classes.videoPlaying);
+        this.trigger("pause");
+      });
+
+
+      this.listenTo($video,'playing', () => {
+        isLoading = false
+        this.$().removeClass(this.options.classes.videoLoading)
+                .addClass(this.options.classes.videoPlaying);
+        this.trigger("playing");
+      });
+
+      this.listenTo($video,'play',  () => {
+        //window.clearTimeout(that.timeout)
+        isLoading = true
+        this.$().addClass(this.options.classes.videoLoading)
+        this.trigger("play");
+      });
+
+
+      this.listenTo($play,'click', (e) =>{
+        eventer.stop(e)
+        if (isLoading) {
+          this.pause()
+        } else {
+          this.play()
+        }
+      })
+
+      $el.append($video);
+
+      $video.css({
+          "maxWidth" : "100%",
+          "maxHeight" : "100%"
+      });
+
+      $el.append($play);
+
+      if (this.options.media) {
+        this.source(this.options.media);
+      }
+    },
+
+
+    source : function(media) {
+      this._media = media;
+      let title = media.title || "",
+          url = media.href,
+          type = media.type,
+          posterUrl = media.poster || "",
+          altText = media.altText || "";
+
+      let $el = this.$(),
+          video = this._video,
+          $play = this._$play,
+          $poster = this._$poster;
+
+      $el.prop("title", title);
+      
+      if (video.canPlayType) {
+        if (url && type && video.canPlayType(type)) {
+          video.src = url
+        }    
+      }
+
+      video.poster = posterUrl
+      
+      $poster.prop({
+        "src" : posterUrl,
+        "alt" : altText
+      });
+
+      $play.prop({
+        'download' :  title,
+        "href" : url
+      });
+    
+    },
+
+    load : function() {
+      this._video.load();
+    },
+
+    play : function() {
+      this._video.play();
+
+    },
+
+    stop : function() {
+
+    },
+
+    pause : function() {
+      this._video.pause();      
+    }
+
+
+  });
+
+  plugins.register(VideoPlayer);
+
+  return players.VideoPlayer = VideoPlayer;
+});
+
+
+define('skylark-domx-plugins-players/main',[
+    "./players",
+    "./video-player"
+], function(players) {
+    return players;
+})
+;
+define('skylark-domx-plugins-players', ['skylark-domx-plugins-players/main'], function (main) { return main; });
+
+define('skylark-domx-plugins-panels/panels',[
+  "skylark-langx/skylark",
+  "skylark-langx/langx",
+  "skylark-domx-browser",
+  "skylark-domx-eventer",
+  "skylark-domx-noder",
+  "skylark-domx-geom",
+  "skylark-domx-query",
+  "skylark-domx-plugins-base/plugins"
+],function(skylark,langx,browser,eventer,noder,geom,$,plugins){
+	var panels = {};
+
+	var CONST = {
+		BACKSPACE_KEYCODE: 8,
+		COMMA_KEYCODE: 188, // `,` & `<`
+		DELETE_KEYCODE: 46,
+		DOWN_ARROW_KEYCODE: 40,
+		ENTER_KEYCODE: 13,
+		TAB_KEYCODE: 9,
+		UP_ARROW_KEYCODE: 38
+	};
+
+	var isShiftHeld = function isShiftHeld (e) { return e.shiftKey === true; };
+
+	var isKey = function isKey (keyCode) {
+		return function compareKeycodes (e) {
+			return e.keyCode === keyCode;
+		};
+	};
+
+	var isBackspaceKey = isKey(CONST.BACKSPACE_KEYCODE);
+	var isDeleteKey = isKey(CONST.DELETE_KEYCODE);
+	var isTabKey = isKey(CONST.TAB_KEYCODE);
+	var isUpArrow = isKey(CONST.UP_ARROW_KEYCODE);
+	var isDownArrow = isKey(CONST.DOWN_ARROW_KEYCODE);
+
+	var ENCODED_REGEX = /&[^\s]*;/;
+	/*
+	 * to prevent double encoding decodes content in loop until content is encoding free
+	 */
+	var cleanInput = function cleanInput (questionableMarkup) {
+		// check for encoding and decode
+		while (ENCODED_REGEX.test(questionableMarkup)) {
+			questionableMarkup = $('<i>').html(questionableMarkup).text();
+		}
+
+		// string completely decoded now encode it
+		return $('<i>').text(questionableMarkup).html();
+	};
+
+	langx.mixin(panels, {
+		CONST: CONST,
+		cleanInput: cleanInput,
+		isBackspaceKey: isBackspaceKey,
+		isDeleteKey: isDeleteKey,
+		isShiftHeld: isShiftHeld,
+		isTabKey: isTabKey,
+		isUpArrow: isUpArrow,
+		isDownArrow: isDownArrow
+	});
+
+	return plugins.panels = panels;
+
+});
+
+define('skylark-domx-plugins-interact/resizable',[
+    "skylark-langx/langx",
+    "skylark-domx-noder",
+    "skylark-domx-data",
+    "skylark-domx-finder",
+    "skylark-domx-geom",
+    "skylark-domx-eventer",
+    "skylark-domx-styler",
+    "skylark-domx-query",
+    "skylark-domx-plugins-base",
+    "./interact",
+    "./movable"
+],function(langx,noder,datax,finder,geom,eventer,styler,$,plugins,interact,Movable){
+    var on = eventer.on,
+        off = eventer.off,
+        attr = datax.attr,
+        removeAttr = datax.removeAttr,
+        offset = geom.pagePosition,
+        addClass = styler.addClass,
+        height = geom.height,
+        some = Array.prototype.some,
+        map = Array.prototype.map;
+
+
+    var Resizable = plugins.Plugin.inherit({
+        klassName: "Resizable",
+
+        "pluginName" : "lark.interact.resizable",
+        
+        options : {
+            // prevents browser level actions like forward back gestures
+            touchActionNone: true,
+            // selector for handle that starts dragging
+            handle : {
+                border : {
+                    directions : {
+                        top: true, //n
+                        left: true, //w
+                        right: true, //e
+                        bottom: true, //s
+                        topLeft : true, // nw
+                        topRight : true, // ne
+                        bottomLeft : true, // sw
+                        bottomRight : true // se                         
+                    },
+                    classes : {
+                        all : "resizable-handle",
+                        top : "resizable-handle-n",
+                        left: "resizable-handle-w",
+                        right: "resizable-handle-e",
+                        bottom: "resizable-handle-s", 
+                        topLeft : "resizable-handle-nw", 
+                        topRight : "resizable-handle-ne",
+                        bottomLeft : "resizable-handle-sw",             
+                        bottomRight : "resizable-handle-se"                         
+                    }
+                },
+                grabber: {
+                    selector : "",
+                    direction : "bottomRight"
+                },
+                selector: true
+            },
+
+            constraints : {
+                minWidth : null,
+                minHeight : null,
+                maxWidth : null,
+                maxHeight : null
+            }
+        },
+
+        _construct :function (elm, options) {
+            this.overrided(elm,options);
+
+
+            options = this.options;
+            var handle = options.handle || {},
+                constraints = options.constraints || {},
+                startedCallback = options.started,
+                movingCallback = options.moving,
+                stoppedCallback = options.stopped;
+
+            if (langx.isString(handle)) {
+                handleEl = finder.find(elm,handle);
+            } else if (langx.isHtmlNode(handle)) {
+                handleEl = handle;
+            }
+
+            function handleResize(handleEl,dir) {
+                let  startRect;
+
+                Movable(handleEl,{
+                    auto : false,
+                    started : function(e) {
+                        startRect = geom.relativeRect(elm);
+                        if (startedCallback) {
+                            startedCallback(e);
+                        }
+                    },
+                    moving : function(e) {
+                        currentRect = {
+                        };
+                        if (dir == "right" || dir == "topRight" || dir == "bottomRight" ) {
+                            currentRect.width = startRect.width + e.deltaX;
+                            if (constraints.minWidth && currentRect.width < constraints.minWidth) {
+                                currentRect.width = constraints.minWidth;
+                            }
+                            if (constraints.maxWidth && currentRect.width > constraints.maxWidth) {
+                                currentRect.width = constraints.maxWidth;
+                            }
+                        } 
+
+                        if (dir == "bottom" || dir == "bottomLeft" || dir == "bottomRight" ) {
+                            currentRect.height = startRect.height + e.deltaY;
+                            if (constraints.minHeight && currentRect.height < constraints.minHeight) {
+                                currentRect.height = constraints.minHeight;
+                            }
+                            if (constraints.maxHeight && currentRect.height > constraints.maxHeight) {
+                                currentRect.height = constraints.maxHeight;
+                            }
+                        } 
+
+                        if (dir == "left" || dir == "topLeft" || dir == "bottomLeft" ) {
+                            currentRect.left = startRect.left + e.deltaX;
+                            currentRect.width = startRect.width - e.deltaX;
+                            if (constraints.minWidth && currentRect.width < constraints.minWidth) {
+                                currentRect.left = currentRect.left + currentRect.width - constraints.minWidth;
+                                currentRect.width = constraints.minWidth;
+                            }
+                            if (constraints.maxWidth && currentRect.width > constraints.maxWidth) {
+                                currentRect.left = currentRect.left + currentRect.width - constraints.maxWidth;
+                                currentRect.width = constraints.maxWidth;
+                            }
+                        } 
+
+                        if (dir == "top" || dir == "topLeft" || dir == "topRight" ) {
+                            currentRect.top = startRect.top + e.deltaY;
+                            currentRect.height = startRect.height - e.deltaY;
+                            if (constraints.minHeight && currentRect.height < constraints.minHeight) {
+                                currentRect.top = currentRect.top + currentRect.height - constraints.minHeight;
+                                currentRect.height = constraints.minHeight;
+                            }
+                            if (constraints.maxHeight && currentRect.height > constraints.maxHeight) {
+                                currentRect.top = currentRect.top + currentRect.height - constraints.maxHeight;
+                                currentRect.height = constraints.maxHeight;
+                            }
+                        } 
+
+                        geom.relativeRect(elm,currentRect);
+
+                        if (movingCallback) {
+                            movingCallback(e);
+                        }
+                        eventer.resized(elm);
+
+                    },
+                    stopped: function(e) {
+                        if (stoppedCallback) {
+                            stoppedCallback(e);
+                        }                
+                    }
+                });
+            }
+
+            if (handle && handle.border) {
+                let borders = []
+                for (var dir in handle.border.directions) {
+                    if (handle.border.directions[dir]) {
+                        let handleEl = noder.createElement("div",{
+                            "className": handle.border.classes.all + " " + handle.border.classes[dir],
+                            "direction" : dir
+                        },elm);   
+                        handleResize(handleEl,dir) ; 
+
+                    }
+
+                }
+            }
+
+            if (handle && handle.grabber && handle.grabber.selector) {
+                 let handleEl = finder.find(elm,handle.grabber.selector);
+                 handleResize(handleEl,handle.grabber.direction) ; 
+            }
+
+        },
+
+        // destroys the dragger.
+        remove: function() {
+            eventer.off(this._handleEl);
+        }
+    });
+
+    plugins.register(Resizable,"resizable");
+
+    return interact.Resizable = Resizable;
+});
+
+define('skylark-domx-plugins-panels/panel',[
+  "skylark-langx/langx",
+  "skylark-domx-browser",
+  "skylark-domx-eventer",
+  "skylark-domx-noder",
+  "skylark-domx-geom",
+  "skylark-domx-query",
+  "skylark-domx-plugins-base",
+  "skylark-domx-plugins-interact/resizable",
+  "./panels",
+],function(langx,browser,eventer,noder,geom,$,plugins,Resizable,panels){
+
+  var Panel = plugins.Plugin.inherit({
+    klassName : "Panel",
+
+    pluginName : "lark.panels.panel",
+
+    options : {
+      /*
+      resizable : {
+          minWidth: 320,
+          minHeight: 320,
+          border : {
+              classes :  {
+                  all : "resizable-handle",
+                  top : "resizable-handle-n",
+                  left: "resizable-handle-w",
+                  right: "resizable-handle-e",
+                  bottom: "resizable-handle-s", 
+                  topLeft : "resizable-handle-nw", 
+                  topRight : "resizable-handle-ne",
+                  bottomLeft : "resizable-handle-sw",             
+                  bottomRight : "resizable-handle-se"     
+              }
+          }
+      }
+      */
+    },
+
+    _construct : function(elm,options) {
+      this.overrided(elm,options);
+      this._velm = this.elmx();
+
+      if (this.options.resizable) {
+
+          this._resizable = new Resizable(elm,{
+              handle : {
+                  border : {
+                      directions : {
+                          top: true, //n
+                          left: true, //w
+                          right: true, //e
+                          bottom: true, //s
+                          topLeft : true, // nw
+                          topRight : true, // ne
+                          bottomLeft : true, // sw
+                          bottomRight : true // se                         
+                      },
+                      classes : {
+                          all : this.options.resizable.border.classes.all,
+                          top : this.options.resizable.border.classes.top,
+                          left: this.options.resizable.border.classes.left,
+                          right: this.options.resizable.border.classes.right,
+                          bottom: this.options.resizable.border.classes.bottom, 
+                          topLeft : this.options.resizable.border.classes.topLeft, 
+                          topRight : this.options.resizable.border.classes.topRight,
+                          bottomLeft : this.options.resizable.border.classes.bottomLeft,             
+                          bottomRight : this.options.resizable.border.classes.bottomRight                        
+                      }                        
+                  }
+              },
+              constraints : {
+                  minWidth : this.options.resizable.minWidth,
+                  minHeight : this.options.resizable.minHeight
+              },
+              started : () => {
+                  this.isResizing = true;
+              },
+              moving : function(e) {
+                  /*
+                  const imageWidth = $(image).width();
+                  const imageHeight = $(image).height();
+                  const stageWidth = $(stage).width();
+                  const stageHeight = $(stage).height();
+                  const left = (stageWidth - imageWidth) /2;
+                  const top = (stageHeight- imageHeight) /2;
+                  $(image).css({
+                      left,
+                      top
+                  });
+                  */
+              },
+              stopped : () => {
+                  this.isResizing = false;
+              }
+          });
+
+      }
+    },
+
+
+  });
+
+  plugins.register(Panel);
+
+  return Panel;
+
+});
+define('skylark-domx-plugins-panels/collapsible',[
+  "skylark-langx/langx",
+  "skylark-domx-browser",
+  "skylark-domx-eventer",
+  "skylark-domx-noder",
+  "skylark-domx-geom",
+  "skylark-domx-query",
+  "skylark-domx-plugins-base",
+  "skylark-domx-plugins-toggles/collapse",
+  "./panels",
+  "./panel"
+],function(langx,browser,eventer,noder,geom,$,plugins,Collapse,panels,Panel){
+
+  var Collapsible = Panel.inherit({
+    klassName : "Collapsible",
+
+    pluginName : "lark.panels.collapsible",
+
+    options : {
+      toggler : {
+        selector : ".panel-heading [data-toggle=\"collapse\"]"
+      },
+
+      body : {
+        selector : ".panel-body"
+      }
+    },
+
+    _construct : function(elm,options) {
+      Panel.prototype._construct.call(this,elm,options);
+      
+      this._expanded = false;
+      this.$toggle = this._velm.find(this.options.toggler.selector);
+      this.$body = this._velm.find(this.options.body.selector);
+      this.$toggle.on('click.panel',(e) => {
+        this.toggle();
+      });
+
+    },
+
+    expand : function() {
+      // expand this panel
+      this.emit("expanding");
+      this.$body.plugin(Collapse.prototype.pluginName).show();
+      this._expanded = true;
+      this.emit("expanded");
+    },
+
+    collapse : function() {
+      // collapse this panel
+      this.emit("collapsing");
+      this.$body.plugin(Collapse.prototype.pluginName).hide();
+      this._expanded = false;
+      this.emit("collapsed");
+    },
+
+    toggle : function() {
+      // toggle this panel
+      if (this._expanded) {
+        this.collapse();
+      } else {
+        this.expand();
+      }
+    },
+
+    full : function() {
+
+    },
+
+    unfull : function() {
+
+    },
+
+    toogleFull : function() {
+
+    },
+    
+    close: function () {
+    }
+
+
+  });
+
+  plugins.register(Collapsible);
+
+  return panels.Collapsible = Collapsible;
+
+});
+ define('skylark-domx-plugins-panels/accordion',[
+  "skylark-langx/langx",
+  "skylark-domx-query",
+  "skylark-domx-velm",
+  "skylark-domx-plugins-base",
+  "./panels",
+  "./panel",
+  "./collapsible"
+],function(langx,$,elmx,plugins,panels,Panel,Collapsible){
+
+  var Accordion = Panel.inherit({
+    klassName : "Accordion",
+
+    pluginName : "lark.panels.accordion",
+
+    options : {
+      panel: {
+        selector : "> .panel",
+        template : null,
+      }
+    },
+
+     _construct : function(elm,options) {
+      Panel.prototype._construct.call(this,elm,options);
+      var panels = [];
+      this._velm.$(this.options.panel.selector).forEach((panelEl) => {
+        var panel = new Accordion.Pane(panelEl,{
+          group : this
+        });
+        panels.push(panel);
+      });
+      this._panels = panels;
+    },
+
+    panels : {
+      get : function() {
+
+      }
+    },
+
+
+    addPanel : function() {
+
+    },
+
+    /**
+     * Removes a group pane.
+     *
+     * @method remove
+     * @return {Accordion} The current widget.
+     */
+    remove : function() {
+
+    },
+
+    /**
+     * Expands a group pane.
+     *
+     * @method remove
+     * @return {Accordion} The current widget.
+     */
+    expand : function() {
+      // expand a panel
+
+    },
+
+    /**
+     * Expands all group panes.
+     *
+     * @method expandAll
+     * @return {Accordion} The current widget.
+     */
+    expandAll : function() {
+      // expand a panel
+
+    },
+
+    /**
+     * Collapse a group pane.
+     *
+     * @method collapse
+     * @return {Accordion} The current widget.
+     */
+    collapse : function() {
+
+    },
+
+    /**
+     * Collapses all group pane.
+     *
+     * @method collapseAll
+     * @return {Accordion} The current widget.
+     */
+    collapseAll : function() {
+
+    }
+  });
+
+  Accordion.Pane = Collapsible.inherit({
+    klassName : "AccordionPane",
+
+    expand : function() {
+      if (this.options.group.active) {
+        this.options.group.active.collapse();
+      }
+      this.overrided();
+      this.options.group.active = this;
+    },
+
+    collapse : function() {
+      this.overrided();
+      this.options.group.active = null;
+    },
+
+    toggle : function() {
+      this.overrided();
+    },
+
+    remove : function() {
+      this.overrided();
+    }
+
+  });
+
+  plugins.register(Accordion);
+
+  return panels.Accordion = Accordion;
+});
+
+define('skylark-domx-plugins-panels/floating',[
+    "skylark-domx/noder",
+    "skylark-domx/eventer",
+    "skylark-domx/query",
+    "skylark-domx-plugins-base",
+    "skylark-domx-plugins-interact/movable",
+    "./panels",
+    "./panel"
+], function (noder,eventer,$,plugins,Movable, panels,Panel) {
+    'use strict';
+
+    var floatings = [];
+
+    var Floating = Panel.inherit({
+        klassName : "Floating",
+
+        pluginName : "lark.panels.floating",
+
+        options : {
+            selectors : {
+                headerPane  : "",
+                contentPane : "",
+                footerPane  : "",
+                titlebar : "",
+                buttons : {
+                    "fullscreen" : ".button-fullscreen",
+                    "maximize" : ".button-maximize",
+                    "minimize" : ".button-minimize",     
+                    "close" : ".button-close"
+                }
+            },
+
+            classes : {
+                "maximize" : "maximize"
+            },
+
+            fixedContent: true,
+            initMaximized: false,
+
+            movable : {
+                dragHandle: false,
+                dragCancel: null
+            }
+        },
+
+        _construct : function(elm,options) {
+            Panel.prototype._construct.call(this,elm,options);
+            this.$pane = $(this._elm);
+
+            this.isOpened = false;
+            this.isMaximized = false;
+
+            if (this.options.movable) {
+                this._movable = new Movable(elm,{
+                    handle : this.options.movable.dragHandle,
+                    starting : (e) => {
+                        const   dragCancel = this.options.movable.dragCancel, 
+                                elemCancel = $(e.target).closest(dragCancel);
+                        if (elemCancel.length) {
+                            return false;
+                        }
+                        if (this.isResizing || this.isMaximized) {
+                            return false;
+                        }
+
+                        return true;
+                    }
+                });
+
+            }
+
+            this.$close = this._velm.$(this.options.selectors.buttons.close);
+            this.$maximize = this._velm.$(this.options.selectors.buttons.maximize);
+            this.$minimize = this._velm.$(this.options.selectors.buttons.minimize);
+            this.$fullscreen = this._velm.$(this.options.selectors.buttons.fullscreen);
+
+
+            this.$close.off("click.window").on("click.window", e => {
+                this.close();
+            });
+            this.$fullscreen.off("click.window").on("click.window", () => {
+                this.fullscreen();
+            });
+            this.$maximize.off("click.window").on("click.window", () => {
+                this.maximize();
+            });
+            this.$pane.off("keydown.window").on("keydown.window", e => {
+                this._keydown(e);
+            });
+
+            floatings.push(this);
+        },
+        close: function() {
+            this.trigger('closing', this);
+            this.$pane.remove();
+            this.isOpened = false;
+            this.isMaximized = false;
+
+            ///if (!$(Constants.CLASS_NS + '-modal').length) {
+            ///    if (this.options.fixedContent) {
+            ///        $('html').css({
+            ///            overflow: '',
+            ///            'padding-right': ''
+            ///        });
+            ///    }
+                ///if (this.options.multiInstances) {
+                ///    zIndex = this.options.zIndex;
+                ///}
+            ///    eventer.off(window,"resize.window");
+            var idx = floatings.indexOf(this);
+            if (idx>-1) {
+                floatings.splice(idx,1);
+            }
+            this.trigger('closed', this);
+        },
+
+        maximize: function() {
+            this.$pane.get(0).focus();
+            if (!this.isMaximized) {
+                this.modalData = {
+                    width: this.$pane.width(),
+                    height: this.$pane.height(),
+                    left: this.$pane.offset().left,
+                    top: this.$pane.offset().top
+                };
+                this.$pane.addClass(this.options.classes.maximize);
+                this.$pane.css({
+                    width: '100%',
+                    height: '100%',
+                    left: 0,
+                    top: 0
+                });
+                this.isMaximized = true;
+            } else {
+                let $W = $(window),$D = $(document);
+                this.$pane.removeClass(this.options.classes.maximize);
+                const initModalLeft = ($W.width() - this.options.modalWidth) / 2 + $D.scrollLeft();
+                const initModalTop = ($W.height() - this.options.modalHeight) / 2 + $D.scrollTop();
+                this.$pane.css({
+                    width: this.modalData.width ? this.modalData.width : this.options.modalWidth,
+                    height: this.modalData.height ? this.modalData.height : this.options.modalHeight,
+                    left: this.modalData.left ? this.modalData.left : initModalLeft,
+                    top: this.modalData.top ? this.modalData.top : initModalTop
+                });
+                this.isMaximized = false;
+            }
+
+            eventer.resized(this._elm);
+        },
+        fullscreen: function() {
+            this.$pane.get(0).focus();
+            noder.fullscreen(this.$pane[0]);
+        },
+        _keydown: function(e) {
+            if (!this.options.keyboard) {
+                return false;
+            }
+            const keyCode = e.keyCode || e.which || e.charCode;
+            const ctrlKey = e.ctrlKey || e.metaKey;
+            const altKey = e.altKey || e.metaKey;
+            switch (keyCode) {
+
+                // Q
+                case 81:
+                    this.close();
+                    break;
+                default:
+            }
+        }
+
+    });
+
+    eventer.on(window,"resize.window", ()=>{
+        for (let i=0; i<floatings.length; i++ ) {
+            eventer.resized(floatings[i]._elm);
+        }
+    });
+
+    return panels.Floating = Floating;
+});
+define('skylark-domx-plugins-panels/pagination',[
+  "skylark-langx/langx",
+  "skylark-domx-browser",
+  "skylark-domx-eventer",
+  "skylark-domx-noder",
+  "skylark-domx-geom",
+  "skylark-domx-query",
+  "skylark-domx-plugins-base",
+  "./panels",
+  "./panel"
+],function(langx,browser,eventer,noder,geom,$,plugins,panels,Panel){
+
+  'use strict';
+
+  var Pagination = Panel.inherit({
+      klassName : "Pagination",
+
+      pluginName : "lark.panels.pagination",
+
+      options : {
+          tagName : "ul",
+          css : "",
+          selectors : {
+              firstNavi : "li[aria-label='first']",
+              prevNavi : "li[aria-label='prev']",
+              nextNavi : "li[aria-label='next']",
+              lastNavi : "li[aria-label='last']",
+              numericNavi : "li:not([aria-label])",
+              numericTxt  : "a"
+          },
+          totalPages: 7,
+          maxButtonsVisible: 5,
+          currentPage: 1     
+      },
+
+      state : {
+          totalPages : Number,
+          currentPage : Number
+      },
+
+      _construct : function(elm,options) {
+        Panel.prototype._construct.call(this,elm,options);
+
+        this.$first = this._velm.$(this.options.selectors.firstNavi);
+        this.$prev = this._velm.$(this.options.selectors.prevNavi);
+        this.$last = this._velm.$(this.options.selectors.lastNavi);
+        this.$next = this._velm.$(this.options.selectors.nextNavi);
+        this.$numeric = this._velm.$(this.options.selectors.numericNavi);
+
+        var self = this;
+
+        function checkCanAction(elm) {
+          var $elm = $(elm);
+          if ($elm.is(".disabled,.active")) {
+            return false;
+          } else {
+            return $elm;
+          }
+        }
+
+        this.$first.click(function(){
+          if (!checkCanAction(this)) {
+            return;
+          }
+          self.currentPage(1);
+        });
+
+        this.$prev.click(function(){
+          if (!checkCanAction(this)) {
+            return;
+          }
+          self.currentPage(self.currentPage()-1);
+        });
+
+        this.$last.click(function(){
+          if (!checkCanAction(this)) {
+            return;
+          }
+          self.currentPage(self.totalPages());
+        });
+
+        this.$next.click(function(){
+          if (!checkCanAction(this)) {
+            return;
+          }
+          self.currentPage(self.currentPage()+1);
+        });
+
+        this.$numeric.click(function(){
+          var ret = checkCanAction(this)
+          if (!ret) {
+            return;
+          }
+          var numeric = ret.find(self.options.selectors.numericTxt).text(),
+              pageNo = parseInt(numeric);
+          self.currentPage(pageNo);
+
+        });
+
+        this._currentPage = this.options.currentPage;
+        this._totalPages = this.options.totalPages;
+
+        this._refresh({
+          currentPage : true,
+          totalPages : true
+        });
+      },
+
+      _refresh: function (updates) {
+        var self = this;
+
+        function changePageNoBtns(currentPage,totalPages) {
+
+          // Create the numeric buttons.
+          // Variable of number control in the buttons.
+          var totalPageNoBtns = Math.min(totalPages, self.options.maxButtonsVisible);
+          var begin = 1;
+          var end = begin + totalPageNoBtns - 1;
+
+          /*
+           * Align the values in the begin and end variables if the user has the
+           * possibility that select a page that doens't appear in the paginador.
+           * e.g currentPage = 1, and user go to the 20 page.
+           */
+          while ((currentPage < begin) || (currentPage > end)) {
+            if (currentPage > end) {
+               begin += totalPageNoBtns;
+               end += totalPageNoBtns;
+
+               if (end > totalPages) {
+                 begin = begin - (end - totalPages);
+                 end = totalPages;
+               }
+             } else {
+               begin -= totalPageNoBtns;
+               end -= totalPageNoBtns;
+
+               if (begin < 0) {
+                 end = end + (begin + totalPageNoBtns);
+                 begin = 1;
+               }
+             }
+          }
+         /*
+          * Verify if the user clicks in the last page show by paginator.
+          * If yes, the paginator advances.
+          */
+          if ((currentPage === end) && (totalPages != 1)) {
+            begin = currentPage - 1;
+            end = begin + totalPageNoBtns - 1;
+
+            if (end >= totalPages) {
+              begin = begin - (end - (totalPages));
+              end = totalPages;
+            }
+          }
+
+          /*
+           * Verify it the user clicks in the first page show by paginator.
+           * If yes, the paginator retrogress
+           */
+           if ((begin === currentPage) && (totalPages != 1)) {
+             if (currentPage != 1) {
+               end = currentPage + 1;
+               begin = end - (totalPageNoBtns - 1);
+             }
+           }
+
+           var count = self.$numeric.size(),
+               visibles = end-begin + 1,
+               i = 0;
+
+           self.$numeric.filter(".active").removeClass("active");
+           while (i<visibles) {
+             var pageNo = i + begin,
+                 $btn = self.$numeric.eq(i);
+             $btn.find(self.options.selectors.numericTxt).text(i+begin).show();
+             if (pageNo == currentPage) {
+              $btn.addClass("active");
+             }
+             i++;
+           }
+           while (i<count) {
+             self.$numeric.eq(i).find(self.options.selectors.numericTxt).text(i+begin).hide();
+             i++;
+           }
+
+
+        }
+
+        function changeLabeldBtns(currentPage,totalPages) {
+          if (currentPage < 1) {
+            throw('Page can\'t be less than 1');
+          } else if (currentPage > totalPages) {
+            throw('Page is bigger than total pages');
+          }
+
+          if (totalPages < 1) {
+            throw('Total Pages can\'t be less than 1');
+          }
+
+          if (currentPage == 1 ) {
+            self.$first.addClass("disabled");
+            self.$prev.addClass("disabled");
+          } else {
+            self.$first.removeClass("disabled");
+            self.$prev.removeClass("disabled");
+          }
+
+          if (currentPage == totalPages ) {
+            self.$last.addClass("disabled");
+            self.$next.addClass("disabled");
+          } else {
+            self.$last.removeClass("disabled");
+            self.$next.removeClass("disabled");
+          }
+        }
+
+        if (updates.currentPage || updates.totalPages) {
+          var currentPage = self.currentPage(),
+              totalPages = self.totalPages();
+
+          changePageNoBtns(currentPage,totalPages);
+          changeLabeldBtns(currentPage,totalPages);
+        }
+
+      },
+
+      currentPage : function(v) {
+        if (v !== undefined) {
+          this._currentPage = v;
+          this._refresh({
+            currentPage : true
+          });            
+          return this;
+        } else {
+          return this._currentPage;
+        }
+      },
+
+      totalPages : function(v) {
+        if (v !== undefined) {
+          this._totalPages = v;
+          this._refresh({
+            totalPages : true
+          });
+          return this;
+        } else {
+          return this._totalPages;
+        }
+      }
+  });
+
+  plugins.register(Pagination);
+
+
+  return panels.Pagination = Pagination;
+});
+define('skylark-domx-plugins-popups/Dropdown',[
+  "skylark-langx/langx",
+  "skylark-domx-browser",
+  "skylark-domx-eventer",
+  "skylark-domx-noder",
+  "skylark-domx-geom",
+  "skylark-domx-query",
+  "skylark-domx-plugins-base",
+  "./popups"
+],function(langx,browser,eventer,noder,geom,$,plugins,popups){
+
+  'use strict';
+
+  // DROPDOWN CLASS DEFINITION
+  // =========================
+
+  var backdrop = '.dropdown-backdrop';
+  var toggle   = '[data-toggle="dropdown"]';
+
+  var Dropdown = plugins.Plugin.inherit({
+    klassName: "Dropdown",
+
+    pluginName : "lark.popups.dropdown",
+
+    options : {
+      "selectors" : {
+        "toggler" : '[data-toggle="dropdown"],.dropdown-menu'
+      }
+
+    },
+
+    _construct : function(elm,options) {
+      this.overrided(elm,options);
+
+      var $el = this.$element = $(this._elm);
+      $el.on('click.dropdown', this.toggle);
+      $el.on('keydown.dropdown', this.options.selectors.toggler,this.keydown);
+    },
+
+    toggle : function (e) {
+      var $this = $(this)
+
+      if ($this.is('.disabled, :disabled')) {
+        return;
+      }
+
+      var $parent  = getParent($this)
+      var isActive = $parent.hasClass('open');
+
+      clearMenus()
+
+      if (!isActive) {
+        if ('ontouchstart' in document.documentElement && !$parent.closest('.navbar-nav').length) {
+          // if mobile we use a backdrop because click events don't delegate
+          $(document.createElement('div'))
+            .addClass('dropdown-backdrop')
+            .insertAfter($(this))
+            .on('click', clearMenus)
+        }
+
+        var relatedTarget = { relatedTarget: this }
+        $parent.trigger(e = eventer.create('show.dropdown', relatedTarget))
+
+        if (e.isDefaultPrevented()) {
+          return;
+        }
+
+        $this
+          .trigger('focus')
+          .attr('aria-expanded', 'true')
+
+        $parent
+          .toggleClass('open')
+          .trigger(eventer.create('shown.dropdown', relatedTarget))
+      }
+
+      return false
+    },
+
+    keydown : function (e) {
+      if (!/(38|40|27|32)/.test(e.which) || /input|textarea/i.test(e.target.tagName)) {
+        return;
+      }
+
+      var $this = $(this);
+
+      e.preventDefault()
+      e.stopPropagation()
+
+      if ($this.is('.disabled, :disabled')) {
+        return;
+      }
+
+      var $parent  = getParent($this)
+      var isActive = $parent.hasClass('open')
+
+      if (!isActive && e.which != 27 || isActive && e.which == 27) {
+        if (e.which == 27) $parent.find(toggle).trigger('focus')
+        return $this.trigger('click')
+      }
+
+      var desc = ' li:not(.disabled):visible a'
+      var $items = $parent.find('.dropdown-menu' + desc)
+
+      if (!$items.length) return
+
+      var index = $items.index(e.target)
+
+      if (e.which == 38 && index > 0)                 index--         // up
+      if (e.which == 40 && index < $items.length - 1) index++         // down
+      if (!~index)                                    index = 0
+
+      $items.eq(index).trigger('focus');
+    }
+
+  });
+
+  function getParent($this) {
+    var selector = $this.attr('data-target')
+
+    if (!selector) {
+      selector = $this.attr('href')
+      selector = selector && /#[A-Za-z]/.test(selector) && selector.replace(/.*(?=#[^\s]*$)/, '') // strip for ie7
+    }
+
+    var $parent = selector && $(selector);
+
+    return $parent && $parent.length ? $parent : $this.parent();
+  }
+
+  function clearMenus(e) {
+    if (e && e.which === 3) return
+    $(backdrop).remove()
+    $(toggle).each(function () {
+      var $this         = $(this)
+      var $parent       = getParent($this)
+      var relatedTarget = { relatedTarget: this }
+
+      if (!$parent.hasClass('open')) return
+
+      if (e && e.type == 'click' && /input|textarea/i.test(e.target.tagName) && noder.contains($parent[0], e.target)) return
+
+      $parent.trigger(e = eventer.create('hide.dropdown', relatedTarget))
+
+      if (e.isDefaultPrevented()) return
+
+      $this.attr('aria-expanded', 'false')
+      $parent.removeClass('open').trigger(eventer.create('hidden.dropdown', relatedTarget))
+    })
+  }
+
+
+
+  // APPLY TO STANDARD DROPDOWN ELEMENTS
+  // ===================================
+  $(document)
+    .on('click.dropdown.data-api', clearMenus)
+    .on('click.dropdown.data-api', '.dropdown form', function (e) { e.stopPropagation() });
+
+  plugins.register(Dropdown);
+
+  return popups.Dropdown = Dropdown;
+
+});
+
+define('skylark-domx-plugins-toggles/tab',[
+  "skylark-langx/langx",
+  "skylark-domx-browser",
+  "skylark-domx-eventer",
+  "skylark-domx-noder",
+  "skylark-domx-geom",
+  "skylark-domx-query",
+  "skylark-domx-plugins-base",
+  "./toggles"
+],function(langx,browser,eventer,noder,geom,$,plugins,toggles){
+
+  'use strict';
+
+  // TAB CLASS DEFINITION
+  // ====================
+
+
+  var Tab =  plugins.Plugin.inherit({
+    klassName: "Tab",
+
+    pluginName : "lark.toggles.tab",
+
+    _construct : function(element,options) {
+      // jscs:disable requireDollarBeforejQueryAssignment
+      this.element = $(element)
+      this.target = options && options.target;
+
+      // jscs:enable requireDollarBeforejQueryAssignment
+      this.element.on("click.lark.toggles.tab",langx.proxy(function(e){
+        e.preventDefault()
+        this.show();
+      },this));    
+    },
+
+    show : function () {
+      var $this    = this.element
+      var $ul      = $this.closest('ul:not(.dropdown-menu)')
+      var selector = this.target || $this.data('target');
+
+      if (!selector) {
+        selector = $this.attr('href')
+        selector = selector && selector.replace(/.*(?=#[^\s]*$)/, '') // strip for ie7
+      }
+
+      if ($this.parent('li').hasClass('active')) return
+
+      var $previous = $ul.find('.active:last a')
+      var hideEvent = eventer.create('hide.lark.toggles.tab', {
+        relatedTarget: $this[0]
+      })
+      var showEvent = eventer.create('show.lark.toggles.tab', {
+        relatedTarget: $previous[0]
+      })
+
+      $previous.trigger(hideEvent);
+      $this.trigger(showEvent);
+
+      if (showEvent.isDefaultPrevented() || hideEvent.isDefaultPrevented()) return
+
+      var $target = $(selector);
+
+      this.activate($this.closest('li'), $ul);
+      this.activate($target, $target.parent(), function () {
+        $previous.trigger({
+          type: 'hidden.lark.toggles.tab',
+          relatedTarget: $this[0]
+        })
+        $this.trigger({
+          type: 'shown.lark.toggles.tab',
+          relatedTarget: $previous[0]
+        })
+      })
+    },
+
+    activate : function (element, container, callback) {
+      var $active    = container.find('> .active')
+      var transition = callback
+        && browser.support.transition
+        && ($active.length && $active.hasClass('fade') || !!container.find('> .fade').length)
+
+      function next() {
+        $active
+          .removeClass('active')
+          .find('> .dropdown-menu > .active')
+            .removeClass('active')
+          .end()
+          .find('[data-toggle="tab"]')
+            .attr('aria-expanded', false)
+
+        element
+          .addClass('active')
+          .find('[data-toggle="tab"]')
+            .attr('aria-expanded', true)
+
+        if (transition) {
+          element[0].offsetWidth // reflow for transition
+          element.addClass('in')
+        } else {
+          element.removeClass('fade')
+        }
+
+        if (element.parent('.dropdown-menu').length) {
+          element
+            .closest('li.dropdown')
+              .addClass('active')
+            .end()
+            .find('[data-toggle="tab"]')
+              .attr('aria-expanded', true)
+        }
+
+        callback && callback()
+      }
+
+      $active.length && transition ?
+        $active
+          .one('transitionEnd', next)
+          .emulateTransitionEnd(Tab.TRANSITION_DURATION) :
+        next()
+
+      $active.removeClass('in')
+    }
+
+
+  });
+
+
+  Tab.TRANSITION_DURATION = 150
+
+
+  plugins.register(Tab);
+
+  return toggles.Tab = Tab;
+});
+
+define('skylark-domx-plugins-panels/tabstrip',[
+    "skylark-langx/langx",
+    "skylark-domx-browser",
+    "skylark-domx-eventer",
+    "skylark-domx-noder",
+    "skylark-domx-geom",
+    "skylark-domx-query",
+    "skylark-domx-plugins-base",
+    "skylark-domx-plugins-popups/Dropdown",
+    "skylark-domx-plugins-toggles/tab",
+    "./panels",
+    "./panel"
+], function(langx, browser, eventer, noder, geom,  $, plugins,Dropdown, TabButton,panels,Panel) {
+
+    var TabStrip = Panel.inherit({
+        klassName : "TabStrip",
+        pluginName : "lark.panels.tabstrip",
+
+        options : {
+          selectors : {
+            header : ".nav-tabs",
+            tab : "[data-toggle=\"tab\"]",
+            content : ".tab-content",
+            tabpane : ".tab-pane"
+          },
+
+          droptabs : {
+            selectors : {
+              dropdown : "li.droptabs",
+              dropdownMenu    : "ul.dropdown-menu",
+              dropdownTabs    : "li",
+              dropdownCaret   : "b.caret",
+              visibleTabs     : ">li:not(.dropdown)",
+            },
+            auto              : true,
+            pullDropdownRight : true,
+
+
+          }
+        },
+
+     _construct : function(elm,options) {
+        Panel.prototype._construct.call(this,elm,options);
+
+        this.$header = this._velm.$(this.options.selectors.header); 
+        this.$tabs = this.$header.find(this.options.selectors.tab);
+        this.$content = this._velm.$(this.options.selectors.content);
+        this.$tabpanes = this.$content.find(this.options.selectors.tabpane);
+
+        this.$header.find('[data-toggle="dropdown"]').plugin(Dropdown.prototype.pluginName);
+
+        var self = this;
+        this.$tabs.each(function(idx,tabEl){
+          $(tabEl).plugin(TabButton.prototype.pluginName, {
+            target : self.$tabpanes[idx]
+          });
+        });
+
+      },
+
+      arrange : function () {
+
+        var dropdownTabsSelector = this.options.droptabs.selectors.dropdownTabs,
+            visibleTabsSelector = this.options.droptabs.selectors.visibleTabs;
+
+            $container = this.$header;
+        var dropdown = $container.find(this.options.droptabs.selectors.dropdown);
+        var dropdownMenu = dropdown.find(this.options.droptabs.selectors.dropdownMenu);
+        var dropdownLabel = $('>a', dropdown).clone();
+        var dropdownCaret = $(this.options.droptabs.selectors.dropdownCaret, dropdown);
+
+        // We only want the default label, strip the caret out
+        $(this.options.droptabs.selectors.dropdownCaret, dropdownLabel).remove();
+
+        if (this.options.droptabs.pullDropdownRight) {
+          $(dropdown).addClass('pull-right');
+        }
+
+        var $dropdownTabs = function () {
+          return $(dropdownTabsSelector, dropdownMenu);
+        }
+
+        var $visibleTabs = function () {
+          return $(visibleTabsSelector, $container);
+        }
+
+        function getFirstHiddenElementWidth() {
+          var tempElem=$dropdownTabs().first().clone().appendTo($container).css("position","fixed");
+          var hiddenElementWidth = $(tempElem).outerWidth();
+          $(tempElem).remove();
+          return hiddenElementWidth;
+        }
+
+        function getHiddenElementWidth(elem) {
+          var tempElem=$(elem).clone().appendTo($container).css("position","fixed");
+          var hiddenElementWidth = $(tempElem).outerWidth();
+          $(tempElem).remove();
+          return hiddenElementWidth;
+        }
+
+        function getDropdownLabel() {
+          var labelText = 'Dropdown';
+          if ($(dropdown).hasClass('active')) {
+            labelText = $('>li.active>a', dropdownMenu).html();
+          } else if (dropdownLabel.html().length > 0) {
+            labelText = dropdownLabel.html();
+          }
+
+          labelText = $.trim(labelText);
+
+          if (labelText.length > 10) {
+            labelText = labelText.substring(0, 10) + '...';
+          }
+
+          return labelText;
+        }
+
+        function renderDropdownLabel() {
+          $('>a', dropdown).html(getDropdownLabel() + ' ' + dropdownCaret.prop('outerHTML'));
+        }
+
+        function manageActive(elem) {
+          //fixes a bug where Bootstrap can't remove the 'active' class on elements after they've been hidden inside the dropdown
+          $('a', $(elem)).on('show.bs.tab', function (e) {
+            $(e.relatedTarget).parent().removeClass('active');
+          })
+          $('a', $(elem)).on('shown.bs.tab', function (e) {
+            renderDropdownLabel();
+          })
+
+        }
+
+        function checkDropdownSelection() {
+          if ($($dropdownTabs()).filter('.active').length > 0) {
+            $(dropdown).addClass('active');
+          } else {
+            $(dropdown).removeClass('active');
+          }
+
+          renderDropdownLabel();
+        }
+
+
+        var visibleTabsWidth = function () {
+          var visibleTabsWidth = 0;
+          $($visibleTabs()).each(function( index ) {
+            visibleTabsWidth += parseInt($(this).outerWidth(), 10);
+          });
+          visibleTabsWidth = visibleTabsWidth + parseInt($(dropdown).outerWidth(), 10);
+          return visibleTabsWidth;
+        }
+
+        var availableSpace = function () {
+          return $container.outerWidth()-visibleTabsWidth();
+        }
+
+        if (availableSpace()<0) {//we will hide tabs here
+          var x = availableSpace();
+          $($visibleTabs().get().reverse()).each(function( index ){
+            if (!($(this).hasClass('always-visible'))){
+                $(this).prependTo(dropdownMenu);
+                x=x+$(this).outerWidth();
+            }
+            if (x>=0) {return false;}
+          });
+        }
+
+        if (availableSpace()>getFirstHiddenElementWidth()) { //and here we bring the tabs out
+          var x = availableSpace();
+          $($dropdownTabs()).each(function( index ){
+            if (getHiddenElementWidth(this) < x && !($(this).hasClass('always-dropdown'))){
+              $(this).appendTo($container);
+              x = x-$(this).outerWidth();
+            } else {return false;}
+           });
+
+          if (!this.options.droptabs.pullDropdownRight && !$(dropdown).is(':last-child')) {
+            // If not pulling-right, keep the dropdown at the end of the container.
+            $(dropdown).detach().insertAfter($container.find('li:last-child'));
+          }
+        }
+
+        if ($dropdownTabs().length <= 0) {
+          dropdown.hide();
+        } else {
+          dropdown.show();
+        }
+      },
+
+      add : function() {
+        //TODO
+      },
+
+      remove : function(){
+        //TODO
+      }
+    });
+
+    plugins.register(TabStrip);
+
+
+    return panels.TabStrip = TabStrip;
+
+});
+define('skylark-domx-plugins-panels/toolbar',[
+  "skylark-langx/langx",
+  "skylark-domx-query",
+  "skylark-domx-plugins-base",
+  "./panels",
+  "./panel"
+],function(langx,$,plugins,panels,Panel){ 
+
+
+  var Toolbar = Panel.inherit({
+    klassName : "Toolbar",
+
+    pluginName : "lark.panels.toolbar",
+
+    options : {
+      toolbarFloat: true,
+      toolbarHidden: false,
+      toolbarFloatOffset: 0,
+      template : '<div class="domx-toolbar"><ul></ul></div>',
+      separator : {
+        template :  '<li><span class="separator"></span></li>'
+      }
+    },
+
+    _construct : function(elm,options) {
+      Panel.prototype._construct.call(this,elm,options);
+
+      var floatInitialized, initToolbarFloat, toolbarHeight;
+      //this.editor = editor;
+
+      //this.opts = langx.extend({}, this.opts, opts);
+      this.opts = this.options;
+
+
+      //if (!langx.isArray(this.opts.toolbar)) {
+      //  this.opts.toolbar = ['bold', 'italic', 'underline', 'strikethrough', '|', 'ol', 'ul', 'blockquote', 'code', '|', 'link', 'image', '|', 'indent', 'outdent'];
+      //}
+
+      this.wrapper = $(this._elm);
+      this.list = this.wrapper.find('ul');
+      this.list.on('click', function(e) {
+        return false;
+      });
+      this.wrapper.on('mousedown', (function(_this) {
+        return function(e) {
+          return _this.list.find('.menu-on').removeClass('.menu-on');
+        };
+      })(this));
+      $(document).on('mousedown.toolbar', (function(_this) {
+        return function(e) {
+          return _this.list.find('.menu-on').removeClass('menu-on');
+        };
+      })(this));
+      if (!this.opts.toolbarHidden && this.opts.toolbarFloat) {
+        this.wrapper.css('top', this.opts.toolbarFloatOffset);
+        toolbarHeight = 0;
+        initToolbarFloat = (function(_this) {
+          return function() {
+            _this.wrapper.css('position', 'static');
+            _this.wrapper.width('auto');
+            _this.editor.editable.util.reflow(_this.wrapper);
+            _this.wrapper.width(_this.wrapper.outerWidth());
+            _this.wrapper.css('left', _this.editor.editable.util.os.mobile ? _this.wrapper.position().left : _this.wrapper.offset().left);
+            _this.wrapper.css('position', '');
+            toolbarHeight = _this.wrapper.outerHeight();
+            _this.editor.placeholderEl.css('top', toolbarHeight);
+            return true;
+          };
+        })(this);
+        floatInitialized = null;
+
+        /*
+        $(window).on('resize.richeditor-' + this.editor.id, function(e) {
+          return floatInitialized = initToolbarFloat();
+        });
+        $(window).on('scroll.richeditor-' + this.editor.id, (function(_this) {
+          return function(e) {
+            var bottomEdge, scrollTop, topEdge;
+            if (!_this.wrapper.is(':visible')) {
+              return;
+            }
+            topEdge = _this.editor.wrapper.offset().top;
+            bottomEdge = topEdge + _this.editor.wrapper.outerHeight() - 80;
+            scrollTop = $(document).scrollTop() + _this.opts.toolbarFloatOffset;
+            if (scrollTop <= topEdge || scrollTop >= bottomEdge) {
+              _this.editor.wrapper.removeClass('toolbar-floating').css('padding-top', '');
+              if (_this.editor.editable.util.os.mobile) {
+                return _this.wrapper.css('top', _this.opts.toolbarFloatOffset);
+              }
+            } else {
+              floatInitialized || (floatInitialized = initToolbarFloat());
+              _this.editor.wrapper.addClass('toolbar-floating').css('padding-top', toolbarHeight);
+              if (_this.editor.editable.util.os.mobile) {
+                return _this.wrapper.css('top', scrollTop - topEdge + _this.opts.toolbarFloatOffset);
+              }
+            }
+          };
+        })(this));
+        */
+      }
+
+      /*
+      this.editor.on('destroy', (function(_this) {
+        return function() {
+          return _this.buttons.length = 0;
+        };
+      })(this));
+      */
+
+      
+    },
+
+    addToolItem : function(itemWidget) {
+      $(itemWidget._elm).appendTo(this.list);
+      return this;
+    },
+
+    addSeparator : function() {
+      $(this.options.separator.template).appendTo(this.list);
+      return this;
+    }
+
+  });
+
+  plugins.register(Toolbar);
+
+  return panels.Toolbar = Toolbar;
+
+});
+define('skylark-domx-plugins-panels/wizard',[
+  "skylark-langx/langx",
+  "skylark-domx-browser",
+  "skylark-domx-eventer",
+  "skylark-domx-noder",
+  "skylark-domx-geom",
+  "skylark-domx-query",
+  "skylark-domx-plugins-base",
+  "./panels",
+  "./panel"
+ ],function(langx,browser,eventer,noder,geom,$,plugins,panels,Panel){
+
+
+	var Wizard = Panel.inherit({
+		klassName: "Wizard",
+
+	    pluginName : "lark.panels.wizard",
+
+	    options : {
+			disablePreviousStep: false,
+			selectedItem: {
+				step: -1
+			}//-1 means it will attempt to look for "active" class in order to set the step
+	    },
+
+	    _construct : function(elm,options) {
+      		Panel.prototype._construct.call(this,elm,options);
+
+			this.$element = this.$();
+			this.options.disablePreviousStep = (this.$element.attr('data-restrict') === 'previous') ? true : this.options.disablePreviousStep;
+			this.currentStep = this.options.selectedItem.step;
+			this.numSteps = this.$element.find('.steps li').length;
+			this.$prevBtn = this.$element.find('button.btn-prev');
+			this.$nextBtn = this.$element.find('button.btn-next');
+
+			var kids = this.$nextBtn.children().detach();
+			this.nextText = langx.trim(this.$nextBtn.text());
+			this.$nextBtn.append(kids);
+
+			var steps = this.$element.children('.steps-container');
+			// maintains backwards compatibility with < 3.8, will be removed in the future
+			if (steps.length === 0) {
+				steps = this.$element;
+				this.$element.addClass('no-steps-container');
+				if (window && window.console && window.console.warn) {
+					window.console.warn('please update your wizard markup to include ".steps-container" as seen in http://getfuelux.com/javascript.html#wizard-usage-markup');
+				}
+			}
+			steps = steps.find('.steps');
+
+			// handle events
+			this.$prevBtn.on('click.fu.wizard', langx.proxy(this.previous, this));
+			this.$nextBtn.on('click.fu.wizard', langx.proxy(this.next, this));
+			steps.on('click.fu.wizard', 'li.complete', langx.proxy(this.stepclicked, this));
+
+			this.selectedItem(this.options.selectedItem);
+
+			if (this.options.disablePreviousStep) {
+				this.$prevBtn.attr('disabled', true);
+				this.$element.find('.steps').addClass('previous-disabled');
+			}
+		},
+
+		destroy: function () {
+			this.$element.remove();
+			// any external bindings [none]
+			// empty elements to return to original markup [none]
+			// returns string of markup
+			return this.$element[0].outerHTML;
+		},
+
+		//index is 1 based
+		//second parameter can be array of objects [{ ... }, { ... }] or you can pass n additional objects as args
+		//object structure is as follows (all params are optional): { badge: '', label: '', pane: '' }
+		addSteps: function (index) {
+			var items = [].slice.call(arguments).slice(1);
+			var $steps = this.$element.find('.steps');
+			var $stepContent = this.$element.find('.step-content');
+			var i, l, $pane, $startPane, $startStep, $step;
+
+			index = (index === -1 || (index > (this.numSteps + 1))) ? this.numSteps + 1 : index;
+			if (items[0] instanceof Array) {
+				items = items[0];
+			}
+
+			$startStep = $steps.find('li:nth-child(' + index + ')');
+			$startPane = $stepContent.find('.step-pane:nth-child(' + index + ')');
+			if ($startStep.length < 1) {
+				$startStep = null;
+			}
+
+			for (i = 0, l = items.length; i < l; i++) {
+				$step = $('<li data-step="' + index + '"><span class="badge badge-info"></span></li>');
+				$step.append(items[i].label || '').append('<span class="chevron"></span>');
+				$step.find('.badge').append(items[i].badge || index);
+
+				$pane = $('<div class="step-pane" data-step="' + index + '"></div>');
+				$pane.append(items[i].pane || '');
+
+				if (!$startStep) {
+					$steps.append($step);
+					$stepContent.append($pane);
+				} else {
+					$startStep.before($step);
+					$startPane.before($pane);
+				}
+
+				index++;
+			}
+
+			this.syncSteps();
+			this.numSteps = $steps.find('li').length;
+			this.setState();
+		},
+
+		//index is 1 based, howMany is number to remove
+		removeSteps: function (index, howMany) {
+			var action = 'nextAll';
+			var i = 0;
+			var $steps = this.$element.find('.steps');
+			var $stepContent = this.$element.find('.step-content');
+			var $start;
+
+			howMany = (howMany !== undefined) ? howMany : 1;
+
+			if (index > $steps.find('li').length) {
+				$start = $steps.find('li:last');
+			} else {
+				$start = $steps.find('li:nth-child(' + index + ')').prev();
+				if ($start.length < 1) {
+					action = 'children';
+					$start = $steps;
+				}
+
+			}
+
+			$start[action]().each(function () {
+				var item = $(this);
+				var step = item.attr('data-step');
+				if (i < howMany) {
+					item.remove();
+					$stepContent.find('.step-pane[data-step="' + step + '"]:first').remove();
+				} else {
+					return false;
+				}
+
+				i++;
+			});
+
+			this.syncSteps();
+			this.numSteps = $steps.find('li').length;
+			this.setState();
+		},
+
+		setState: function () {
+			var canMovePrev = (this.currentStep > 1);//remember, steps index is 1 based...
+			var isFirstStep = (this.currentStep === 1);
+			var isLastStep = (this.currentStep === this.numSteps);
+
+			// disable buttons based on current step
+			if (!this.options.disablePreviousStep) {
+				this.$prevBtn.attr('disabled', (isFirstStep === true || canMovePrev === false));
+			}
+
+			// change button text of last step, if specified
+			var last = this.$nextBtn.attr('data-last');
+			if (last) {
+				this.lastText = last;
+				// replace text
+				var text = this.nextText;
+				if (isLastStep === true) {
+					text = this.lastText;
+					// add status class to wizard
+					this.$element.addClass('complete');
+				} else {
+					this.$element.removeClass('complete');
+				}
+
+				var kids = this.$nextBtn.children().detach();
+				this.$nextBtn.text(text).append(kids);
+			}
+
+			// reset classes for all steps
+			var $steps = this.$element.find('.steps li');
+			$steps.removeClass('active').removeClass('complete');
+			$steps.find('span.badge').removeClass('badge-info').removeClass('badge-success');
+
+			// set class for all previous steps
+			var prevSelector = '.steps li:lt(' + (this.currentStep - 1) + ')';
+			var $prevSteps = this.$element.find(prevSelector);
+			$prevSteps.addClass('complete');
+			$prevSteps.find('span.badge').addClass('badge-success');
+
+			// set class for current step
+			var currentSelector = '.steps li:eq(' + (this.currentStep - 1) + ')';
+			var $currentStep = this.$element.find(currentSelector);
+			$currentStep.addClass('active');
+			$currentStep.find('span.badge').addClass('badge-info');
+
+			// set display of target element
+			var $stepContent = this.$element.find('.step-content');
+			var target = $currentStep.attr('data-step');
+			$stepContent.find('.step-pane').removeClass('active');
+			$stepContent.find('.step-pane[data-step="' + target + '"]:first').addClass('active');
+
+			// reset the wizard position to the left
+			this.$element.find('.steps').first().attr('style', 'margin-left: 0');
+
+			// check if the steps are wider than the container div
+			var totalWidth = 0;
+			this.$element.find('.steps > li').each(function () {
+				totalWidth += $(this).outerWidth();
+			});
+			var containerWidth = 0;
+			if (this.$element.find('.actions').length) {
+				containerWidth = this.$element.width() - this.$element.find('.actions').first().outerWidth();
+			} else {
+				containerWidth = this.$element.width();
+			}
+
+			if (totalWidth > containerWidth) {
+				// set the position so that the last step is on the right
+				var newMargin = totalWidth - containerWidth;
+				this.$element.find('.steps').first().attr('style', 'margin-left: -' + newMargin + 'px');
+
+				// set the position so that the active step is in a good
+				// position if it has been moved out of view
+				if (this.$element.find('li.active').first().position().left < 200) {
+					newMargin += this.$element.find('li.active').first().position().left - 200;
+					if (newMargin < 1) {
+						this.$element.find('.steps').first().attr('style', 'margin-left: 0');
+					} else {
+						this.$element.find('.steps').first().attr('style', 'margin-left: -' + newMargin + 'px');
+					}
+
+				}
+
+			}
+
+			// only fire changed event after initializing
+			if (typeof (this.initialized) !== 'undefined') {
+				var e = eventer.create('changed.fu.wizard');
+				this.$element.trigger(e, {
+					step: this.currentStep
+				});
+			}
+
+			this.initialized = true;
+		},
+
+		stepclicked: function (e) {
+			var li = $(e.currentTarget);
+			var index = this.$element.find('.steps li').index(li);
+
+			if (index < this.currentStep && this.options.disablePreviousStep) {//enforce restrictions
+				return;
+			} else {
+				var evt = eventer.create('stepclicked.fu.wizard');
+				this.$element.trigger(evt, {
+					step: index + 1
+				});
+				if (evt.isDefaultPrevented()) {
+					return;
+				}
+
+				this.currentStep = (index + 1);
+				this.setState();
+			}
+		},
+
+		syncSteps: function () {
+			var i = 1;
+			var $steps = this.$element.find('.steps');
+			var $stepContent = this.$element.find('.step-content');
+
+			$steps.children().each(function () {
+				var item = $(this);
+				var badge = item.find('.badge');
+				var step = item.attr('data-step');
+
+				if (!isNaN(parseInt(badge.html(), 10))) {
+					badge.html(i);
+				}
+
+				item.attr('data-step', i);
+				$stepContent.find('.step-pane[data-step="' + step + '"]:last').attr('data-step', i);
+				i++;
+			});
+		},
+
+		previous: function () {
+			if (this.options.disablePreviousStep || this.currentStep === 1) {
+				return;
+			}
+
+			var e = eventer.create('actionclicked.fu.wizard');
+			this.$element.trigger(e, {
+				step: this.currentStep,
+				direction: 'previous'
+			});
+			if (e.isDefaultPrevented()) {
+				return;
+			}// don't increment ...what? Why?
+
+			this.currentStep -= 1;
+			this.setState();
+
+			// only set focus if focus is still on the $nextBtn (avoid stomping on a focus set programmatically in actionclicked callback)
+			if (this.$prevBtn.is(':focus')) {
+				var firstFormField = this.$element.find('.active').find('input, select, textarea')[0];
+
+				if (typeof firstFormField !== 'undefined') {
+					// allow user to start typing immediately instead of having to click on the form field.
+					$(firstFormField).focus();
+				} else if (this.$element.find('.active input:first').length === 0 && this.$prevBtn.is(':disabled')) {
+					//only set focus on a button as the last resort if no form fields exist and the just clicked button is now disabled
+					this.$nextBtn.focus();
+				}
+
+			}
+		},
+
+		next: function () {
+			var e = eventer.create('actionclicked.fu.wizard');
+			this.$element.trigger(e, {
+				step: this.currentStep,
+				direction: 'next'
+			});
+			if (e.isDefaultPrevented()) {
+				return;
+			}// respect preventDefault in case dev has attached validation to step and wants to stop propagation based on it.
+
+			if (this.currentStep < this.numSteps) {
+				this.currentStep += 1;
+				this.setState();
+			} else {//is last step
+				this.$element.trigger('finished.fu.wizard');
+			}
+
+			// only set focus if focus is still on the $nextBtn (avoid stomping on a focus set programmatically in actionclicked callback)
+			if (this.$nextBtn.is(':focus')) {
+				var firstFormField = this.$element.find('.active').find('input, select, textarea')[0];
+
+				if (typeof firstFormField !== 'undefined') {
+					// allow user to start typing immediately instead of having to click on the form field.
+					$(firstFormField).focus();
+				} else if (this.$element.find('.active input:first').length === 0 && this.$nextBtn.is(':disabled')) {
+					//only set focus on a button as the last resort if no form fields exist and the just clicked button is now disabled
+					this.$prevBtn.focus();
+				}
+
+			}
+		},
+
+		selectedItem: function (selectedItem) {
+			var retVal, step;
+
+			if (selectedItem) {
+				step = selectedItem.step || -1;
+				//allow selection of step by data-name
+				step = Number(this.$element.find('.steps li[data-name="' + step + '"]').first().attr('data-step')) || Number(step);
+
+				if (1 <= step && step <= this.numSteps) {
+					this.currentStep = step;
+					this.setState();
+				} else {
+					step = this.$element.find('.steps li.active:first').attr('data-step');
+					if (!isNaN(step)) {
+						this.currentStep = parseInt(step, 10);
+						this.setState();
+					}
+
+				}
+
+				retVal = this;
+			} else {
+				retVal = {
+					step: this.currentStep
+				};
+				if (this.$element.find('.steps li.active:first[data-name]').length) {
+					retVal.stepname = this.$element.find('.steps li.active:first').attr('data-name');
+				}
+
+			}
+
+			return retVal;
+		}
+
+	});
+
+   plugins.register(Wizard);
+
+	return panels.Wizard = Wizard;
+
+});
+
+define('skylark-domx-plugins-panels/main',[
+    "./panels",
+    "./accordion",
+    "./collapsible",
+    "./floating",
+    "./pagination",
+    "./panel",
+    "./tabstrip",
+    "./toolbar",
+    "./wizard"
+], function(panels) {
+    return panels;
+});
+define('skylark-domx-plugins-panels', ['skylark-domx-plugins-panels/main'], function (main) { return main; });
+
+define('skylark-domx-plugins-embeds/embeds',[
+    "skylark-domx-plugins-base/plugins"
+], function(plugins) {
+    'use strict';
+
+	return plugins.embeds = {};
+});
+
+
+define('skylark-domx-plugins-embeds/embed-runner',[
+    "skylark-domx-iframes/create",
+    "skylark-domx/query",
+    "skylark-domx-plugins-base",
+    "./embeds"
+], function(createIframe, $, plugins,embeds) {
+
+    'use strict';
+    // move from render/live.js
+
+  /** ============================================================================
+   * Skylark Html Viewer
+   * Messages to and from the runner.
+   * ========================================================================== */
+
+  var 
+      $window = $(window),
+      $document = $(document);
+
+
+  var EmbedRunner =  plugins.Plugin.inherit({
+
+    klassName: "EmbedRunner",
+
+    pluginName : "lark.embeds.runner",
+
+    options : {
+      runnerUrl : "",
+      runnerName : ""
+    },
+
+    _construct : function(elm,options) {
+      this.overrided(elm,options);
+
+       /**
+        * Store what runner origin *should* be
+        * TODO this should allow anything if x-origin protection should be disabled
+       */
+       this.runner = {};
+       this.runner.origin = '*';
+
+    },
+
+    /**
+     * Render live preview.
+     * Create the runner iframe, and if postMe wait until the iframe is loaded to
+     * start postMessaging the runner.
+     */
+    prepare :  function () {
+
+      if (this._inited) {
+        return this._inited.promise;
+      }
+
+      this._inited = new Deferred();
+
+      // Basic mode
+      // This adds the runner iframe to the page. It's only run once.
+      //if (!$live.find('iframe').length) {
+        /*
+        iframe = noder.create("iframe",{
+          ///iframe.src = jsbin.runner;
+          src : this.options.runnerUrl
+        },{
+          "class" : "stretch",
+          "sandbox", "allow-modals allow-forms allow-pointer-lock allow-popups allow-same-origin allow-scripts",
+          "frameBorder": '0',
+          "name", "<proxy>",
+        },this._elm);
+
+        try {
+          ///iframe.contentWindow.name = '/' + jsbin.state.code + '/' + jsbin.state.revision;
+          iframe.contentWindow.name  = this.options.runnerName;
+        } catch (e) {
+          // ^- this shouldn't really fail, but if we're honest, it's a fucking mystery as to why it even works.
+          // problem is: if this throws (because iframe.contentWindow is undefined), then the execution exits
+          // and `var renderLivePreview` is set to undefined. The knock on effect is that the calls to renderLivePreview
+          // then fail, and jsbin doesn't boot up. Tears all round, so we catch.
+        }
+      //}
+
+      iframe.onload = () => {
+        if (window.postMessage) {
+          // setup postMessage listening to the runner
+          $window.on('message', (event) => {
+            this.handleMessage(event.originalEvent)
+          });
+          this.setup(iframe);
+          this._inited.resolve();
+        }
+      };
+
+      iframe.onerror = (err) => {
+        this._inited.reject(err);
+      };
+      */
+
+      createIframe({
+        "url" : this.options.runnerUrl,
+        "className" : "stretch",
+        "sandbox" : "allow-modals allow-forms allow-pointer-lock allow-popups allow-same-origin allow-scripts",
+        "frameBorder": '0',
+        "name": "<proxy>",
+        "contentWindowName": this.options.runnerName,
+        "onload" : () => {
+          if (window.postMessage) {
+            // setup postMessage listening to the runner
+            $window.on('message', (event) => {
+              this.handleMessage(event.originalEvent)
+            });
+            this.setup(iframe);
+            this._inited.resolve();
+          }
+        },
+        "onerror" : (err) => {
+          this._inited.reject(err);
+        }
+      },this._elm);
+
+      /**
+       * Events
+       */
+
+      $document.on('codeChange.live', (event, arg) => {
+        if (arg.origin === 'setValue' || arg.origin === undefined) {
+          return;
+        }
+        ///store.sessionStorage.removeItem('runnerPending');
+      });
+
+      // Listen for console input and post it to the iframe
+      $document.on("console:run", (event, cmd)  => {
+        this.postMessage('console:run', cmd);
+      });
+
+      $document.on('console:load:script', (event, url) => {
+        this.postMessage('console:load:script', url);
+      });
+
+      $document.on('console:load:dom', (event, html) => {
+        this.postMessage('console:load:dom', html);
+      });
+
+      /* not need ? // lwf
+       * When the iframe resizes, update the size text
+      this.resize = (function () {
+        var $size = this.$().find('.size');
+
+        var hide = func.debounce(function () {
+          $size.fadeOut(200);
+        }, 2000);
+
+        var embedResizeDone = false;
+
+        return function (data) {
+          
+          ///if (!jsbin.embed) {
+          ///  // Display the iframe size in px in the JS Bin UI
+          ///  size.show().html(data.width + 'px');
+          ///  hide();
+          ///}
+          ///if (jsbin.embed && self !== top && embedResizeDone === false) {
+          if (embedResizeDone === false) {
+            embedResizeDone = true;
+            // Inform the outer page of a size change
+            var height = ($body.outerHeight(true) - $(this.runner.iframe).height()) + data.offsetHeight;
+           window.parent.postMessage({ height: height }, '*');
+          }
+        };
+      }());
+      */
+      
+      return inited.promise;
+    },
+
+
+    /**
+     * Setup the renderer
+     */
+    setup : function (runnerFrame) {
+      this.runner.window = runnerFrame.contentWindow;
+      this.runner.iframe = runnerFrame;
+    },
+
+    /**
+     * Log error messages, indicating that it's from the renderer.
+     */
+    error : function () {
+      // it's quite likely that the error that fires on this handler actually comes
+      // from another service on the page, like a browser plugin, which we can
+      // safely ignore.
+      window.console.warn.apply(console, ['Renderer:'].concat([].slice.call(arguments)));
+    },
+
+    /**
+     * Handle all incoming postMessages to the renderer
+     */
+    handleMessage : function (event) {
+      if (!event.origin) return;
+      var data = event.data;
+
+      if (typeof data !== 'string') {
+        // this event isn't for us (i.e. comes from a browser ext)
+        return;
+      }
+
+      // specific change to handle reveal embedding
+      /*
+       // Unnecessary? //lwf
+      try {
+        if (event.data.indexOf('slide:') === 0 || event.data === 'jsbin:refresh') {
+          // reset the state of the panel visibility
+          jsbin.panels.allEditors(function (p) {
+            p.visible = false;
+          });
+          jsbin.panels.restore();
+          return;
+        }
+      } catch (e) {}
+      */
+
+      try {
+        data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+      } catch (e) {
+        return this.error('Error parsing event data:', e.message);
+      }
+
+      /*
+       // Unnecessary? //lwf
+      if (data.type.indexOf('code:') === 0 && jsbin.embed) {
+        var panel = data.type.substr(5);
+        if (panel === 'js') { panel = 'javascript'; }
+        if (' css javascript html '.indexOf(' ' + panel + ' ') === -1) {
+          return renderer.error('No matching event handler:', data.type);
+        }
+
+        if (!jsbin.state.metadata.pro) {
+          return renderer.error('Code injection is only supported on pro created bins');
+        }
+
+        jsbin.panels.named[panel].setCode(data.data);
+        renderLivePreview();
+
+        return;
+      }
+      */
+
+      if (typeof this[data.type] !== 'function') {
+        return false; //renderer.error('No matching handler for event', data);
+      }
+      try {
+        this[data.type](data.data);
+      } catch (e) {
+        this.error(e.message);
+      }
+    },
+
+    /**
+     * Send message to the runner window
+     */
+    postMessage : function (type, data) {
+      if (!this.runner.window) {
+        return this.error('postMessage: No connection to runner window.');
+      }
+      this.runner.window.postMessage(JSON.stringify({
+        type: type,
+        data: data
+      }), this.runner.origin);
+    },
+
+    /**
+     * When the renderer is complete, it means we didn't hit an initial
+     * infinite loop
+     */
+    complete : function () {
+      try {
+        store.sessionStorage.removeItem('runnerPending');
+      } catch (e) {}
+    },
+
+    /**
+     * Pass loop protection hit calls up to the error UI
+    renderer.loopProtectHit = function (line) {
+      var cm = jsbin.panels.named.javascript.editor;
+
+      // grr - more setTimeouts to the rescue. We need this to go in *after*
+      // jshint does it's magic, but jshint set on a setTimeout, so we have to
+      // schedule after.
+      setTimeout(function () {
+        var annotations = cm.state.lint.annotations || [];
+        if (typeof cm.updateLinting !== 'undefined') {
+          // note: this just updated the *source* reference
+          annotations = annotations.filter(function (a) {
+            return a.source !== 'loopProtectLine:' + line;
+          });
+          annotations.push({
+            from: CodeMirror.Pos(line-1, 0),
+            to: CodeMirror.Pos(line-1, 0),
+            message: 'Exiting potential infinite loop.\nTo disable loop protection: add "// noprotect" to your code',
+            severity: 'warning',
+            source: 'loopProtectLine:' + line
+          });
+
+          cm.updateLinting(annotations);
+        }
+      }, cm.state.lint.options.delay || 0);
+    };
+     */
+
+
+
+    /**
+     * When the iframe focuses, simulate that here
+     */
+    focus : function () {
+      ///jsbin.panels.focus(jsbin.panels.named.live);
+      // also close any open dropdowns
+      ///closedropdown();
+    },
+
+    /**
+     * Proxy console logging to JS Bin's console
+     */
+    console : function (data) {
+      var method = data.method,
+          args = data.args;
+
+      if (!window._console) {return;}
+      if (!window._console[method]) {method = 'log';}
+
+      // skip the entire console rendering if the console is hidden
+      ///if (!jsbin.panels.named.console.visible) { return; }
+
+      window._console[method].apply(window._console, args);
+    },
+
+    /**
+     * Load scripts into rendered iframe
+     */
+    'console:load:script:success' : function (url) {
+      $document.trigger('console:load:script:success', url);
+    },
+
+    'console:load:script:error' : function (err) {
+      $document.trigger('console:load:script:error', err);
+    },
+
+    /**
+     * Load DOME into rendered iframe
+     * TODO abstract these so that they are automatically triggered
+     */
+    'console:load:dom:success' : function (url) {
+      $document.trigger('console:load:dom:success', url);
+    },
+
+    'console:load:dom:error' : function (err) {
+      $document.trigger('console:load:dom:error', err);
+    }
+
+  });
+
+  return embeds.EmbedRunner = EmbedRunner;
+});
+
+define('skylark-domx-plugins-embeds/embed-vimeo',[
+  "skylark-langx/langx",
+  "skylark-domx-noder",
+  "skylark-domx-query",
+    "skylark-domx-plugins-base",
+  './embeds'
+], function (langx, noder, $, plugins, embeds) {
+  'use strict'
+
+  var EmbedVimeo = plugins.Plugin.inherit({
+    klassName: "EmbedVimeo",
+
+    pluginName : "lark.embeds.vimeo",
+
+    options : {
+
+    },
+
+    _construct : function(elm,options) {
+      //url, videoId, playerId, clickToPlay) 
+      plugins.Plugin.prototype._construct.call(this,elm,options);
+
+      this.url = options.url
+      this.videoId = options.videoId
+      this.playerId = options.playerId
+      this.clickToPlay = options.clickToPlay
+
+      ///this.element = document.createElement('div')
+    },
+
+    canPlayType: function () {
+      return true
+    },
+
+    loadAPI: function () {
+      var that = this
+      var apiUrl = '//f.vimeocdn.com/js/froogaloop2.min.js'
+      var scriptTags = document.getElementsByTagName('script')
+      var i = scriptTags.length
+      var scriptTag
+      var called
+
+      function callback() {
+        if (!called && that.playOnReady) {
+          that.play()
+        }
+        called = true
+      }
+      while (i) {
+        i -= 1
+        if (scriptTags[i].src === apiUrl) {
+          scriptTag = scriptTags[i]
+          break
+        }
+      }
+      if (!scriptTag) {
+        scriptTag = document.createElement('script')
+        scriptTag.src = apiUrl
+      }
+      $(scriptTag).on('load', callback)
+      scriptTags[0].parentNode.insertBefore(scriptTag, scriptTags[0])
+      // Fix for cached scripts on IE 8:
+      if (/loaded|complete/.test(scriptTag.readyState)) {
+        callback()
+      }
+    },
+
+    onReady: function () {
+      var that = this
+      this.ready = true
+      this.player.addEvent('play', function () {
+        that.hasPlayed = true
+        that.onPlaying()
+      })
+      this.player.addEvent('pause', function () {
+        that.onPause()
+      })
+      this.player.addEvent('finish', function () {
+        that.onPause()
+      })
+      if (this.playOnReady) {
+        this.play()
+      }
+    },
+
+    onPlaying: function () {
+      if (this.playStatus < 2) {
+        this.emit("playing");
+        this.playStatus = 2
+      }
+    },
+
+    onPause: function () {
+      this.emit("pause");
+      delete this.playStatus
+    },
+
+    insertIframe: function () {
+      var iframe = document.createElement('iframe')
+      iframe.src = this.url
+        .replace('VIDEO_ID', this.videoId)
+        .replace('PLAYER_ID', this.playerId)
+      iframe.id = this.playerId
+      this._elm.parentNode.replaceChild(iframe, this._elm)
+      this._elm = iframe
+    },
+
+    play: function () {
+      var that = this
+      if (!this.playStatus) {
+        this.emit("play");
+        this.playStatus = 1
+      }
+      if (this.ready) {
+        if (
+          !this.hasPlayed &&
+          (this.clickToPlay ||
+            (window.navigator &&
+              /iP(hone|od|ad)/.test(window.navigator.platform)))
+        ) {
+          // Manually trigger the playing callback if clickToPlay
+          // is enabled and to workaround a limitation in iOS,
+          // which requires synchronous user interaction to start
+          // the video playback:
+          this.onPlaying()
+        } else {
+          this.player.api('play')
+        }
+      } else {
+        this.playOnReady = true
+        if (!window.$f) {
+          this.loadAPI()
+        } else if (!this.player) {
+          this.insertIframe()
+          this.player = $f(this._elm)
+          this.player.addEvent('ready', function () {
+            that.onReady()
+          })
+        }
+      }
+    },
+
+    pause: function () {
+      if (this.ready) {
+        this.player.api('pause');
+      } else if (this.playStatus) {
+        delete this.playOnReady;
+        this.emit("pause");
+        delete this.playStatus;
+      }
+    }
+  });
+
+  return embeds.EmbedVimeo = EmbedVimeo;
+
+});
+define('skylark-domx-plugins-embeds/embed-youtube',[
+  "skylark-langx/langx",
+  "skylark-domx-noder",
+  "skylark-domx-query",
+    "skylark-domx-plugins-base",
+  './embeds'
+], function (langx, noder, $, plugins, embeds) {
+  'use strict'
+
+  var EmbedYoutube = plugins.Plugin.inherit({
+    klassName: "EmbedYoutube",
+
+    pluginName : "lark.embeds.youtube",
+
+    options : {
+
+    },
+
+    _construct : function(elm,options) {
+      // videoId, playerVars, clickToPlay
+      plugins.Plugin.prototype._construct.call(this,elm,options);
+
+      this.videoId = options.videoId;
+      this.playerVars = options.playerVars;
+      this.clickToPlay = options.clickToPlay;
+      ///this.element = document.createElement('div');
+    },
+
+    canPlayType: function () {
+      return true;
+    },
+
+    loadAPI: function () {
+      var that = this,
+        onYouTubeIframeAPIReady = window.onYouTubeIframeAPIReady,
+        apiUrl = 'https://www.youtube.com/iframe_api',
+        scriptTags = document.getElementsByTagName('script'),
+        i = scriptTags.length,
+        scriptTag;
+
+      window.onYouTubeIframeAPIReady = function () {
+        if (onYouTubeIframeAPIReady) {
+          onYouTubeIframeAPIReady.apply(this);
+        }
+        if (that.playOnReady) {
+          that.play();
+        }
+      }
+      while (i) {
+        i -= 1
+        if (scriptTags[i].src === apiUrl) {
+          return
+        }
+      }
+      scriptTag = document.createElement('script')
+      scriptTag.src = apiUrl
+      scriptTags[0].parentNode.insertBefore(scriptTag, scriptTags[0])
+    },
+
+    onReady: function () {
+      this.ready = true;
+      if (this.playOnReady) {
+        this.play()
+      }
+    },
+
+    onPlaying: function () {
+      if (this.playStatus < 2) {
+        this.emit("playing");
+        this.playStatus = 2;
+      }
+    },
+
+    onPause: function () {
+      langx.defer(()=>{
+        this.checkSeek();
+      },2000)
+    },
+
+    checkSeek: function () {
+      if (
+        this.stateChange === YT.PlayerState.PAUSED ||
+        this.stateChange === YT.PlayerState.ENDED
+      ) {
+        // check if current state change is actually paused
+        this.emit("pause");
+        delete this.playStatus
+      }
+    },
+
+    onStateChange: function (event) {
+      switch (event.data) {
+        case YT.PlayerState.PLAYING:
+          this.hasPlayed = true
+          this.onPlaying()
+          break
+        case YT.PlayerState.PAUSED:
+        case YT.PlayerState.ENDED:
+          this.onPause()
+          break
+      }
+      // Save most recent state change to this.stateChange
+      this.stateChange = event.data
+    },
+
+    onError: function (event) {
+      this.trigger("error", event);
+    },
+
+    play: function () {
+      var that = this
+      if (!this.playStatus) {
+        this.emit("play");
+        this.playStatus = 1;
+      }
+      if (this.ready) {
+        if (
+          !this.hasPlayed &&
+          (this.clickToPlay ||
+            (window.navigator &&
+              /iP(hone|od|ad)/.test(window.navigator.platform)))
+        ) {
+          // Manually trigger the playing callback if clickToPlay
+          // is enabled and to workaround a limitation in iOS,
+          // which requires synchronous user interaction to start
+          // the video playback:
+          this.onPlaying();
+        } else {
+          this.player.playVideo();
+        }
+      } else {
+        this.playOnReady = true;
+        if (!(window.YT && YT.Player)) {
+          this.loadAPI();
+        } else if (!this.player) {
+          this.player = new YT.Player(this._elm, {
+            videoId: this.videoId,
+            playerVars: this.playerVars,
+            events: {
+              onReady: function () {
+                that.onReady()
+              },
+              onStateChange: function (event) {
+                that.onStateChange(event)
+              },
+              onError: function (event) {
+                that.onError(event)
+              }
+            }
+          })
+        }
+      }
+    },
+
+    pause: function () {
+      if (this.ready) {
+        this.player.pauseVideo()
+      } else if (this.playStatus) {
+        delete this.playOnReady
+        this.emit("pause");
+        delete this.playStatus
+      }
+    }
+  });
+
+  return embeds.EmbedYoutube = EmbedYoutube;
+});
+define('skylark-domx-plugins-embeds/main',[
+	"./embeds",
+	"./embed-runner",
+	"./embed-vimeo",
+	"./embed-youtube"
+],function(embeds){
+	return embeds;
+});
+define('skylark-domx-plugins-embeds', ['skylark-domx-plugins-embeds/main'], function (main) { return main; });
+
+define('skylark-domx-plugins-sandboxs/sandboxs',[
+    "skylark-domx-plugins-base/plugins"
+], function(plugins) {
+    'use strict';
+
+	return plugins.sandboxs = {};
+});
+
+
+define('skylark-domx-plugins-sandboxs/sandbox',[
+    "skylark-langx",
+    "skylark-domx-browser",
+    "skylark-domx-noder",
+    "skylark-domx-eventer",
+    "skylark-domx-query",
+    "skylark-domx-plugins-base",
+    "./sandboxs"
+], function(langx, browser, noder,eventer,  $, plugins, sandboxs) {
+    'use strict';
+  /** ============================================================================
+   * Sandbox
+   * Handles creating and insertion of dynamic iframes
+   * ========================================================================== */
+
+
+  var getIframeWindow = function (iframeElement) {
+      return iframeElement.contentWindow || iframeElement.contentDocument.parentWindow;
+  };
+
+  var Sandbox =  plugins.Plugin.inherit({
+
+    klassName: "Sandbox",
+
+    pluginName : "lark.sandboxs.sandbox",
+
+    options : {
+      name: "Output",
+      allows : 'allow-modals allow-forms allow-pointer-lock allow-popups allow-same-origin allow-scripts',
+      frameBorder : "0",
+      cssTextTagId : 'sandbox-css'
+    },
+
+    _construct : function(elm,options) {
+      this.overrided(elm,options);
+
+      /**
+       * Save the target container element, plus the old and active iframes.
+       */
+      this.target = elm;
+      this.old = null;
+      this.active = null;
+      this.state = {};
+      this.guid = +new Date(); // id used to keep track of which iframe is active
+
+    },
+
+    /**
+     * Create a new sandboxed iframe.
+     */
+    create : function () {
+      var iframe = document.createElement('iframe');
+      // iframe.src = window.location.origin + '/runner-inner';
+      iframe.setAttribute('sandbox', this.options.allows);
+      iframe.setAttribute('frameBorder', this.options.frameBorder);
+      iframe.setAttribute('name', this.options.name);
+      iframe.id = this.guid++;
+      // this.active = iframe;
+      return iframe;
+    },
+
+    /**
+     * Add a new iframe to the page and wait until it has loaded to call the
+     * requester back. Also wait until the new iframe has loaded before removing
+     * the old one.
+     */
+    /**
+     * Add a new iframe to the page and wait until it has loaded to call the
+     * requester back. Also wait until the new iframe has loaded before removing
+     * the old one.
+     */
+    use : function (iframe, done) {
+      if (!this.target) {
+        throw new Error('Sandbox has no target element.');
+
+      }
+      this.old = this.active;
+      this.saveState(this.old);
+      this.active = iframe;
+      noder.prepend(this.target, iframe);
+      // setTimeout allows the iframe to be rendered before other code runs,
+      // allowing us access to the calculated properties like innerWidth.
+      langx.defer((function () {
+        // call the code that renders the iframe source
+        if (done) {
+          done();
+        }
+
+        // remove *all* the iframes, baring the active one
+        var iframes = this.target.getElementsByTagName('iframe');
+        var length = iframes.length;
+        var i = 0;
+        var id = this.active.id;
+        var iframe;
+
+        for (; iframe = iframes[i], i < length; i++) {
+          if (iframe.id !== id) {
+            noder.remove(iframe);
+            length--;
+          }
+        }
+      }).bind(this));
+    },
+
+    /**
+     * Restore the state of a prvious iframe, like scroll position.
+     */
+    restoreState : function (iframe, state) {
+      if (!iframe) return {};
+      var win = getIframeWindow(iframe);
+      if (!win) return {};
+      if (state.scroll) {
+        win.scrollTo(state.scroll.x, state.scroll.y);
+      }
+    },
+
+    /**
+     * Save the state of an iframe, like scroll position.
+     */
+    saveState : function (iframe) {
+      if (!iframe) return {};
+      var win = getIframeWindow(iframe);
+      if (!win) return {};
+      return {
+        scroll: {
+          x: win.scrollX,
+          y: win.scrollY
+        }
+      };
+    },
+
+    /**
+     * Attach event listeners and rpevent some default behaviour on the new
+     * window during live rendering.
+     */
+    wrap : function (childWindow, options) {
+      if (!childWindow) return;
+      options = options || {};
+
+      // Notify the parent of resize events (and send one straight away)
+      ///event.on(childWindow, 'resize', utils.throttle(function () {
+      ///  runner.postMessage('resize', this.getSizeProperties(childWindow));
+      ///}, 25));
+      ///runner.postMessage('resize', this.getSizeProperties(childWindow));
+
+      eventer.on(childWindow, 'resize', function () {
+        eventer.resized(this._elm);
+      });
+
+      // Notify the parent of a focus
+      eventer.on(childWindow, 'focus', () => {
+        //runner.postMessage('focus');
+        eventer.trigger(this._elm,"focused");
+      });
+    },
+
+    getSizeProperties : function (childWindow) {
+      return {
+        width: childWindow.innerWidth || childWindow.document.documentElement.clientWidth,
+        height: childWindow.innerHeight || childWindow.document.documentElement.clientHeight,
+        offsetWidth: childWindow.document.documentElement.offsetWidth,
+        offsetHeight: childWindow.document.documentElement.offsetHeight
+      };
+    },
+
+    /**
+     * Evaluate a command against the active iframe, then use the proxy console
+     * to fire information up to the parent
+     */
+    eval : function (cmd) {
+      if (!this.active) throw new Error("sandbox.eval: has no active iframe.");
+
+      var re = /(^.|\b)console\.(\S+)/g;
+
+      if (re.test(cmd)) {
+        var replaceWith = 'window.runnerWindow.proxyConsole.';
+        cmd = cmd.replace(re, function (all, str, arg) {
+          return replaceWith + arg;
+        });
+      }
+
+      var childWindow = this.active.contentWindow;
+      var output = null,
+          type = 'log';
+      try {
+        output = childWindow.eval(cmd);
+      } catch (e) {
+        output = e.message;
+        type = 'error';
+      }
+
+      return proxyConsole[type](output);
+    },
+
+    /**
+     * Inject a script via a URL into the page
+     */
+    injectScript : function (url, cb) {
+      if (!this.active) throw new Error("sandbox.injectScript: has no active iframe.");
+      var childWindow = this.active.contentWindow,
+          childDocument = childWindow.document;
+      var script = childDocument.createElement('script');
+      script.src = url;
+      script.onload = function () {
+        cb();
+      };
+      script.onerror = function () {
+        cb('Failed to load "' + url + '"');
+      };
+      childDocument.body.appendChild(script);
+    },
+
+    /**
+     * Inject full DOM into the page
+     */
+    injectDOM : function (html, cb) {
+      if (!this.active) throw new Error("sandbox.injectDOM: has no active iframe.");
+      var childWindow = this.active.contentWindow,
+          childDocument = childWindow.document;
+      try {
+        childDocument.body.innerHTML = html;
+      } catch (e) {
+        cb("Failed to load DOM.");
+      }
+      cb();
+    },
+
+    injectCssText : function(cssText) {
+      if (this.active) {
+        var style = this.active.contentDocument.getElementById(this.options.cssTextTagId);
+        if (style) {
+          style.innerHTML = cssText;
+          return;
+        }
+      }
+    },
+
+    render : function(source,options) {
+      var iframe = this.create(options);
+      this.use(iframe, () => {
+        var childDoc = iframe.contentDocument,
+            childWindow = iframe.contentWindow || iframe.contentDocument.parentWindow;
+        if (!childDoc) {
+          childDoc = childWindow.document;
+        }
+
+        // Reset the console to the prototype state
+        let proxyConsole = options.proxyConsole,
+            loopProtect = options.loopProtect;
+
+        proxyConsole.methods.forEach(function (method) {
+          delete proxyConsole[method];
+        });          
+
+
+        // Start writing the page. This will clear any existing document.
+        childDoc.open();
+
+        // We need to write a blank line first – Firefox blows away things you add
+        // to the child window when you do the fist document.write.
+        // Note that each document.write fires a DOMContentLoaded in Firefox.
+        // This method exhibits synchronous and asynchronous behaviour, depending
+        // on the browser. Urg.
+        childDoc.write('');
+
+        // Give the child a reference to things it needs. This has to go here so
+        // that the user's code (that runs as a result of the following
+        // childDoc.write) can access the objects.
+        childWindow.runnerWindow = {
+          proxyConsole: proxyConsole,
+          protect: loopProtect,
+        };
+
+        childWindow.console = proxyConsole;
+
+        // if there's a parse error this will fire
+        childWindow.onerror = function (msg, url, line, col, error) {
+          // show an error on the jsbin console, but not the browser console
+          // (i.e. use _raw), because the browser will throw the native error
+          // which (hopefully) includes a link to the JavaScript VM at that time.
+          proxyConsole._raw('error', error && error.stack ? error.stack : msg + ' (line ' + line + ')');
+        };
+
+        // Write the source out. IE crashes if you have lots of these, so that's
+        // why the source is rendered above (processor.render) – it should be one
+        // string. IE's a sensitive soul.
+        childDoc.write(source);
+        // childDoc.documentElement.innerHTML = source;
+
+        // Close the document. This will fire another DOMContentLoaded.
+        childDoc.close();
+
+        // Setup the new window
+        this.wrap(childWindow, options);
+      });      
+    }
+
+  });
+
+
+  plugins.register(Sandbox);
+
+
+  return sandboxs.Sandbox = Sandbox;
+
+});
+
+
+define('skylark-domx-plugins-sandboxs/main',[
+	"./sandboxs",
+	"./sandbox"
+],function(sandboxs){
+	return sandboxs;
+});
+define('skylark-domx-plugins-sandboxs', ['skylark-domx-plugins-sandboxs/main'], function (main) { return main; });
+
+define('skylark-domx-plugins-menus/menus',[
+	"skylark-langx/skylark"
+],function(skylark){
+	return skylark.attach("domx.plugins.menus");
+});
+define('skylark-domx-plugins-menus/menu',[
+  "skylark-langx/langx",
+  "skylark-domx-query",
+  "skylark-domx-lists",
+  "skylark-domx-plugins-base",
+  "./menus"
+],function(langx,$,lists,plugins,menus){
+  'use strict'
+
+
+  var Menu = plugins.Plugin.inherit({
+    klassName : "Menu",
+
+    pluginName : "lark.menus.menu",
+
+    options : {
+      template : "",
+
+      classes : {
+        base : "lark-menu"
+      },
+
+      selectors : {
+        container : null
+      },
+
+      item : {
+        templates : {
+          general : '<li class="menu-item"><a href="#" class="link"><%= title %></a></li>',
+          separator : "",
+          hasChildren : '<li class="menu-item hasChildren"><a href="#" class="link"><%= title %></a><ul class="submenu"></ul>',
+        },
+
+        classes : {
+          base : "menu-item",
+          active : "active",
+          hasChildren : "hasChildren"
+        },
+
+        selectors : {
+          general : "li",
+          hasChildren : ":has(ul)"
+        }
+      },
+
+      submenu : {
+        template : "<ul></ul>",
+        classes : {
+          base : "submenu"
+        },
+        selectors : {
+          children : "> ul",
+          descendant : "ul"
+        }
+      },
+
+      data : {
+        ///items : []
+      },
+
+      onAction : null
+    },
+
+    _construct : function(elm,options) {
+        plugins.Plugin.prototype._construct.call(this,elm,options);
+
+        this._$container = this.$(this.options.selectors.container);
+
+        if (this.options.onAction) {
+          this.listenTo(this._$container,"click",`.${this.options.item.classes.base}`,(e)=>{
+              var itemData = $(e.currentTarget).data("item");
+              this.options.onAction(itemData);
+
+          });
+        }
+
+    },
+
+    renderMenuItemHtml : function(itemData) {
+      if (!this._renderItemHtml) {
+        let itemTpl = this.options.item.template;
+        if (langx.isString(itemTpl)) {
+          this._renderItemHtml = langx.template(itemTpl);
+        } else if (langx.isFunction(itemTpl)) {
+          this._renderItemHtml = itemTpl;
+        }
+      }
+
+      return this._renderItemHtml(itemData);
+    },
+
+    renderGeneralMenuItem : function(itemData) {
+      if (!this._renderGeneralItemHtml) {
+        let itemTpl = this.options.item.templates.general;
+        if (langx.isString(itemTpl)) {
+          this._renderGeneralItemHtml = langx.template(itemTpl);
+        } else if (langx.isFunction(itemTpl)) {
+          this._renderGeneralItemHtml = itemTpl;
+        }
+      }
+      return $(this._renderGeneralItemHtml(itemData));
+    },
+
+    renderHasChildrenMenuItem : function(itemData) {
+      if (!this._renderHasChildrenItemHtml) {
+        let itemTpl = this.options.item.templates.hasChildren;
+        if (langx.isString(itemTpl)) {
+          this._renderHasChildrenItemHtml = langx.template(itemTpl);
+        } else if (langx.isFunction(itemTpl)) {
+          this._renderHasChildrenItemHtml = itemTpl;
+        }
+      }
+
+      return $(this._renderHasChildrenItemHtml(itemData));
+    }   
+
+
+  });
+
+
+  plugins.register(Menu);
+
+  return menus.Menu = Menu; 
+});
+define('skylark-domx-plugins-menus/accordion-menu',[
+  "skylark-langx/langx",
+  "skylark-domx-query",
+  "skylark-domx-lists",
+  "skylark-domx-plugins-base",
+  "./menus",
+  "./menu"
+],function(langx,$,lists,plugins,menus,Menu){
+  'use strict'
+  
+   var AccordionMenu = Menu.inherit({
+    klassName : "AccordionMenu",
+
+    pluginName : "lark.menus.accordion",
+
+    _construct : function(elm,options) {
+        Menu.prototype._construct.call(this,elm,options);
+
+        lists.multitier(elm, {
+          togglable : true,
+
+          classes : {
+            active :  this.options.item.classes.active  // active
+           /// collapse : "collapse",
+           /// in : "in",
+          },
+
+          selectors : {
+            item : this.options.item.selectors.general,          //li
+            sublist : this.options.submenu.selectors.descendant, //"ul",
+            hasSublist : this.options.item.selectors.hasChildren//":has(ul)",
+            ///handler : " > a"
+          },
+
+          multiExpand : false
+
+        });
+    }
+
+  });
+
+
+  plugins.register(AccordionMenu);
+
+  return menus.AccordionMenu = AccordionMenu; 
+});
+define('skylark-domx-plugins-menus/cascade-menu',[
+  "skylark-langx/langx",
+  "skylark-domx-query",
+  "skylark-domx-lists",
+  "skylark-domx-plugins-base",
+  "./menus",
+  "./menu"
+],function(langx,$,lists,plugins,menus,Menu){
+  'use strict'
+
+  var CascadeMenu = Menu.inherit({
+    klassName : "CascadeMenu",
+
+    pluginName : "lark.menus.cascade",
+
+    _construct : function(elm,options) {
+        Menu.prototype._construct.call(this,elm,options);
+
+        lists.multitier(elm, {
+          togglable : true,
+
+          classes : {
+            active :  this.options.item.classes.active  // active
+           /// collapse : "collapse",
+           /// in : "in",
+          },
+
+          selectors : {
+            item : this.options.item.selectors.general,          //li
+            sublist : this.options.submenu.selectors.descendant, //"ul",
+            hasSublist : this.options.item.selectors.hasChildren//":has(ul)",
+            ///handler : " > a"
+          },
+
+          multiExpand : false
+
+        });
+    }
+
+  });
+
+
+  plugins.register(CascadeMenu);
+
+  return menus.CascadeMenu = CascadeMenu;	
+});
+define('skylark-domx-plugins-menus/mega-menu',[
+  "skylark-langx/langx",
+  "skylark-domx-query",
+  "skylark-domx-lists",
+  "skylark-domx-plugins-base",
+  "./menus",
+  "./menu"
+],function(langx,$,lists,plugins,menus,Menu){
+  'use strict'
+
+  var MegaMenu = Menu.inherit({
+    klassName : "MegaMenu",
+
+    pluginName : "lark.menus.mega",
+
+    options : {
+      menuBehaviour: "click",
+      stickyHeader: true,
+      //selector: $(this),
+      caret:false,
+      caretArrows: [{
+        up: "caret-up",
+        down: "caret-down",
+        upUrl:"",
+        downUrl:"",
+      }],
+      highlighter: true,
+      followingHighlighter: false,
+      highlightColor:"",
+      textHighlighter: false,
+      textHighlighterColor: "",
+      animation:false,
+      animationClass: "",
+
+    },
+
+    _construct : function(elm,options) {
+        Menu.prototype._construct.call(this,elm,options);
+
+        let settings = this.options;
+        
+        var element = settings.selector;
+        var mainLinks = $(".main-links ul li a");
+        var subMenu = $(".menu-dropdown .menu-item-wrapper");
+        var mainLinksDataAttribute = [];
+        var iDofSubMenus = [];
+        var selectElementwithId = $("#"+subMenu.attr("id"));
+
+        var caretUp = this.options.caretArrows[0].up;
+        var caretDown = this.options.caretArrows[0].down;
+
+        // Sticky Heder
+
+        if (settings.stickyHeader === false) {
+          $(".mega-menu").removeClass("sticky-header");
+        }
+        else {
+          $(".mega-menu").addClass("sticky-header");
+        }
+
+        // If caret: custom then it will exclude default settings mentioned above
+        if (settings.caret === true) {
+          var caretUp = settings.caretArrows[0].up;
+          var caretDown = settings.caretArrows[0].down;
+        }
+
+        // If icon caret (up or down) is not empty image caret should be hidden
+        if (settings.caretArrows[0].up || settings.caretArrows[0].down ) {
+          settings.caretArrows[0].upUrl = null;
+          settings.caretArrows[0].downUrl = null;
+        }
+
+        // Creating Caret icon for every link which have data-submenu attribute
+        $("a[data-submenu]").append('<span class="caret ' + caretDown + '"></span>');
+
+        // Set Initial Image path for carret (Default is down)
+        if (settings.caret === true && settings.caretArrows[0].downUrl !== "") {
+          $(".mega-menu span.caret").removeClass("undefined");
+          $(".mega-menu span.caret").addClass("caret-img down");
+          $(".mega-menu span.caret.caret-img.down").css({"background-image" : "url(" +settings.caretArrows[0].downUrl+ ")"});
+        }
+
+        // Append Style on DOM
+        $(`<style>
+            .mega-menu .main-links ul li a:hover{
+              border-color:` +settings.highlightColor+
+            `}
+          </style>`).appendTo("head");
+
+        // Remove Active link Highlight
+        mainLinks.on(settings.menuBehaviour, function(){
+          mainLinks.removeClass("highlight");
+          mainLinks.css({"border-color":""});
+        });
+
+        // If a user didn't defined menu behaviour
+        if (settings.menuBehaviour === "") {
+          settings.menuBehaviour = "click";
+        }
+
+        // Menu Toggle Works
+        mainLinks.each(function(i){
+
+          var linkID = $(this).attr("data-submenu");
+
+          mainLinksDataAttribute.push($(this).attr("data-submenu"));
+
+          $(this).on(settings.menuBehaviour,function(){
+            // Find Position of Menu ULs to help pass index for perticular ID on each menu links
+            var findPositionOfSubmenus = langx.inArray( linkID, iDofSubMenus );
+
+            var imageCaret = $(this).find(".caret.caret-img");
+
+            // Sets every links default behavour for caret except currently clicked
+            mainLinks.find("span").removeClass(caretUp);
+            mainLinks.find("span").addClass(caretDown);
+
+            // $(".caret.caret-img").css("background-image").replace(/\"/g, "") == "url(" +settings.caretArrows[0].downUrl+ ")"
+
+            // Icon Caret toggling
+            if (mainLinksDataAttribute[i] == iDofSubMenus[findPositionOfSubmenus] && !$(subMenu[findPositionOfSubmenus]).hasClass("active")) {
+
+              subMenu.removeClass("active");
+              $(subMenu[findPositionOfSubmenus]).addClass("active");
+
+              $(this).find("span").removeClass(caretDown);
+              $(this).find("span").addClass(caretUp);
+            }
+            else {
+                $(subMenu[findPositionOfSubmenus]).removeClass("active");
+
+                $(this).find("span").removeClass(caretUp);
+                $(this).find("span").addClass(caretDown);
+            }
+
+            // Sets every links default behavour for image caret except currently clicked
+            if ($(".menu-dropdown").find(".menu-item-wrapper").hasClass("active")) {
+              $(".mega-menu span.caret").addClass("down");
+              $(".mega-menu span.caret").css({"background-image" : "url(" +settings.caretArrows[0].downUrl+ ")"});
+            }
+
+            // Image caret toggling
+            if (imageCaret.hasClass("down")) {
+              imageCaret.removeClass("down");
+              imageCaret.addClass("up");
+              imageCaret.css({"background-image" : "url(" +settings.caretArrows[0].upUrl+ ")"});
+              // console.log(imageCaret[0].className);
+            }
+            else {
+              imageCaret.removeClass("up");
+              imageCaret.addClass("down");
+              imageCaret.css({"background-image" : "url(" +settings.caretArrows[0].downUrl+ ")"});
+              // console.log(imageCaret[0].className);
+            }
+
+            // Active link Highlight
+            if (mainLinks.find("span").hasClass("caret-up") || $(this).find("span").hasClass("up") && !$(this).hasClass("highlight") ) {
+              $(this).addClass("highlight");
+
+              // Changing Highlight Color
+              $(this).css({"border-color": settings.highlightColor});
+            }
+
+            // Normal Dropdown Positioning
+            if (subMenu.hasClass("dropdown") ) {
+              var dropDownforClickedLink = $("#"+iDofSubMenus[findPositionOfSubmenus]+".dropdown");
+              dropDownforClickedLink.css({"left": $(this).offset().left })
+            }
+
+          });
+
+        });
+
+
+        // If Follow highlighter set true
+        if (settings.followingHighlighter === true) {
+
+          // Add a element with class first
+          $(".main-links ul").append('<div class="follow-highlighter"></div>');
+
+          // While Mouser Hover
+          mainLinks.mouseover(function(e,i){
+
+            var getCurrentElementMousePos = e.pageX - $(this).offset().left;
+            var currentElementHalfWidth = $(this).innerWidth() / 2;
+
+            $(".follow-highlighter").css({"display": "block"});
+            $(".main-links ul").addClass("follow-highlighter-enabled")
+            $(".follow-highlighter").css({"width" : $(this).innerWidth() , "left" : $(this).offset().left , "background-color": settings.highlightColor});
+
+          });
+        }
+
+        // While Mouse Unhover
+        $(".main-links ul").each(function(){
+          $(this).mouseleave(function(){
+            $(".main-links ul").removeClass("follow-highlighter-enabled");
+            $(".follow-highlighter").css({"display": "none", "left" : $(mainLinks[0]).offset().left});
+          })
+        })
+
+        // If no need of highighter
+        if (settings.highlighter === false) {
+          $(".main-links").addClass("disable-highlighter");
+          $(".follow-highlighter").remove();
+        }
+
+        // If Text Highlighter Set to true
+        if (settings.textHighlighter === true) {
+          $(".main-links").addClass("text-highlighter");
+        }
+        // Text Highlighter Color
+        if (settings.textHighlighterColor) {
+          $("style").append(`.mega-menu .text-highlighter.main-links ul li a:hover{
+            color:` + settings.textHighlighterColor +
+          `}`);
+        }
+
+          // Get menus IDs
+          subMenu.each(function(i){
+            iDofSubMenus.push($(subMenu[i]).attr("id"));
+          });
+
+          // Add Animations
+          if (settings.animation === true) {
+            subMenu.addClass(settings.animationClass);
+          }
+
+          // Mobile Nav icon
+          $(".mobile-nav-icon a").click(function(){
+            $(".follow-highlighter").remove();
+            if ($(".main-links").hasClass("active")) {
+              $(".main-links").removeClass("active");
+              $(".menu-dropdown").hide();
+            }
+            else {
+              $(".main-links").addClass("active");
+              $(".menu-dropdown").show();
+            }
+          });
+
+
+          // Responsive options
+
+          $(".menu-item-wrapper").prepend('<a href="#" class="back-link">Back</a>');
+
+          $(window).resize(function() {
+           if ($(window).width() < 768) {
+
+             // Get main-links marging top as height of mobile-nav-icon
+             if ($(".mega-menu").hasClass("sticky-header")) {
+               $(".mega-menu").addClass("responsive-menu");
+               $(".main-links").css({"margin-top": $(".mobile-nav-icon").outerHeight()+"px"});
+
+               // $(".menu-item-wrapper").prepend('<a href="#" class="back-link">Back</a>');
+
+             }
+
+           } else {
+             $(".main-links").css({"margin-top": "0px"});
+             // $(".back-link").remove();
+            // $(".mega-menu").removeClass("responsive-menu");
+           }
+          });
+
+          ///$(document).ready(
+          ///  function(){
+          ///    $(".back-link").on('click', function(){
+          ///      mainLinks.trigger('click');
+         ///       $(mainLinks[mainLinks.length - 1]).trigger('click');
+          ///    });
+          ///  }
+          ///)
+    }
+
+  });
+
+
+  plugins.register(MegaMenu);
+
+  return menus.MegaMenu = MegaMenu;	
+});
+define('skylark-domx-plugins-menus/nav-menu',[
+  "skylark-langx/langx",
+  "skylark-domx-query",
+  "skylark-domx-lists",
+  "skylark-domx-plugins-base",
+  "./menus",
+  "./menu"
+],function(langx,$,lists,plugins,menus,Menu){
+  'use strict'
+
+  var NavMenu = Menu.inherit({
+    klassName : "NavMenu",
+
+    pluginName : "lark.menus.nav",
+
+    options : {
+      item : {
+        templates : {
+        } 
+      }
+    },
+
+    _construct : function(elm,options) {
+        Menu.prototype._construct.call(this,elm,options);
+
+        if (this.options.data.items) {
+          this.resetItems(this.options.data.items);
+        }
+
+        lists.multitier(elm, {
+          togglable : false,
+
+          classes : {
+            active :  this.options.item.classes.active  // active
+           /// collapse : "collapse",
+           /// in : "in",
+          },
+
+          selectors : {
+            item : this.options.item.selectors.general,          //li
+            sublist : this.options.submenu.selectors.descendant, //"ul",
+            hasSublist : this.options.item.selectors.hasChildren//":has(ul)",
+            ///handler : " > a"
+          },
+
+          multiExpand : false
+
+        });
+    },
+
+    resetItems : function(itemsData) {
+      let self = this;
+
+      function renderItem(itemData,$container) {
+        let $item;
+        if (itemData.children) {
+          $item = self.renderHasChildrenMenuItem(itemData);
+        } else {
+          $item = self.renderGeneralMenuItem(itemData);
+        }
+
+        $item.data("item",itemData);
+        $container.append($item)
+
+        if (itemData.children) {
+          let $childrenContainer = $item.find(self.options.submenu.selectors.children);
+          itemData.children.forEach((childItemData) => {
+            renderItem(childItemData,$childrenContainer);            
+          });
+        }
+      }
+        
+      let $itemsContainer = this.$(this.options.selectors.container)
+
+      itemsData.forEach((itemData)=>{
+        renderItem(itemData,$itemsContainer);
+      });
+    }
+
+  });
+
+
+  plugins.register(NavMenu);
+
+  return menus.NavMenu = NavMenu;	
+});
+define('skylark-domx-plugins-toggles/checkbox',[
+  "skylark-langx/langx",
+  "skylark-domx/browser",
+  "skylark-domx/eventer",
+  "skylark-domx/noder",
+  "skylark-domx/geom",
+  "skylark-domx/query",
+  "skylark-domx-plugins-base",
+  "./toggles"
+],function(langx,browser,eventer,noder,geom,$,plugins,toggles){
+
+  var Checkbox = plugins.Plugin.inherit({
+    klassName: "Checkbox",
+
+    pluginName : "lark.toggles.checkbox",
+
+    options : {
+      ignoreVisibilityCheck: false
+    },
+
+    _construct : function(elm,options) {
+      this.overrided(elm,options);
+      var $element = this.$();
+
+      if (elm.tagName.toLowerCase() !== 'label') {
+        throw new Error('Checkbox must be initialized on the `label` that wraps the `input` element. See https://github.com/ExactTarget/fuelux/blob/master/reference/markup/checkbox.html for example of proper markup. Call `.checkbox()` on the `<label>` not the `<input>`');
+        return;
+      }
+
+      // cache elements
+      this.$label = $element;
+      this.$chk = this.$label.find('input[type="checkbox"]');
+      this.$container = $element.parent('.checkbox'); // the container div
+
+      if (!this.options.ignoreVisibilityCheck && this.$chk.css('visibility').match(/hidden|collapse/)) {
+        throw new Error('For accessibility reasons, in order for tab and space to function on checkbox, checkbox `<input />`\'s `visibility` must not be set to `hidden` or `collapse`. See https://github.com/ExactTarget/fuelux/pull/1996 for more details.');
+      }
+
+      // determine if a toggle container is specified
+      var containerSelector = this.$chk.attr('data-toggle');
+      this.$toggleContainer = $(containerSelector);
+
+      // handle internal events
+      this.$chk.on('change', langx.proxy(this.itemchecked, this));
+
+      // set default state
+      this.setInitialState();
+    },
+
+    setInitialState: function setInitialState () {
+      var $chk = this.$chk;
+
+      // get current state of input
+      var checked = $chk.prop('checked');
+      var disabled = $chk.prop('disabled');
+
+      // sync label class with input state
+      this.setCheckedState($chk, checked);
+      this.setDisabledState($chk, disabled);
+    },
+
+    setCheckedState: function setCheckedState (element, checked) {
+      var $chk = element;
+      var $lbl = this.$label;
+      var $containerToggle = this.$toggleContainer;
+
+      if (checked) {
+        $chk.prop('checked', true);
+        $lbl.addClass('checked');
+        $containerToggle.removeClass('hide hidden');
+        $lbl.trigger('checked.lark.toggles.checkbox');
+      } else {
+        $chk.prop('checked', false);
+        $lbl.removeClass('checked');
+        $containerToggle.addClass('hidden');
+        $lbl.trigger('unchecked.lark.toggles.checkbox');
+      }
+
+      $lbl.trigger('changed.lark.toggles.checkbox', checked);
+    },
+
+    setDisabledState: function (element, disabled) {
+      var $chk = $(element);
+      var $lbl = this.$label;
+
+      if (disabled) {
+        $chk.prop('disabled', true);
+        $lbl.addClass('disabled');
+        $lbl.trigger('disabled.lark.toggles.checkbox');
+      } else {
+        $chk.prop('disabled', false);
+        $lbl.removeClass('disabled');
+        $lbl.trigger('enabled.lark.toggles.checkbox');
+      }
+
+      return $chk;
+    },
+
+    itemchecked: function (evt) {
+      var $chk = $(evt.target);
+      var checked = $chk.prop('checked');
+
+      this.setCheckedState($chk, checked);
+    },
+
+    toggle: function () {
+      var checked = this.isChecked();
+
+      if (checked) {
+        this.uncheck();
+      } else {
+        this.check();
+      }
+    },
+
+    check: function () {
+      this.setCheckedState(this.$chk, true);
+    },
+
+    uncheck: function () {
+      this.setCheckedState(this.$chk, false);
+    },
+
+    isChecked: function () {
+      var checked = this.$chk.prop('checked');
+      return checked;
+    },
+
+    enable: function () {
+      this.setDisabledState(this.$chk, false);
+    },
+
+    disable: function () {
+      this.setDisabledState(this.$chk, true);
+    },
+
+    destroy: function () {
+      this.$label.remove();
+      return this.$label[0].outerHTML;
+    }
+  });
+
+
+  Checkbox.prototype.getValue = Checkbox.prototype.isChecked;
+
+  plugins.register(Checkbox);
+
+  return toggles.Checkbox = Checkbox;
+});
+
+define('skylark-domx-plugins-toggles/radio',[
+  "skylark-langx/langx",
+  "skylark-domx/browser",
+  "skylark-domx/eventer",
+  "skylark-domx/noder",
+  "skylark-domx/geom",
+  "skylark-domx/query",
+  "skylark-domx-plugins-base",
+  "./toggles"
+],function(langx,browser,eventer,noder,geom,$,plugins,toggles){
+
+
+  var Radio = plugins.Plugin.inherit({
+    klassName: "Radio",
+
+    pluginName : "lark.toggles.radio",
+
+    options : {
+      ignoreVisibilityCheck: false
+    },
+
+    _construct : function(elm,options) {
+      this.overrided(elm,options);
+      if (elm.tagName.toLowerCase() !== 'label') {
+        throw new Error('Radio must be initialized on the `label` that wraps the `input` element. See https://github.com/ExactTarget/fuelux/blob/master/reference/markup/radio.html for example of proper markup. Call `.radio()` on the `<label>` not the `<input>`');
+      }
+
+      // cache elements
+      this.$label = this.$();
+      this.$radio = this.$label.find('input[type="radio"]');
+      this.groupName = this.$radio.attr('name'); // don't cache group itself since items can be added programmatically
+
+      if (!this.options.ignoreVisibilityCheck && this.$radio.css('visibility').match(/hidden|collapse/)) {
+        throw new Error('For accessibility reasons, in order for tab and space to function on radio, `visibility` must not be set to `hidden` or `collapse`. See https://github.com/ExactTarget/fuelux/pull/1996 for more details.');
+      }
+
+      // determine if a toggle container is specified
+      var containerSelector = this.$radio.attr('data-toggle');
+      this.$toggleContainer = $(containerSelector);
+
+      // handle internal events
+      this.$radio.on('change', langx.proxy(this.itemchecked, this));
+
+      // set default state
+      this.setInitialState();
+    },
+
+    setInitialState: function () {
+      var $radio = this.$radio;
+
+      // get current state of input
+      var checked = $radio.prop('checked');
+      var disabled = $radio.prop('disabled');
+
+      // sync label class with input state
+      this.setCheckedState($radio, checked);
+      this.setDisabledState($radio, disabled);
+    },
+
+    resetGroup: function () {
+      var $radios = $('input[name="' + this.groupName + '"]');
+      $radios.each(function resetRadio (index, item) {
+        var $radio = $(item);
+        var $lbl = $radio.parent();
+        var containerSelector = $radio.attr('data-toggle');
+        var $containerToggle = $(containerSelector);
+
+
+        $lbl.removeClass('checked');
+        $containerToggle.addClass('hidden');
+      });
+    },
+
+    setCheckedState: function (element, checked) {
+      var $radio = element;
+      var $lbl = $radio.parent();
+      var containerSelector = $radio.attr('data-toggle');
+      var $containerToggle = $(containerSelector);
+
+      if (checked) {
+        // reset all items in group
+        this.resetGroup();
+
+        $radio.prop('checked', true);
+        $lbl.addClass('checked');
+        $containerToggle.removeClass('hide hidden');
+        $lbl.trigger('checked.lark.toggles.radio');
+      } else {
+        $radio.prop('checked', false);
+        $lbl.removeClass('checked');
+        $containerToggle.addClass('hidden');
+        $lbl.trigger('unchecked.lark.toggles.radio');
+      }
+
+      $lbl.trigger('changed.lark.toggles.radio', checked);
+    },
+
+    setDisabledState: function (element, disabled) {
+      var $radio = $(element);
+      var $lbl = this.$label;
+
+      if (disabled) {
+        $radio.prop('disabled', true);
+        $lbl.addClass('disabled');
+        $lbl.trigger('disabled.lark.toggles.radio');
+      } else {
+        $radio.prop('disabled', false);
+        $lbl.removeClass('disabled');
+        $lbl.trigger('enabled.lark.toggles.radio');
+      }
+
+      return $radio;
+    },
+
+    itemchecked: function (evt) {
+      var $radio = $(evt.target);
+      this.setCheckedState($radio, true);
+    },
+
+    check: function () {
+      this.setCheckedState(this.$radio, true);
+    },
+
+    uncheck: function () {
+      this.setCheckedState(this.$radio, false);
+    },
+
+    isChecked: function () {
+      var checked = this.$radio.prop('checked');
+      return checked;
+    },
+
+    enable: function () {
+      this.setDisabledState(this.$radio, false);
+    },
+
+    disable: function () {
+      this.setDisabledState(this.$radio, true);
+    },
+
+    destroy: function () {
+      this.$label.remove();
+      return this.$label[0].outerHTML;
+    }
+
+  });
+
+
+  Radio.prototype.getValue = Radio.prototype.isChecked;
+
+  plugins.register(Radio);
+
+  return toggles.Radio = Radio;
+});
+
+define('skylark-domx-plugins-toggles/main',[
+	"./toggles",
+	"./checkbox",
+	"./collapse",
+	"./radio",
+	"./tab"
+],function(toggles){
+	return toggles;
+});
+define('skylark-domx-plugins-toggles', ['skylark-domx-plugins-toggles/main'], function (main) { return main; });
+
+ define('skylark-domx-plugins-menus/tree-menu',[
+  "skylark-langx/langx",
+  "skylark-domx-query",
+  "skylark-domx-lists",
+  "skylark-domx-plugins-base",
+  "./menus",
+  "./menu",
+  "skylark-domx-plugins-toggles"
+],function(langx,$,lists,plugins,menus,Menu){
+  'use strict'
+
+  var TreeMenu = Menu.inherit({
+    klassName : "Tree",
+
+    pluginName : "lark.menus.tree",
+
+    _construct : function(elm,options) {
+        Menu.prototype._construct.call(this,elm,options);
+
+        lists.multitier(elm,langx.mixin({
+          hide : function($el) {
+            $el.plugin("lark.toggles.collapse").hide();
+          },
+          toggle : function($el) {
+            $el.plugin("lark.toggles.collapse").toggle();
+          }
+        },this.options));
+    }
+
+  });
+
+
+  plugins.register(TreeMenu);
+
+  return menus.TreeMenu = TreeMenu;	
+});
+define('skylark-devices-keyboard/keyboard',[
+	"skylark-langx-ns"
+],function(skylark){
+	var keyboard = {};
+	/**
+	 * Function: isShiftDown
+	 * 
+	 * Returns true if the shift key is pressed for the given event.
+	 */
+	keyboard.isShiftDown = function (evt) {
+		return (evt != null) ? evt.shiftKey : false;
+	};
+
+	/**
+	 * Function: isAltDown
+	 * 
+	 * Returns true if the alt key is pressed for the given event.
+	 */
+	keyboard.isAltDown = function (evt) {
+		return (evt != null) ? evt.altKey : false;
+	};
+
+	/**
+	 * Function: isControlDown
+	 * 
+	 * Returns true if the control key is pressed for the given event.
+	 */
+	keyboard.isControlDown = function (evt) {
+		return (evt != null) ? evt.ctrlKey : false;
+	};
+
+	/**
+	 * Function: isMetaDown
+	 * 
+	 * Returns true if the meta key is pressed for the given event.
+	 */
+	keyboard.isMetaDown = function (evt){
+		return (evt != null) ? evt.metaKey : false;
+	};
+
+
+	return skylark.attach("devices.keyboard",keyboard);	
+});
+define('skylark-devices-keyboard/keys',[
+	"./keyboard"
+],function(keyboard){
+	var keys = {};
+	/**
+	 * TAB key
+	 * @attribute TAB
+	 * @type {Number}
+	 */
+	keys.TAB = 9;
+
+	/**
+	 * ENTER key
+	 * @attribute ENTER
+	 * @type {Number}
+	 */
+	keys.ENTER = 13;
+
+	/**
+	 * SHIFT key
+	 * @attribute SHIFT
+	 * @type {Number}
+	 */
+	keys.SHIFT = 16;
+
+	/**
+	 * CTRL key
+	 * @attribute CTRL
+	 * @type {Number}
+	 */
+	keys.CTRL = 17;
+
+	/**
+	 * ALT key
+	 * @attribute ALT
+	 * @type {Number}
+	 */
+	keys.ALT = 18;
+
+	/**
+	 * CAPS_LOCK key
+	 * @attribute CAPS_LOCK
+	 * @type {Number}
+	 */
+	keys.CAPS_LOCK = 20;
+
+	/**
+	 * ESC key
+	 * @attribute ESC
+	 * @type {Number}
+	 */
+	keys.ESC = 27;
+
+	/**
+	 * SPACEBAR key
+	 * @attribute SPACEBAR
+	 * @type {Number}
+	 */
+	keys.SPACEBAR = 32;
+
+	/**
+	 * PAGE_UP key
+	 * @attribute PAGE_UP
+	 * @type {Number}
+	 */
+	keys.PAGE_UP = 33;
+
+	/**
+	 * PAGE_DOWN key
+	 * @attribute PAGE_DOWN
+	 * @type {Number}
+	 */
+	keys.PAGE_DOWN = 34;
+
+	/**
+	 * END key
+	 * @attribute END
+	 * @type {Number}
+	 */
+	keys.END = 35;
+
+	/**
+	 * HOME key
+	 * @attribute HOME
+	 * @type {Number}
+	 */
+	keys.HOME = 36;
+
+	/**
+	 * INSERT key
+	 * @attribute INSERT
+	 * @type {Number}
+	 */
+	keys.INSERT = 45;
+
+	/**
+	 * DEL key
+	 * @attribute DEL
+	 * @type {Number}
+	 */
+	keys.DEL = 46;
+
+	/**
+	 * LEFT key
+	 * @attribute LEFT
+	 * @type {Number}
+	 */
+	keys.LEFT = 37;
+
+	/**
+	 * RIGHT key
+	 * @attribute RIGHT
+	 * @type {Number}
+	 */
+	keys.RIGHT = 39;
+
+	/**
+	 * UP key
+	 * @attribute UP
+	 * @type {Number}
+	 */
+	keys.UP = 38;
+
+	/**
+	 * DOWN key
+	 * @attribute DOWN
+	 * @type {Number}
+	 */
+	keys.DOWN = 40;
+
+	/**
+	 * NUM0 key
+	 * @attribute NUM0
+	 * @type {Number}
+	 */
+	keys.NUM0 = 48;
+
+	/**
+	 * NUM1 key
+	 * @attribute NUM1
+	 * @type {Number}
+	 */
+	keys.NUM1 = 49;
+
+	/**
+	 * NUM2 key
+	 * @attribute NUM2
+	 * @type {Number}
+	 */
+	keys.NUM2 = 50;
+
+	/**
+	 * NUM3 key
+	 * @attribute NUM3
+	 * @type {Number}
+	 */
+	keys.NUM3 = 51;
+
+	/**
+	 * NUM4 key
+	 * @attribute NUM4
+	 * @type {Number}
+	 */
+	keys.NUM4 = 52;
+
+	/**
+	 * NUM5 key
+	 * @attribute NUM5
+	 * @type {Number}
+	 */
+	keys.NUM5 = 53;
+
+	/**
+	 * NUM6 key
+	 * @attribute NUM6
+	 * @type {Number}
+	 */
+	keys.NUM6 = 54;
+
+	/**
+	 * NUM7 key
+	 * @attribute NUM7
+	 * @type {Number}
+	 */
+	keys.NUM7 = 55;
+
+	/**
+	 * NUM8 key
+	 * @attribute NUM8
+	 * @type {Number}
+	 */
+	keys.NUM8 = 56;
+
+	/**
+	 * NUM9 key
+	 * @attribute NUM9
+	 * @type {Number}
+	 */
+	keys.NUM9 = 57;
+
+	/**
+	 * A key
+	 * @attribute A
+	 * @type {Number}
+	 */
+	keys.A = 65;
+
+	/**
+	 * B key
+	 * @attribute B
+	 * @type {Number}
+	 */
+	keys.B = 66;
+
+	/**
+	 * C key
+	 * @attribute C
+	 * @type {Number}
+	 */
+	keys.C = 67;
+
+	/**
+	 * D key
+	 * @attribute D
+	 * @type {Number}
+	 */
+	keys.D = 68;
+
+	/**
+	 * E key
+	 * @attribute E
+	 * @type {Number}
+	 */
+	keys.E = 69;
+
+	/**
+	 * F key
+	 * @attribute F
+	 * @type {Number}
+	 */
+	keys.F = 70;
+
+	/**
+	 * G key
+	 * @attribute G
+	 * @type {Number}
+	 */
+	keys.G = 71;
+
+	/**
+	 * H key
+	 * @attribute H
+	 * @type {Number}
+	 */
+	keys.H = 72;
+
+	/**
+	 * I key
+	 * @attribute I
+	 * @type {Number}
+	 */
+	keys.I = 73;
+
+	/**
+	 * J key
+	 * @attribute J
+	 * @type {Number}
+	 */
+	keys.J = 74;
+
+	/**
+	 * K key
+	 * @attribute K
+	 * @type {Number}
+	 */
+	keys.K = 75;
+
+	/**
+	 * L key
+	 * @attribute L
+	 * @type {Number}
+	 */
+	keys.L = 76;
+
+	/**
+	 * M key
+	 * @attribute M
+	 * @type {Number}
+	 */
+	keys.M = 77;
+
+	/**
+	 * N key
+	 * @attribute N
+	 * @type {Number}
+	 */
+	keys.N = 78;
+
+	/**
+	 * O key
+	 * @attribute O
+	 * @type {Number}
+	 */
+	keys.O = 79;
+
+	/**
+	 * P key
+	 * @attribute P
+	 * @type {Number}
+	 */
+	keys.P = 80;
+
+	/**
+	 * Q key
+	 * @attribute Q
+	 * @type {Number}
+	 */
+	keys.Q = 81;
+
+	/**
+	 * R key
+	 * @attribute R
+	 * @type {Number}
+	 */
+	keys.R = 82;
+
+	/**
+	 * S key
+	 * @attribute S
+	 * @type {Number}
+	 */
+	keys.S = 83;
+
+	/**
+	 * T key
+	 * @attribute T
+	 * @type {Number}
+	 */
+	keys.T = 84;
+
+	/**
+	 * U key
+	 * @attribute U
+	 * @type {Number}
+	 */
+	keys.U = 85;
+
+	/**
+	 * V key
+	 * @attribute V
+	 * @type {Number}
+	 */
+	keys.V = 86;
+
+	/**
+	 * W key
+	 * @attribute W
+	 * @type {Number}
+	 */
+	keys.W = 87;
+
+	/**
+	 * X key
+	 * @attribute X
+	 * @type {Number}
+	 */
+	keys.X = 88;
+
+	/**
+	 * Y key
+	 * @attribute Y
+	 * @type {Number}
+	 */
+	keys.Y = 89;
+
+	/**
+	 * Z key
+	 * @attribute Z
+	 * @type {Number}
+	 */
+	keys.Z = 90;
+
+	/**
+	 * F1 key
+	 * @attribute F1
+	 * @type {Number}
+	 */
+	keys.F1 = 112;
+
+	/**
+	 * F2 key
+	 * @attribute F2
+	 * @type {Number}
+	 */
+	keys.F2 = 113;
+
+	/**
+	 * F3 key
+	 * @attribute F3
+	 * @type {Number}
+	 */
+	keys.F3 = 114;
+
+	/**
+	 * F4 key
+	 * @attribute F4
+	 * @type {Number}
+	 */
+	keys.F4 = 115;
+
+	/**
+	 * F5 key
+	 * @attribute F5
+	 * @type {Number}
+	 */
+	keys.F5 = 116;
+
+	/**
+	 * F6 key
+	 * @attribute F6
+	 * @type {Number}
+	 */
+	keys.F6 = 117;
+
+	/**
+	 * F7 key
+	 * @attribute F7
+	 * @type {Number}
+	 */
+	keys.F7 = 118;
+
+	/**
+	 * F8 key
+	 * @attribute F8
+	 * @type {Number}
+	 */
+	keys.F8 = 119;
+
+	/**
+	 * F9 key
+	 * @attribute F9
+	 * @type {Number}
+	 */
+	keys.F9 = 120;
+
+	/**
+	 * F10 key
+	 * @attribute F10
+	 * @type {Number}
+	 */
+	keys.F10 = 121;
+
+	/**
+	 * F11 key
+	 * @attribute F11
+	 * @type {Number}
+	 */
+	keys.F11 = 122;
+
+	/**
+	 * F12 key
+	 * @attribute F12
+	 * @type {Number}
+	 */
+	keys.F12 = 123;
+
+	return keyboard.keys = keys;
+	
+});
+define('skylark-domx-plugins-menus/popup-menu',[
+  "skylark-langx/langx",
+  "skylark-devices-keyboard/keys",
+  "skylark-domx-noder",
+  "skylark-domx-styler",
+  "skylark-domx-query",
+  "skylark-domx-lists",
+  "skylark-domx-plugins-base",
+ 	"skylark-domx-plugins-popups/popups",
+  "./menus",
+  "./menu"
+],function(langx,keys,noder,styler, $,lists,plugins,popups,menus,Menu){
+  'use strict'
+
+  	var PopupMenu = Menu.inherit({
+
+    	klassName : "PopupMenu",
+
+    	pluginName : "lark.menus.popup",
+
+		delay: 300,
+		options: {
+			icons: {
+				submenu: "ui-icon-caret-1-e"
+			},
+			///items: "> *",
+			///menus: "ul",
+			position: {
+				my: "left top",
+				at: "right top"
+			},
+
+			role: "menu",
+
+
+			item : {
+				classes : {
+					base : "menu-item",
+          			active : "active",
+          			disabled : "disabled",
+          			wrapper : "menu-item-wrapper"
+				},
+				selector : "> *"
+			},
+
+			// Callbacks
+			blur: null,
+			focus: null,
+			select: null
+		},
+
+    	_construct : function(elm,options) {
+        	Menu.prototype._construct.call(this,elm,options);
+			this.element = this.$();
+
+			this.activeMenu = this.element;
+
+			// Flag used to prevent firing of the click handler
+			// as the event bubbles up through nested menus
+			this.mouseHandled = false;
+			this.lastMousePosition = { x: null, y: null };
+			this.element
+				.attr( {
+					role: this.options.role,
+					tabIndex: 0
+				} );
+
+			this.listenTo(this.element, {
+
+				// Prevent focus from sticking to links inside menu after clicking
+				// them (focus should always stay on UL during navigation).
+				'mousedown': function( event ) {
+					event.preventDefault();
+
+					this._activateItem( event );
+				},
+				"click": function( event ) {
+					var target = $( event.target );
+					//var active = $( $.ui.safeActiveElement( this.document[ 0 ] ) );
+					var active = $(noder.active());
+					if ( !this.mouseHandled && target.not(`.${this.options.item.classes.disable}`).length ) {
+						this.select( event );
+
+						// Only set the mouseHandled flag if the event will bubble, see #9469.
+						if ( !event.isPropagationStopped() ) {
+							this.mouseHandled = true;
+						}
+
+						// Open submenu on click
+						if ( target.has(`.${this.options.submenu.classes.base}`).length ) {
+							this.expand( event );
+						} else if ( !this.element.is( ":focus" ) &&
+								active.closest( `.${this.options.submenu.classes.base}` ).length ) {
+
+							// Redirect focus to the menu
+							this.element.trigger( "focus", [ true ] );
+
+							// If the active item is on the top level, let it stay active.
+							// Otherwise, blur the active item since it is no longer visible.
+							if ( this.active && this.active.parents( `.${this.options.submenu.classes.base}` ).length === 1 ) {
+								clearTimeout( this.timer );
+							}
+						}
+					}
+				},
+				"mouseenter": "_activateItem",
+				"mousemove": "_activateItem",
+			}, `.${this.options.item.classes.base}`);
+
+			this.listenTo(this.element, {
+				"mouseleave": "collapseAll",
+				"focus": function( event, keepActiveItem ) {
+
+					// If there's already an active item, keep it active
+					// If not, activate the first item
+					var item = this.active || this._menuItems().first();
+
+					if ( !keepActiveItem ) {
+						this.focus( event, item );
+					}
+				},
+				"blur": function( event ) {
+					this._delay( function() {
+						var notContained = !noder.contains(
+							this.element[ 0 ],
+							//$.ui.safeActiveElement( this.document[ 0 ] )
+							noder.active()
+						);
+						if ( notContained ) {
+							this.collapseAll( event );
+						}
+					} );
+				},
+				"keydown": "_keydown"
+			} );
+
+			this.listenTo(this.element, "mouseleave",  `.${this.options.submenu.classes.base}`, "collapseAll");
+
+			///this.refresh();
+
+			// Clicks outside of a menu collapse any open menus
+			this.listenTo( $(document), {
+				click: function( event ) {
+					if ( this._closeOnDocumentClick( event ) ) {
+						this.collapseAll( event, true );
+					}
+
+					// Reset the mouseHandled flag
+					this.mouseHandled = false;
+				}
+			} );
+		},
+
+		_activateItem: function( event ) {
+
+			// Ignore mouse events while typeahead is active, see #10458.
+			// Prevents focusing the wrong item when typeahead causes a scroll while the mouse
+			// is over an item in the menu
+			if ( this.previousFilter ) {
+				return;
+			}
+
+			// If the mouse didn't actually move, but the page was scrolled, ignore the event (#9356)
+			if ( event.clientX === this.lastMousePosition.x &&
+					event.clientY === this.lastMousePosition.y ) {
+				return;
+			}
+
+			this.lastMousePosition = {
+				x: event.clientX,
+				y: event.clientY
+			};
+
+			var actualTarget = $( event.target ).closest( `.${this.options.item.classes.base}` ),
+				target = $( event.currentTarget );
+
+			// Ignore bubbled events on parent items, see #11641
+			if ( actualTarget[ 0 ] !== target[ 0 ] ) {
+				return;
+			}
+
+			// If the item is already active, there's nothing to do
+			if ( target.is(`.${this.options.item.classes.active}`) ) {
+				return;
+			}
+
+			// Remove ui-state-active class from siblings of the newly focused menu item
+			// to avoid a jump caused by adjacent elements both having a class with a border
+			///this._removeClass( target.siblings().children( ".ui-state-active" ),
+			///	null, "ui-state-active" );
+			target.siblings().children( `.${this.options.item.classes.active}` ).removeClass(this.options.item.classes.active);
+			this.focus( event, target );
+		},
+
+		_keydown: function( event ) {
+			var match, prev, character, skip,
+				preventDefault = true;
+
+			switch ( event.keyCode ) {
+			case keys.PAGE_UP:
+				this.previousPage( event );
+				break;
+			case keys.PAGE_DOWN:
+				this.nextPage( event );
+				break;
+			case keys.HOME:
+				this._move( "first", "first", event );
+				break;
+			case keys.END:
+				this._move( "last", "last", event );
+				break;
+			case keys.UP:
+				this.previous( event );
+				break;
+			case keys.DOWN:
+				this.next( event );
+				break;
+			case keys.LEFT:
+				this.collapse( event );
+				break;
+			case keys.RIGHT:
+				if ( this.active && !this.active.is( `.${this.options.item.classes.disabled}`) ) {
+					this.expand( event );
+				}
+				break;
+			case keys.ENTER:
+			case keys.SPACE:
+				this._activate( event );
+				break;
+			case keys.ESC:
+				this.collapse( event );
+				break;
+			default:
+				preventDefault = false;
+				prev = this.previousFilter || "";
+				skip = false;
+
+				// Support number pad values
+				character = event.keyCode >= 96 && event.keyCode <= 105 ?
+					( event.keyCode - 96 ).toString() : String.fromCharCode( event.keyCode );
+
+				clearTimeout( this.filterTimer );
+
+				if ( character === prev ) {
+					skip = true;
+				} else {
+					character = prev + character;
+				}
+
+				match = this._filterMenuItems( character );
+				match = skip && match.index( this.active.next() ) !== -1 ?
+					this.active.nextAll( `.${this.options.item.classes.base}` ) :
+					match;
+
+				// If no matches on the current filter, reset to the last character pressed
+				// to move down the menu to the first item that starts with that character
+				if ( !match.length ) {
+					character = String.fromCharCode( event.keyCode );
+					match = this._filterMenuItems( character );
+				}
+
+				if ( match.length ) {
+					this.focus( event, match );
+					this.previousFilter = character;
+					this.filterTimer = this._delay( function() {
+						delete this.previousFilter;
+					}, 1000 );
+				} else {
+					delete this.previousFilter;
+				}
+			}
+
+			if ( preventDefault ) {
+				event.preventDefault();
+			}
+		},
+
+		_activate: function( event ) {
+			if ( this.active && !this.active.is( `.${this.options.item.classes.disabled}` ) ) {
+				if ( this.active.children( "[aria-haspopup='true']" ).length ) {
+					this.expand( event );
+				} else {
+					this.select( event );
+				}
+			}
+		},
+
+		_itemRole: function() {
+			return {
+				menu: "menuitem",
+				listbox: "option"
+			}[ this.options.role ];
+		},
+
+		focus: function( event, item ) {
+			var nested, focused, activeParent;
+			this.blur( event, event && event.type === "focus" );
+
+			this._scrollIntoView( item );
+
+			this.active = item.first();
+
+			focused = this.active.children( `.${this.options.item.classes.wrapper}` );
+			///this._addClass( focused, null, "ui-state-active" );
+			focused.addClass(this.options.item.classes.active);
+
+			// Only update aria-activedescendant if there's a role
+			// otherwise we assume focus is managed elsewhere
+			if ( this.options.role ) {
+				this.element.attr( "aria-activedescendant", focused.attr( "id" ) );
+			}
+
+			// Highlight active parent menu item, if any
+			activeParent = this.active
+				.parent()
+					.closest( `.${this.options.item.classes.base}`)
+						.children( `.${this.options.item.classes.wrapper}`);
+			///this._addClass( activeParent, null, "ui-state-active" );
+			activeParent.addClass(this.options.item.classes.active );
+
+			if ( event && event.type === "keydown" ) {
+				this._close();
+			} else {
+				this.timer = this._delay( function() {
+					this._close();
+				}, this.delay );
+			}
+
+			nested = item.children( `.${this.options.submenu.classes.base}` );
+			if ( nested.length && event && ( /^mouse/.test( event.type ) ) ) {
+				this._startOpening( nested );
+			}
+			this.activeMenu = item.parent();
+
+			///this._trigger( "focus", event, { item: item } );
+			this.trigger("focus",{item : item})
+		},
+
+		_scrollIntoView: function( item ) {
+			var borderTop, paddingTop, offset, scroll, elementHeight, itemHeight;
+			if ( this._hasScroll() ) {
+				borderTop = parseFloat( styler.css( this.activeMenu[ 0 ], "borderTopWidth" ) ) || 0;
+				paddingTop = parseFloat( styler.css( this.activeMenu[ 0 ], "paddingTop" ) ) || 0;
+				offset = item.offset().top - this.activeMenu.offset().top - borderTop - paddingTop;
+				scroll = this.activeMenu.scrollTop();
+				elementHeight = this.activeMenu.height();
+				itemHeight = item.outerHeight();
+
+				if ( offset < 0 ) {
+					this.activeMenu.scrollTop( scroll + offset );
+				} else if ( offset + itemHeight > elementHeight ) {
+					this.activeMenu.scrollTop( scroll + offset - elementHeight + itemHeight );
+				}
+			}
+		},
+
+		blur: function( event, fromFocus ) {
+			if ( !fromFocus ) {
+				clearTimeout( this.timer );
+			}
+
+			if ( !this.active ) {
+				return;
+			}
+
+			///this._removeClass( this.active.children( ".ui-menu-item-wrapper" ),
+			///	null, "ui-state-active" );
+			this.active.children( `.${this.options.item.classes.wrapper}` ).removeClass(this.options.item.classes.active);
+
+			///this._trigger( "blur", event, { item: this.active } );
+			this.trigger( "blur", { item: this.active } );
+			this.active = null;
+		},
+
+		_startOpening: function( submenu ) {
+			clearTimeout( this.timer );
+
+			// Don't open if already open fixes a Firefox bug that caused a .5 pixel
+			// shift in the submenu position when mousing over the caret icon
+			///if ( submenu.attr( "aria-hidden" ) !== "true" ) {
+			///	return;
+			///}
+
+			this.timer = this._delay( function() {
+				this._close();
+				this._open( submenu );
+			}, this.delay );
+		},
+
+		_open: function( submenu ) {
+			var position = langx.extend( {
+				of: this.active
+			}, this.options.position );
+
+			clearTimeout( this.timer );
+			this.element.find( `.${this.options.submenu.classes.base}`).not( submenu.parents( `.${this.options.submenu.classes.base}` ) )
+				.hide()
+				.attr( "aria-hidden", "true" );
+
+			//submenu
+			//	.show()
+			//	.removeAttr( "aria-hidden" )
+			//	.attr( "aria-expanded", "true" )
+			//	.position( position );
+			popups.open(submenu.attr( "aria-expanded", "true" ),{
+				position
+			});
+		},
+
+		collapseAll: function( event, all ) {
+			clearTimeout( this.timer );
+			this.timer = this._delay( function() {
+
+				// If we were passed an event, look for the submenu that contains the event
+				var currentMenu = all ? this.element :
+					$( event && event.target ).closest( this.element.find( `.${this.options.submenu.classes.base}`) );
+
+				// If we found no valid submenu ancestor, use the main menu to close all
+				// sub menus anyway
+				if ( !currentMenu.length ) {
+					currentMenu = this.element;
+				}
+
+				this._close( currentMenu );
+
+				this.blur( event );
+
+				// Work around active item staying active after menu is blurred
+				///this._removeClass( currentMenu.find( ".ui-state-active" ), null, "ui-state-active" );
+				currentMenu.find( `.${this.options.item.classes.active}`).removeClass(this.options.item.classes.active );
+
+				this.activeMenu = currentMenu;
+			}, all ? 0 : this.delay );
+		},
+
+		// With no arguments, closes the currently active menu - if nothing is active
+		// it closes all menus.  If passed an argument, it will search for menus BELOW
+		_close: function( startMenu ) {
+			if ( !startMenu ) {
+				startMenu = this.active ? this.active.parent() : this.element;
+			}
+
+			//startMenu.find(`.${this.options.submenu.classes.base}` )
+			//	.hide()
+			//	.attr( "aria-hidden", "true" )
+			//	.attr( "aria-expanded", "false" );
+			popups.close(startMenu.find(`.${this.options.submenu.classes.base}` ).attr( "aria-expanded", "false" ));
+		},
+
+		_closeOnDocumentClick: function( event ) {
+			return !$( event.target ).closest(`.${this.options.submenu.classes.base}` ).length;
+		},
+
+		_isDivider: function( item ) {
+
+			// Match hyphen, em dash, en dash
+			return !/[^\-\u2014\u2013\s]/.test( item.text() );
+		},
+
+		collapse: function( event ) {
+			var newItem = this.active &&
+				this.active.parent().closest( `.${this.options.item.classes.base}`, this.element );
+			if ( newItem && newItem.length ) {
+				this._close();
+				this.focus( event, newItem );
+			}
+		},
+
+		expand: function( event ) {
+			var newItem = this.active && this._menuItems( this.active.children( `.${this.options.submenu.classes.base}` ) ).first();
+
+			if ( newItem && newItem.length ) {
+				this._open( newItem.parent() );
+
+				// Delay so Firefox will not hide activedescendant change in expanding submenu from AT
+				this._delay( function() {
+					this.focus( event, newItem );
+				} );
+			}
+		},
+
+		next: function( event ) {
+			this._move( "next", "first", event );
+		},
+
+		previous: function( event ) {
+			this._move( "prev", "last", event );
+		},
+
+		isFirstItem: function() {
+			return this.active && !this.active.prevAll( `.${this.options.item.classes.base}` ).length;
+		},
+
+		isLastItem: function() {
+			return this.active && !this.active.nextAll( `.${this.options.item.classes.base}` ).length;
+		},
+
+		_menuItems: function( menu ) {
+			return ( menu || this.element )
+				.find( this.options.items )
+				.filter( `.${this.options.item.classes.base}` );
+		},
+
+		_move: function( direction, filter, event ) {
+			var next;
+			if ( this.active ) {
+				if ( direction === "first" || direction === "last" ) {
+					next = this.active
+						[ direction === "first" ? "prevAll" : "nextAll" ]( `.${this.options.item.classes.base}` )
+						.last();
+				} else {
+					next = this.active
+						[ direction + "All" ]( `.${this.options.item.classes.base}` )
+						.first();
+				}
+			}
+			if ( !next || !next.length || !this.active ) {
+				next = this._menuItems( this.activeMenu )[ filter ]();
+			}
+
+			this.focus( event, next );
+		},
+
+		nextPage: function( event ) {
+			var item, base, height;
+
+			if ( !this.active ) {
+				this.next( event );
+				return;
+			}
+			if ( this.isLastItem() ) {
+				return;
+			}
+			if ( this._hasScroll() ) {
+				base = this.active.offset().top;
+				height = this.element.height();
+				this.active.nextAll( `.${this.options.item.classes.base}` ).each( function() {
+					item = $( this );
+					return item.offset().top - base - height < 0;
+				} );
+
+				this.focus( event, item );
+			} else {
+				this.focus( event, this._menuItems( this.activeMenu )
+					[ !this.active ? "first" : "last" ]() );
+			}
+		},
+
+		previousPage: function( event ) {
+			var item, base, height;
+			if ( !this.active ) {
+				this.next( event );
+				return;
+			}
+			if ( this.isFirstItem() ) {
+				return;
+			}
+			if ( this._hasScroll() ) {
+				base = this.active.offset().top;
+				height = this.element.height();
+				this.active.prevAll( `.${this.options.item.classes.base}` ).each( function() {
+					item = $( this );
+					return item.offset().top - base + height > 0;
+				} );
+
+				this.focus( event, item );
+			} else {
+				this.focus( event, this._menuItems( this.activeMenu ).first() );
+			}
+		},
+
+		_hasScroll: function() {
+			return this.element.outerHeight() < this.element.prop( "scrollHeight" );
+		},
+
+		select: function( event ) {
+
+			// TODO: It should never be possible to not have an active item at this
+			// point, but the tests don't trigger mouseenter before click.
+			this.active = this.active || $( event.target ).closest( `.${this.options.item.classes.base}` );
+			var ui = { item: this.active };
+			if ( !this.active.has( `.${this.options.submenu.classes.base}` ).length ) {
+				this.collapseAll( event, true );
+			}
+			///this._trigger( "select", event, ui );
+			this.trigger( "select", ui );
+		},
+
+		_filterMenuItems: function( character ) {
+			var escapedCharacter = character.replace( /[\-\[\]{}()*+?.,\\\^$|#\s]/g, "\\$&" ),
+				regex = new RegExp( "^" + escapedCharacter, "i" );
+
+			return this.activeMenu
+				.find( this.options.items )
+
+					// Only match on items, not dividers or other content (#10571)
+					.filter( `.${this.options.item.classes.base}` )
+						.filter( function() {
+							return regex.test(
+								langx.trim( $( this ).children( `.${this.options.item.classes.wrapper}`).text() ) );
+						} );
+		}
+	} );
+
+  plugins.register(PopupMenu);
+
+  return menus.PopupMenu = PopupMenu;	
+
+});
+
+define('skylark-domx-plugins-menus/main',[
+    "./menus",
+    "./accordion-menu",
+    "./cascade-menu",
+    "./mega-menu",
+    "./nav-menu",
+    "./tree-menu",
+    "./popup-menu"
+], function(menus) {
+    return menus;
+});
+define('skylark-domx-plugins-menus', ['skylark-domx-plugins-menus/main'], function (main) { return main; });
+
+define('skylark-devices-keyboard/KeyState',[
+	"skylark-langx-klass",
+	"./keyboard"
+],function(klass,keyboard){
+	"use strict";
+
+	/**
+	 * KeyState is used by Keyboard, Mouse, etc, to represent a key state.
+	 *
+	 * @class KeyState
+	 * @module Input
+	*/
+	var KeyState = klass({
+		_construct : function() {
+			/**
+			 * Indicates if this key is currently pressed.
+			 * @property pressed
+			 * @default false
+			 * @type {boolean}
+			 */
+			this.pressed = false;
+
+			/**
+			 * Indicates if this key was just pressed.
+			 * @property justPressed
+			 * @default false
+			 * @type {boolean}
+			 */
+			this.justPressed = false;
+			
+			/**
+			 * Indicates if this key was just released.
+			 * @property justReleased
+			 * @default false
+			 * @type {boolean}
+			 */
+			this.justReleased = false;
+
+		},
+
+		/**
+		 * Update Key status based on new key state.
+		 * 
+		 * @method update
+		 */
+		update : function(action)  {
+			this.justPressed = false;
+			this.justReleased = false;
+
+			if(action === KeyState.DOWN)
+			{
+				if(this.pressed === false)
+				{
+					this.justPressed = true;
+				}
+				this.pressed = true;
+			}
+			else if(action === KeyState.UP)
+			{
+				if(this.pressed)
+				{
+					this.justReleased = true;
+				}
+				this.pressed = false;
+			}
+			else if(action === KeyState.RESET)
+			{
+				this.justReleased = false;
+				this.justPressed = false;
+			}
+		},
+
+		/**
+		 * Set this key attributes manually.
+		 * 
+		 * @method set
+		 */
+		set : function(justPressed, pressed, justReleased){
+			this.justPressed = justPressed;
+			this.pressed = pressed;
+			this.justReleased = justReleased;
+		},
+
+		/**
+		 * Reset key to default values.
+		 * 
+		 * @method reset
+		*/
+		reset : function() 	{
+			this.justPressed = false;
+			this.pressed = false;
+			this.justReleased = false;
+		}
+	});
+
+	/**
+	 * Down
+	 * @attribute DOWN
+	 * @type {Number}
+	 */
+	KeyState.DOWN = -1;
+
+	/**
+	 * Up
+	 * @attribute UP
+	 * @type {Number}
+	 */
+	KeyState.UP = 1;
+
+	/**
+	 * Reset
+	 * @attribute RESET
+	 * @type {Number}
+	 */
+	KeyState.RESET = 0;
+
+
+	return keyboard.KeyState = KeyState;
+
+});
+define('skylark-devices-keyboard/Monitor',[
+	"skylark-langx-klass",
+	"./keyboard",
+	"./KeyState"
+],function(
+	klass,
+	keyboard,
+	KeyState
+){
+	"use strict";
+
+	/**
+	 * Keyboard instance for input in sync with the running 3D application.
+	 * 
+	 * The keyboard object provided by scripts is automatically updated by the runtime handler.
+	 * 
+	 * @class Keyboard
+	 * @module Input
+	 * @param {Boolean} dontInitialize If true the mouse events are not created.
+	 */
+	var Monitor = klass({
+		_construct : function (dontInitialize) 	{
+			/**
+			 * Array with keyboard keys status.
+			 *
+			 * @property keyStates
+			 * @type {Array}
+			 */
+			this.keyStates = [];
+
+
+			/**
+			 * The actions array serves as a buffer for the key input actions.
+			 *
+			 * Until the update method is called it stores all the key stroke actions.
+			 *
+			 * On update the key strokes are updated and the keys array stores the correct values.
+			 *
+			 * @property actions
+			 * @type {Array}
+			 */
+			this.actions = [];
+
+			var self = this;
+			var actions = this.actions;
+
+			/**
+			 * Event manager used to handle the keyup, keydown and focus events.
+			 *
+			 * On each event actions are added to the actions array.
+			 *
+			 * @property events
+			 * @type {EventManager}
+			 */
+			//this.events = new EventManager();
+			/*
+			this.events.add(window, "keydown", function(event)
+			{
+				actions.push(event.keyCode);
+				actions.push(Key.DOWN);
+			});
+			this.events.add(window, "keyup", function(event)
+			{
+				actions.push(event.keyCode);
+				actions.push(Key.UP);
+			});
+			this.events.add(window, "focus", function(event)
+			{
+				self.reset();
+			});
+			*/
+			this.handlers = {
+				"keydown" : function(event) {
+								actions.push(event.keyCode);
+								actions.push(Key.DOWN);
+							},			
+				"keyup" : function(event) {
+								actions.push(event.keyCode);
+								actions.push(Key.UP);
+							},			
+				"focus" : function(event) {
+								self.reset();
+							},			
+
+
+			};
+
+			if(dontInitialize !== true)
+			{
+				this.create();
+			}
+
+
+		},
+
+		/**
+		 * Update key flags synchronously.
+		 * 
+		 * @method update
+		 */
+		update : function() 	{
+			var end = 0;
+
+			while(this.actions.length > end)
+			{
+				var key = this.actions.shift();
+				var action = this.actions.shift();
+
+				if(this.keyStates[key] === undefined)
+				{
+					this.keyStates[key] = new Key();
+				}
+
+				this.keyStates[key].update(action);
+
+				if(this.keyStates[key].justReleased || this.keyStates[key].justPressed)
+				{
+					this.actions.push(key);
+					this.actions.push(Key.RESET);
+					end += 2;
+				}
+			}
+		},
+
+		/**
+		 * Reset keyboard status to default.
+		 *
+		 * Does not clean the action list.
+		 * 
+		 * @method reset
+		 */
+		reset : function() {
+			//Reset all keys
+			for(var i = 0; i < this.keyStates.length; i++)
+			{
+				if(this.keyStates[i] !== undefined)
+				{
+					this.keyStates[i].reset();
+				}
+			}
+		},
+
+		/**
+		 * Check if a key is pressed.
+		 * 
+		 * @method keyPressed
+		 * @return {boolean} True is the key is currently pressed
+		 */
+		keyPressed : function(key){
+			return this.keyStates[key] !== undefined && this.keyStates[key].pressed;
+		},
+
+		/**
+		 * Check is a key as just pressed.
+		 * 
+		 * @method keyJustPressed
+		 * @return {boolean} True is the key was just pressed
+		 */
+		keyJustPressed : function(key){
+			return this.keyStates[key] !== undefined && this.keyStates[key].justPressed;
+		},
+
+		/**
+		 * Check if a key was just released.
+		 * 
+		 * @method keyJustReleased
+		 * @return {boolean} True is the key was just pressed
+		 */
+		keyJustReleased : function(key){
+			return this.keyStates[key] !== undefined && this.keyStates[key].justReleased;
+		},
+
+
+		/**
+		 * Create keyboard events.
+		 * 
+		 * @method dispose
+		 */
+		create : function(){
+			//this.events.create();
+			for (var event in this.handlers) {
+				window.addEventListener(event,this.handlers[event]);
+			}
+		},
+
+		/**
+		 * Dispose keyboard events.
+		 * 
+		 * @method dispose
+		 */
+		dispose : function()	{
+			//this.events.destroy();
+			for (var event in this.handlers) {
+				window.removeEventListener(event,this.handlers[event]);
+			}
+		}
+
+	});
+
+
+	return keyboard.Monitor =  Monitor;
+});
+define('skylark-devices-keyboard/codes',[
+	"./keyboard"
+],function(keyboard){
+
+  /**
+   * Get by name
+   *
+   *   exports.code['enter'] // => 13
+   */
+
+  var codes =  {
+    'backspace': 8,
+    'tab': 9,
+    'enter': 13,
+    'shift': 16,
+    'ctrl': 17,
+    'alt': 18,
+    'pause/break': 19,
+    'caps lock': 20,
+    'esc': 27,
+    'space': 32,
+    'page up': 33,
+    'page down': 34,
+    'end': 35,
+    'home': 36,
+    'left': 37,
+    'up': 38,
+    'right': 39,
+    'down': 40,
+    'insert': 45,
+    'delete': 46,
+    'command': 91,
+    'left command': 91,
+    'right command': 93,
+    'numpad *': 106,
+    'numpad +': 107,
+    'numpad -': 109,
+    'numpad .': 110,
+    'numpad /': 111,
+    'num lock': 144,
+    'scroll lock': 145,
+    'my computer': 182,
+    'my calculator': 183,
+    ';': 186,
+    '=': 187,
+    ',': 188,
+    '-': 189,
+    '.': 190,
+    '/': 191,
+    '`': 192,
+    '[': 219,
+    '\\': 220,
+    ']': 221,
+    "'": 222
+  };
+
+  /*!
+   * Programatically add the following
+   */
+
+  // lower case chars a-z
+  for (var i = 97; i < 123; i++) {
+    codes[String.fromCharCode(i)] = i - 32;
+  }
+
+  // numbers 0-9
+  for (var i = 48; i < 58; i++) {
+    codes[i - 48] = i;
+  }
+
+  // function keys f1-f12
+  for (var i = 1; i < 13; i++) {
+    codes['f'+i] = i + 111;
+  }
+
+  // numpad keys
+  for (var i = 0; i < 10; i++) {
+    codes['numpad '+i] = i + 96;
+  }
+
+  // Helper aliases
+
+
+  return keyboard.codes = codes;
+});
+define('skylark-devices-keyboard/names',[
+	"./keyboard",
+	"./codes"
+],function(keyboard,codes){
+
+  /**
+   * Get by code
+   *
+   *   exports.name[13] // => 'Enter'
+   */
+
+  var names = {} ;
+
+  // Create reverse mapping
+  for (var i in codes) {
+  	names[codes[i]] = i;
+  }
+
+  return keyboard.names = names;
+});
+define('skylark-devices-keyboard/aliases',[
+	"./keyboard",
+	"./codes",
+    "./names"
+],function(keyboard,codes){
+
+  var aliases =  {
+    'windows': 91,
+    '⇧': 16,
+    '⌥': 18,
+    '⌃': 17,
+    '⌘': 91,
+    'ctl': 17,
+    'control': 17,
+    'option': 18,
+    'pause': 19,
+    'break': 19,
+    'caps': 20,
+    'return': 13,
+    'escape': 27,
+    'spc': 32,
+    'spacebar': 32,
+    'pgup': 33,
+    'pgdn': 34,
+    'ins': 45,
+    'del': 46,
+    'cmd': 91
+  }
+
+  return keyboard.aliases = aliases;
+});
+define('skylark-devices-keyboard/isEventKey',[
+  "skylark-langx-types",
+  "./keyboard",
+  "./aliases",
+  "./codes",
+  "./names"
+],function(types,keyboard,aliases,codes,names){
+
+  /**
+   * Compares a keyboard event with a given keyCode or keyName.
+   *
+   * @param {Event} event Keyboard event that should be tested
+   * @param {Mixed} keyCode {Number} or keyName {String}
+   * @return {Boolean}
+   * @api public
+   */
+   function isEventKey(event, nameOrCode) {
+      var keyCode = event.which || event.keyCode || event.charCode;
+      if (keyCode === null || keyCode === undefined) { 
+        return false; 
+      }
+
+      if (types.isString(nameOrCode)) {
+        // check codes
+        var foundNamedKey = codes[nameOrCode.toLowerCase()]
+        if (foundNamedKey) { return foundNamedKey === keyCode; }
+      
+        // check aliases
+        var foundNamedKey = aliases[nameOrCode.toLowerCase()]
+        if (foundNamedKey) { return foundNamedKey === keyCode; }
+      } else if (types.isNumber(nameOrCode)) {
+        return nameOrCode === keyCode;
+      }
+      return false;
+  }
+
+  return keyboard.isEventKey = isEventKey;
+
+});
+
+define('skylark-devices-keyboard/main',[
+	"./keyboard",
+	"./KeyState",
+	"./keys",
+	"./Monitor",
+	"./aliases",
+	"./codes",
+	"./isEventKey",
+	"./names"
+],function(keyboard){
+	return keyboard;
+});
+define('skylark-devices-keyboard', ['skylark-devices-keyboard/main'], function (main) { return main; });
+
+define('skylark-devices-orientation/orientation',[
+  "skylark-langx-ns"
+],function(skylark){
+
+  /**
+   * @summary Detects if device orientation is supported
+   * @description We can only be sure device orientation is supported once received an event with coherent data
+   * @returns {Promise<boolean>}
+   */
+   function isDeviceOrientationSupported() {
+    return new Promise(function(resolve) {
+      if ('DeviceOrientationEvent' in window) {
+        var listener = function(e) {
+          if (e && e.alpha !== null && !isNaN(e.alpha)) {
+            resolve(true);
+          }
+          else {
+            resolve(false);
+          }
+
+          window.removeEventListener('deviceorientation', listener);
+        };
+
+        window.addEventListener('deviceorientation', listener, false);
+
+        // after 2 secs, auto-reject the promise
+        setTimeout(listener, 2000);
+      }
+      else {
+        resolve(false);
+      }
+    });
+  }
+
+  return skylark.attach("devices.orientation",{
+    isDeviceOrientationSupported
+  });
+	
+});
+define('skylark-devices-orientation/main',["./orientation"],function(orientation){
+	return orientation;
+});
+define('skylark-devices-orientation', ['skylark-devices-orientation/main'], function (main) { return main; });
+
+define('skylark-devices-points/points',[
+	"skylark-langx-ns"
+],function(skylark){
+	return skylark.attach("devices.points",{});
+});
+define('skylark-devices-points/mouse',[
+	"./points"
+],function(points){
+	/**
+	 * Function: isMouseEvent
+	 * 
+	 * Returns true if the event was generated using a mouse (not a pen or touch device).
+	 */
+	function isMouseEvent(evt) 	{
+		return (evt.pointerType != null) ? (evt.pointerType == 'mouse' || evt.pointerType ===
+			evt.MSPOINTER_TYPE_MOUSE) : ((evt.mozInputSource != null) ?
+				evt.mozInputSource == 1 : evt.type.indexOf('mouse') == 0);
+	}
+	
+	/**
+	 * Function: isLeftMouseButton
+	 * 
+	 * Returns true if the left mouse button is pressed for the given event.
+	 * To check if a button is pressed during a mouseMove you should use the
+	 * <mxGraph.isMouseDown> property. Note that this returns true in Firefox
+	 * for control+left-click on the Mac.
+	 */
+	function isLeftMouseButton(evt) {
+		// Special case for mousemove and mousedown we check the buttons
+		// if it exists because which is 0 even if no button is pressed
+		if ('buttons' in evt && (evt.type == 'mousedown' || evt.type == 'mousemove'))
+		{
+			return evt.buttons == 1;
+		}
+		else if ('which' in evt)
+		{
+	        return evt.which === 1;
+	    }
+		else
+		{
+	        return evt.button === 1;
+	    }
+	}
+	
+	/**
+	 * Function: isMiddleMouseButton
+	 * 
+	 * Returns true if the middle mouse button is pressed for the given event.
+	 * To check if a button is pressed during a mouseMove you should use the
+	 * <mxGraph.isMouseDown> property.
+	 */
+	function isMiddleMouseButton(evt) {
+		if ('which' in evt)
+		{
+	        return evt.which === 2;
+	    }
+		else
+		{
+	        return evt.button === 4;
+	    }
+	}
+	
+	/**
+	 * Function: isRightMouseButton
+	 * 
+	 * Returns true if the right mouse button was pressed. Note that this
+	 * button might not be available on some systems. For handling a popup
+	 * trigger <isPopupTrigger> should be used.
+	 */
+	function isRightMouseButton(evt){
+		if ('which' in evt)
+		{
+	        return evt.which === 3;
+	    }
+		else
+		{
+	        return evt.button === 2;
+	    }
+	}
+
+  /**
+   * @summary Gets the event name for mouse wheel
+   * @returns {string}
+   */
+  function mouseWheelEvent() {
+    return 'onwheel' in document.createElement('div') ? 'wheel' : // Modern browsers support "wheel"
+      document.onmousewheel !== undefined ? 'mousewheel' : // Webkit and IE support at least "mousewheel"
+        'DOMMouseScroll'; // let's assume that remaining browsers are older Firefox
+  };
+
+  /**
+   * @summary Normalize mousewheel values accross browsers
+   * @description From Facebook's Fixed Data Table
+   * {@link https://github.com/facebookarchive/fixed-data-table/blob/master/src/vendor_upstream/dom/normalizeWheel.js}
+   * @copyright Facebook
+   * @param {MouseWheelEvent} event
+   * @returns {{spinX: number, spinY: number, pixelX: number, pixelY: number}}
+   */
+  function normalizeWheel(event) {
+    var PIXEL_STEP  = 10;
+    var LINE_HEIGHT = 40;
+    var PAGE_HEIGHT = 800;
+
+    var sX = 0, sY = 0; // spinX, spinY
+    var pX = 0, pY = 0; // pixelX, pixelY
+
+    // Legacy
+    if ('detail'      in event) { sY = event.detail; }
+    if ('wheelDelta'  in event) { sY = -event.wheelDelta / 120; }
+    if ('wheelDeltaY' in event) { sY = -event.wheelDeltaY / 120; }
+    if ('wheelDeltaX' in event) { sX = -event.wheelDeltaX / 120; }
+
+    // side scrolling on FF with DOMMouseScroll
+    if ('axis' in event && event.axis === event.HORIZONTAL_AXIS) {
+      sX = sY;
+      sY = 0;
+    }
+
+    pX = sX * PIXEL_STEP;
+    pY = sY * PIXEL_STEP;
+
+    if ('deltaY' in event) { pY = event.deltaY; }
+    if ('deltaX' in event) { pX = event.deltaX; }
+
+    if ((pX || pY) && event.deltaMode) {
+      if (event.deltaMode === 1) { // delta in LINE units
+        pX *= LINE_HEIGHT;
+        pY *= LINE_HEIGHT;
+      }
+      else {                      // delta in PAGE units
+        pX *= PAGE_HEIGHT;
+        pY *= PAGE_HEIGHT;
+      }
+    }
+
+    // Fall-back if spin cannot be determined
+    if (pX && !sX) { sX = (pX < 1) ? -1 : 1; }
+    if (pY && !sY) { sY = (pY < 1) ? -1 : 1; }
+
+    return {
+      spinX: sX,
+      spinY: sY,
+      pixelX: pX,
+      pixelY: pY
+    };
+  };
+
+	return points.mouse = {
+		mouseWheelEvent,
+		normalizeWheel,
+
+		isMouseEvent,
+		isLeftMouseButton,
+		isMiddleMouseButton,
+		isRightMouseButton
+	};
+});
+define('skylark-devices-points/touch',[
+	"./points"
+],function(points){
+
+  /**
+   * @summary Detects if the user is using a touch screen
+   * @returns {Promise<boolean>}
+   */
+   function isTouchEnabled () {
+    return new Promise(function(resolve) {
+      var listener = function(e) {
+        if (e) {
+          resolve(true);
+        }
+        else {
+          resolve(false);
+        }
+
+        window.removeEventListener('touchstart', listener);
+      };
+
+      window.addEventListener('touchstart', listener, false);
+
+      // after 10 secs auto-reject the promise
+      setTimeout(listener, 10000);
+    });
+  };
+
+
+  /*
+   * Converts single-touch event to mouse event.
+   */
+  function mousy(elm) {
+    var touchToMouse = function(event) {
+        if (event.touches.length > 1) return; //allow default multi-touch gestures to work
+        var touch = event.changedTouches[0];
+        var type = "";
+        
+        switch (event.type) {
+        case "touchstart": 
+            type = "mousedown"; break;
+        case "touchmove":  
+            type="mousemove";   break;
+        case "touchend":   
+            type="mouseup";     break;
+        default: 
+            return;
+        }
+        
+        // https://developer.mozilla.org/en/DOM/event.initMouseEvent for API
+        var simulatedEvent = document.createEvent("MouseEvent");
+        simulatedEvent.initMouseEvent(type, true, true, window, 1, 
+                touch.screenX, touch.screenY, 
+                touch.clientX, touch.clientY, false, 
+                false, false, false, 0, null);
+        
+        touch.target.dispatchEvent(simulatedEvent);
+        event.preventDefault();
+    };
+
+    elm = elm || document;
+
+    elm.addEventListener("touchstart",touchToMouse,true);
+    elm.addEventListener("touchmove",touchToMouse,true);
+    elm.addEventListener("touchend",touchToMouse,true);
+  }
+
+  return points.touch = {
+  	isTouchEnabled,
+    mousy
+  };
+	
+});
+define('skylark-devices-points/main',[
+	"./points",
+	"./mouse",
+	"./touch"
+],function(points){
+	return points;
+});
+define('skylark-devices-points', ['skylark-devices-points/main'], function (main) { return main; });
+
+define('skylark-devices-webgl/webgl',[
+	"skylark-langx-ns"
+],function(skylark){
+
+  /**
+   * @summary Tries to return a canvas webgl context
+   * @returns {WebGLRenderingContext}
+   */
+  function getWebGLCtx() {
+    var canvas = document.createElement('canvas');
+    var names = ['webgl', 'experimental-webgl', 'moz-webgl', 'webkit-3d'];
+    var context = null;
+
+    if (!canvas.getContext) {
+      return null;
+    }
+
+    if (names.some(function(name) {
+        try {
+          context = canvas.getContext(name);
+          return (context && typeof context.getParameter === 'function');
+        } catch (e) {
+          return false;
+        }
+      })) {
+      return context;
+    }
+    else {
+      return null;
+    }
+  }
+
+  /**
+   * @summary Detects if WebGL is supported
+   * @returns {boolean}
+   */
+  function isWebGLSupported() {
+    return !!window.WebGLRenderingContext && getWebGLCtx() !== null;
+  };
+
+
+  /**
+   * @summary Gets max texture width in WebGL context
+   * @returns {int}
+   */
+   function getMaxTextureWidth() {
+    var ctx = getWebGLCtx();
+    if (ctx !== null) {
+      return ctx.getParameter(ctx.MAX_TEXTURE_SIZE);  
+    }
+    else {
+      return 0;
+    }
+  };
+
+  return skylark.attach("devices.webgl",{
+  	getWebGLCtx,
+  	isWebGLSupported,
+  	getMaxTextureWidth
+  })
+	
+});
+define('skylark-devices-webgl/main',[
+	"./webgl"
+],function(webgl){
+	return webgl;
+});
+define('skylark-devices-webgl', ['skylark-devices-webgl/main'], function (main) { return main; });
+
+define('skylark-io-mimes/mimes',[
+	"skylark-langx-ns"
+],function(skylark){
+	return skylark.attach("io.mimes",{
+
+	});
+});
+define('skylark-io-mimes/types',[
+	"./mimes"
+],function(mimes) {
+	return mimes.types = {
+	  "application\/x-executable": "exe",
+	  "application\/x-jar": "jar",
+	  "application\/x-gzip": "gz",
+	  "application\/x-bzip2": "tbz",
+	  "application\/x-rar": "rar",
+	  "application\/x-mpegURL": "m3u8",
+	  "application\/dash+xml": "mpd",
+	  "application\/andrew-inset": "ez",
+	  "application\/applixware": "aw",
+	  "application\/atom+xml": "atom",
+	  "application\/atomcat+xml": "atomcat",
+	  "application\/atomsvc+xml": "atomsvc",
+	  "application\/ccxml+xml": "ccxml",
+	  "application\/cdmi-capability": "cdmia",
+	  "application\/cdmi-container": "cdmic",
+	  "application\/cdmi-domain": "cdmid",
+	  "application\/cdmi-object": "cdmio",
+	  "application\/cdmi-queue": "cdmiq",
+	  "application\/cu-seeme": "cu",
+	  "application\/davmount+xml": "davmount",
+	  "application\/docbook+xml": "dbk",
+	  "application\/dssc+der": "dssc",
+	  "application\/dssc+xml": "xdssc",
+	  "application\/ecmascript": "ecma",
+	  "application\/emma+xml": "emma",
+	  "application\/epub+zip": "epub",
+	  "application\/exi": "exi",
+	  "application\/font-tdpfr": "pfr",
+	  "application\/gml+xml": "gml",
+	  "application\/gpx+xml": "gpx",
+	  "application\/gxf": "gxf",
+	  "application\/hyperstudio": "stk",
+	  "application\/inkml+xml": "ink",
+	  "application\/ipfix": "ipfix",
+	  "application\/java-serialized-object": "ser",
+	  "application\/java-vm": "class",
+	  "application\/json": "json",
+	  "application\/jsonml+json": "jsonml",
+	  "application\/lost+xml": "lostxml",
+	  "application\/mac-binhex40": "hqx",
+	  "application\/mac-compactpro": "cpt",
+	  "application\/mads+xml": "mads",
+	  "application\/marc": "mrc",
+	  "application\/marcxml+xml": "mrcx",
+	  "application\/mathematica": "ma",
+	  "application\/mathml+xml": "mathml",
+	  "application\/mbox": "mbox",
+	  "application\/mediaservercontrol+xml": "mscml",
+	  "application\/metalink+xml": "metalink",
+	  "application\/metalink4+xml": "meta4",
+	  "application\/mets+xml": "mets",
+	  "application\/mods+xml": "mods",
+	  "application\/mp21": "m21",
+	  "application\/mp4": "mp4s",
+	  "application\/msword": "doc",
+	  "application\/mxf": "mxf",
+	  "application\/octet-stream": "bin",
+	  "application\/oda": "oda",
+	  "application\/oebps-package+xml": "opf",
+	  "application\/ogg": "ogx",
+	  "application\/omdoc+xml": "omdoc",
+	  "application\/onenote": "onetoc",
+	  "application\/oxps": "oxps",
+	  "application\/patch-ops-error+xml": "xer",
+	  "application\/pdf": "pdf",
+	  "application\/pgp-encrypted": "pgp",
+	  "application\/pgp-signature": "asc",
+	  "application\/pics-rules": "prf",
+	  "application\/pkcs10": "p10",
+	  "application\/pkcs7-mime": "p7m",
+	  "application\/pkcs7-signature": "p7s",
+	  "application\/pkcs8": "p8",
+	  "application\/pkix-attr-cert": "ac",
+	  "application\/pkix-cert": "cer",
+	  "application\/pkix-crl": "crl",
+	  "application\/pkix-pkipath": "pkipath",
+	  "application\/pkixcmp": "pki",
+	  "application\/pls+xml": "pls",
+	  "application\/postscript": "ai",
+	  "application\/prs.cww": "cww",
+	  "application\/pskc+xml": "pskcxml",
+	  "application\/rdf+xml": "rdf",
+	  "application\/reginfo+xml": "rif",
+	  "application\/relax-ng-compact-syntax": "rnc",
+	  "application\/resource-lists+xml": "rl",
+	  "application\/resource-lists-diff+xml": "rld",
+	  "application\/rls-services+xml": "rs",
+	  "application\/rpki-ghostbusters": "gbr",
+	  "application\/rpki-manifest": "mft",
+	  "application\/rpki-roa": "roa",
+	  "application\/rsd+xml": "rsd",
+	  "application\/rss+xml": "rss",
+	  "application\/rtf": "rtf",
+	  "application\/sbml+xml": "sbml",
+	  "application\/scvp-cv-request": "scq",
+	  "application\/scvp-cv-response": "scs",
+	  "application\/scvp-vp-request": "spq",
+	  "application\/scvp-vp-response": "spp",
+	  "application\/sdp": "sdp",
+	  "application\/set-payment-initiation": "setpay",
+	  "application\/set-registration-initiation": "setreg",
+	  "application\/shf+xml": "shf",
+	  "application\/smil+xml": "smi",
+	  "application\/sparql-query": "rq",
+	  "application\/sparql-results+xml": "srx",
+	  "application\/srgs": "gram",
+	  "application\/srgs+xml": "grxml",
+	  "application\/sru+xml": "sru",
+	  "application\/ssdl+xml": "ssdl",
+	  "application\/ssml+xml": "ssml",
+	  "application\/tei+xml": "tei",
+	  "application\/thraud+xml": "tfi",
+	  "application\/timestamped-data": "tsd",
+	  "application\/vnd.3gpp.pic-bw-large": "plb",
+	  "application\/vnd.3gpp.pic-bw-small": "psb",
+	  "application\/vnd.3gpp.pic-bw-var": "pvb",
+	  "application\/vnd.3gpp2.tcap": "tcap",
+	  "application\/vnd.3m.post-it-notes": "pwn",
+	  "application\/vnd.accpac.simply.aso": "aso",
+	  "application\/vnd.accpac.simply.imp": "imp",
+	  "application\/vnd.acucobol": "acu",
+	  "application\/vnd.acucorp": "atc",
+	  "application\/vnd.adobe.air-application-installer-package+zip": "air",
+	  "application\/vnd.adobe.formscentral.fcdt": "fcdt",
+	  "application\/vnd.adobe.fxp": "fxp",
+	  "application\/vnd.adobe.xdp+xml": "xdp",
+	  "application\/vnd.adobe.xfdf": "xfdf",
+	  "application\/vnd.ahead.space": "ahead",
+	  "application\/vnd.airzip.filesecure.azf": "azf",
+	  "application\/vnd.airzip.filesecure.azs": "azs",
+	  "application\/vnd.amazon.ebook": "azw",
+	  "application\/vnd.americandynamics.acc": "acc",
+	  "application\/vnd.amiga.ami": "ami",
+	  "application\/vnd.android.package-archive": "apk",
+	  "application\/vnd.anser-web-certificate-issue-initiation": "cii",
+	  "application\/vnd.anser-web-funds-transfer-initiation": "fti",
+	  "application\/vnd.antix.game-component": "atx",
+	  "application\/vnd.apple.installer+xml": "mpkg",
+	  "application\/vnd.aristanetworks.swi": "swi",
+	  "application\/vnd.astraea-software.iota": "iota",
+	  "application\/vnd.audiograph": "aep",
+	  "application\/vnd.blueice.multipass": "mpm",
+	  "application\/vnd.bmi": "bmi",
+	  "application\/vnd.businessobjects": "rep",
+	  "application\/vnd.chemdraw+xml": "cdxml",
+	  "application\/vnd.chipnuts.karaoke-mmd": "mmd",
+	  "application\/vnd.cinderella": "cdy",
+	  "application\/vnd.claymore": "cla",
+	  "application\/vnd.cloanto.rp9": "rp9",
+	  "application\/vnd.clonk.c4group": "c4g",
+	  "application\/vnd.cluetrust.cartomobile-config": "c11amc",
+	  "application\/vnd.cluetrust.cartomobile-config-pkg": "c11amz",
+	  "application\/vnd.commonspace": "csp",
+	  "application\/vnd.contact.cmsg": "cdbcmsg",
+	  "application\/vnd.cosmocaller": "cmc",
+	  "application\/vnd.crick.clicker": "clkx",
+	  "application\/vnd.crick.clicker.keyboard": "clkk",
+	  "application\/vnd.crick.clicker.palette": "clkp",
+	  "application\/vnd.crick.clicker.template": "clkt",
+	  "application\/vnd.crick.clicker.wordbank": "clkw",
+	  "application\/vnd.criticaltools.wbs+xml": "wbs",
+	  "application\/vnd.ctc-posml": "pml",
+	  "application\/vnd.cups-ppd": "ppd",
+	  "application\/vnd.curl.car": "car",
+	  "application\/vnd.curl.pcurl": "pcurl",
+	  "application\/vnd.dart": "dart",
+	  "application\/vnd.data-vision.rdz": "rdz",
+	  "application\/vnd.dece.data": "uvf",
+	  "application\/vnd.dece.ttml+xml": "uvt",
+	  "application\/vnd.dece.unspecified": "uvx",
+	  "application\/vnd.dece.zip": "uvz",
+	  "application\/vnd.denovo.fcselayout-link": "fe_launch",
+	  "application\/vnd.dna": "dna",
+	  "application\/vnd.dolby.mlp": "mlp",
+	  "application\/vnd.dpgraph": "dpg",
+	  "application\/vnd.dreamfactory": "dfac",
+	  "application\/vnd.ds-keypoint": "kpxx",
+	  "application\/vnd.dvb.ait": "ait",
+	  "application\/vnd.dvb.service": "svc",
+	  "application\/vnd.dynageo": "geo",
+	  "application\/vnd.ecowin.chart": "mag",
+	  "application\/vnd.enliven": "nml",
+	  "application\/vnd.epson.esf": "esf",
+	  "application\/vnd.epson.msf": "msf",
+	  "application\/vnd.epson.quickanime": "qam",
+	  "application\/vnd.epson.salt": "slt",
+	  "application\/vnd.epson.ssf": "ssf",
+	  "application\/vnd.eszigno3+xml": "es3",
+	  "application\/vnd.ezpix-album": "ez2",
+	  "application\/vnd.ezpix-package": "ez3",
+	  "application\/vnd.fdf": "fdf",
+	  "application\/vnd.fdsn.mseed": "mseed",
+	  "application\/vnd.fdsn.seed": "seed",
+	  "application\/vnd.flographit": "gph",
+	  "application\/vnd.fluxtime.clip": "ftc",
+	  "application\/vnd.framemaker": "fm",
+	  "application\/vnd.frogans.fnc": "fnc",
+	  "application\/vnd.frogans.ltf": "ltf",
+	  "application\/vnd.fsc.weblaunch": "fsc",
+	  "application\/vnd.fujitsu.oasys": "oas",
+	  "application\/vnd.fujitsu.oasys2": "oa2",
+	  "application\/vnd.fujitsu.oasys3": "oa3",
+	  "application\/vnd.fujitsu.oasysgp": "fg5",
+	  "application\/vnd.fujitsu.oasysprs": "bh2",
+	  "application\/vnd.fujixerox.ddd": "ddd",
+	  "application\/vnd.fujixerox.docuworks": "xdw",
+	  "application\/vnd.fujixerox.docuworks.binder": "xbd",
+	  "application\/vnd.fuzzysheet": "fzs",
+	  "application\/vnd.genomatix.tuxedo": "txd",
+	  "application\/vnd.geogebra.file": "ggb",
+	  "application\/vnd.geogebra.tool": "ggt",
+	  "application\/vnd.geometry-explorer": "gex",
+	  "application\/vnd.geonext": "gxt",
+	  "application\/vnd.geoplan": "g2w",
+	  "application\/vnd.geospace": "g3w",
+	  "application\/vnd.gmx": "gmx",
+	  "application\/vnd.google-earth.kml+xml": "kml",
+	  "application\/vnd.google-earth.kmz": "kmz",
+	  "application\/vnd.grafeq": "gqf",
+	  "application\/vnd.groove-account": "gac",
+	  "application\/vnd.groove-help": "ghf",
+	  "application\/vnd.groove-identity-message": "gim",
+	  "application\/vnd.groove-injector": "grv",
+	  "application\/vnd.groove-tool-message": "gtm",
+	  "application\/vnd.groove-tool-template": "tpl",
+	  "application\/vnd.groove-vcard": "vcg",
+	  "application\/vnd.hal+xml": "hal",
+	  "application\/vnd.handheld-entertainment+xml": "zmm",
+	  "application\/vnd.hbci": "hbci",
+	  "application\/vnd.hhe.lesson-player": "les",
+	  "application\/vnd.hp-hpgl": "hpgl",
+	  "application\/vnd.hp-hpid": "hpid",
+	  "application\/vnd.hp-hps": "hps",
+	  "application\/vnd.hp-jlyt": "jlt",
+	  "application\/vnd.hp-pcl": "pcl",
+	  "application\/vnd.hp-pclxl": "pclxl",
+	  "application\/vnd.hydrostatix.sof-data": "sfd-hdstx",
+	  "application\/vnd.ibm.minipay": "mpy",
+	  "application\/vnd.ibm.modcap": "afp",
+	  "application\/vnd.ibm.rights-management": "irm",
+	  "application\/vnd.ibm.secure-container": "sc",
+	  "application\/vnd.iccprofile": "icc",
+	  "application\/vnd.igloader": "igl",
+	  "application\/vnd.immervision-ivp": "ivp",
+	  "application\/vnd.immervision-ivu": "ivu",
+	  "application\/vnd.insors.igm": "igm",
+	  "application\/vnd.intercon.formnet": "xpw",
+	  "application\/vnd.intergeo": "i2g",
+	  "application\/vnd.intu.qbo": "qbo",
+	  "application\/vnd.intu.qfx": "qfx",
+	  "application\/vnd.ipunplugged.rcprofile": "rcprofile",
+	  "application\/vnd.irepository.package+xml": "irp",
+	  "application\/vnd.is-xpr": "xpr",
+	  "application\/vnd.isac.fcs": "fcs",
+	  "application\/vnd.jam": "jam",
+	  "application\/vnd.jcp.javame.midlet-rms": "rms",
+	  "application\/vnd.jisp": "jisp",
+	  "application\/vnd.joost.joda-archive": "joda",
+	  "application\/vnd.kahootz": "ktz",
+	  "application\/vnd.kde.karbon": "karbon",
+	  "application\/vnd.kde.kchart": "chrt",
+	  "application\/vnd.kde.kformula": "kfo",
+	  "application\/vnd.kde.kivio": "flw",
+	  "application\/vnd.kde.kontour": "kon",
+	  "application\/vnd.kde.kpresenter": "kpr",
+	  "application\/vnd.kde.kspread": "ksp",
+	  "application\/vnd.kde.kword": "kwd",
+	  "application\/vnd.kenameaapp": "htke",
+	  "application\/vnd.kidspiration": "kia",
+	  "application\/vnd.kinar": "kne",
+	  "application\/vnd.koan": "skp",
+	  "application\/vnd.kodak-descriptor": "sse",
+	  "application\/vnd.las.las+xml": "lasxml",
+	  "application\/vnd.llamagraphics.life-balance.desktop": "lbd",
+	  "application\/vnd.llamagraphics.life-balance.exchange+xml": "lbe",
+	  "application\/vnd.lotus-1-2-3": 123,
+	  "application\/vnd.lotus-approach": "apr",
+	  "application\/vnd.lotus-freelance": "pre",
+	  "application\/vnd.lotus-notes": "nsf",
+	  "application\/vnd.lotus-organizer": "org",
+	  "application\/vnd.lotus-screencam": "scm",
+	  "application\/vnd.lotus-wordpro": "lwp",
+	  "application\/vnd.macports.portpkg": "portpkg",
+	  "application\/vnd.mcd": "mcd",
+	  "application\/vnd.medcalcdata": "mc1",
+	  "application\/vnd.mediastation.cdkey": "cdkey",
+	  "application\/vnd.mfer": "mwf",
+	  "application\/vnd.mfmp": "mfm",
+	  "application\/vnd.micrografx.flo": "flo",
+	  "application\/vnd.micrografx.igx": "igx",
+	  "application\/vnd.mif": "mif",
+	  "application\/vnd.mobius.daf": "daf",
+	  "application\/vnd.mobius.dis": "dis",
+	  "application\/vnd.mobius.mbk": "mbk",
+	  "application\/vnd.mobius.mqy": "mqy",
+	  "application\/vnd.mobius.msl": "msl",
+	  "application\/vnd.mobius.plc": "plc",
+	  "application\/vnd.mobius.txf": "txf",
+	  "application\/vnd.mophun.application": "mpn",
+	  "application\/vnd.mophun.certificate": "mpc",
+	  "application\/vnd.mozilla.xul+xml": "xul",
+	  "application\/vnd.ms-artgalry": "cil",
+	  "application\/vnd.ms-cab-compressed": "cab",
+	  "application\/vnd.ms-excel": "xls",
+	  "application\/vnd.ms-excel.addin.macroenabled.12": "xlam",
+	  "application\/vnd.ms-excel.sheet.binary.macroenabled.12": "xlsb",
+	  "application\/vnd.ms-excel.sheet.macroenabled.12": "xlsm",
+	  "application\/vnd.ms-excel.template.macroenabled.12": "xltm",
+	  "application\/vnd.ms-fontobject": "eot",
+	  "application\/vnd.ms-htmlhelp": "chm",
+	  "application\/vnd.ms-ims": "ims",
+	  "application\/vnd.ms-lrm": "lrm",
+	  "application\/vnd.ms-officetheme": "thmx",
+	  "application\/vnd.ms-pki.seccat": "cat",
+	  "application\/vnd.ms-pki.stl": "stl",
+	  "application\/vnd.ms-powerpoint": "ppt",
+	  "application\/vnd.ms-powerpoint.addin.macroenabled.12": "ppam",
+	  "application\/vnd.ms-powerpoint.presentation.macroenabled.12": "pptm",
+	  "application\/vnd.ms-powerpoint.slide.macroenabled.12": "sldm",
+	  "application\/vnd.ms-powerpoint.slideshow.macroenabled.12": "ppsm",
+	  "application\/vnd.ms-powerpoint.template.macroenabled.12": "potm",
+	  "application\/vnd.ms-project": "mpp",
+	  "application\/vnd.ms-word.document.macroenabled.12": "docm",
+	  "application\/vnd.ms-word.template.macroenabled.12": "dotm",
+	  "application\/vnd.ms-works": "wps",
+	  "application\/vnd.ms-wpl": "wpl",
+	  "application\/vnd.ms-xpsdocument": "xps",
+	  "application\/vnd.mseq": "mseq",
+	  "application\/vnd.musician": "mus",
+	  "application\/vnd.muvee.style": "msty",
+	  "application\/vnd.mynfc": "taglet",
+	  "application\/vnd.neurolanguage.nlu": "nlu",
+	  "application\/vnd.nitf": "ntf",
+	  "application\/vnd.noblenet-directory": "nnd",
+	  "application\/vnd.noblenet-sealer": "nns",
+	  "application\/vnd.noblenet-web": "nnw",
+	  "application\/vnd.nokia.n-gage.data": "ngdat",
+	  "application\/vnd.nokia.n-gage.symbian.install": "n-gage",
+	  "application\/vnd.nokia.radio-preset": "rpst",
+	  "application\/vnd.nokia.radio-presets": "rpss",
+	  "application\/vnd.novadigm.edm": "edm",
+	  "application\/vnd.novadigm.edx": "edx",
+	  "application\/vnd.novadigm.ext": "ext",
+	  "application\/vnd.oasis.opendocument.chart": "odc",
+	  "application\/vnd.oasis.opendocument.chart-template": "otc",
+	  "application\/vnd.oasis.opendocument.database": "odb",
+	  "application\/vnd.oasis.opendocument.formula": "odf",
+	  "application\/vnd.oasis.opendocument.formula-template": "odft",
+	  "application\/vnd.oasis.opendocument.graphics": "odg",
+	  "application\/vnd.oasis.opendocument.graphics-template": "otg",
+	  "application\/vnd.oasis.opendocument.image": "odi",
+	  "application\/vnd.oasis.opendocument.image-template": "oti",
+	  "application\/vnd.oasis.opendocument.presentation": "odp",
+	  "application\/vnd.oasis.opendocument.presentation-template": "otp",
+	  "application\/vnd.oasis.opendocument.spreadsheet": "ods",
+	  "application\/vnd.oasis.opendocument.spreadsheet-template": "ots",
+	  "application\/vnd.oasis.opendocument.text": "odt",
+	  "application\/vnd.oasis.opendocument.text-master": "odm",
+	  "application\/vnd.oasis.opendocument.text-template": "ott",
+	  "application\/vnd.oasis.opendocument.text-web": "oth",
+	  "application\/vnd.olpc-sugar": "xo",
+	  "application\/vnd.oma.dd2+xml": "dd2",
+	  "application\/vnd.openofficeorg.extension": "oxt",
+	  "application\/vnd.openxmlformats-officedocument.presentationml.presentation": "pptx",
+	  "application\/vnd.openxmlformats-officedocument.presentationml.slide": "sldx",
+	  "application\/vnd.openxmlformats-officedocument.presentationml.slideshow": "ppsx",
+	  "application\/vnd.openxmlformats-officedocument.presentationml.template": "potx",
+	  "application\/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+	  "application\/vnd.openxmlformats-officedocument.spreadsheetml.template": "xltx",
+	  "application\/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+	  "application\/vnd.openxmlformats-officedocument.wordprocessingml.template": "dotx",
+	  "application\/vnd.osgeo.mapguide.package": "mgp",
+	  "application\/vnd.osgi.dp": "dp",
+	  "application\/vnd.osgi.subsystem": "esa",
+	  "application\/vnd.palm": "pdb",
+	  "application\/vnd.pawaafile": "paw",
+	  "application\/vnd.pg.format": "str",
+	  "application\/vnd.pg.osasli": "ei6",
+	  "application\/vnd.picsel": "efif",
+	  "application\/vnd.pmi.widget": "wg",
+	  "application\/vnd.pocketlearn": "plf",
+	  "application\/vnd.powerbuilder6": "pbd",
+	  "application\/vnd.previewsystems.box": "box",
+	  "application\/vnd.proteus.magazine": "mgz",
+	  "application\/vnd.publishare-delta-tree": "qps",
+	  "application\/vnd.pvi.ptid1": "ptid",
+	  "application\/vnd.quark.quarkxpress": "qxd",
+	  "application\/vnd.realvnc.bed": "bed",
+	  "application\/vnd.recordare.musicxml": "mxl",
+	  "application\/vnd.recordare.musicxml+xml": "musicxml",
+	  "application\/vnd.rig.cryptonote": "cryptonote",
+	  "application\/vnd.rim.cod": "cod",
+	  "application\/vnd.rn-realmedia": "rm",
+	  "application\/vnd.rn-realmedia-vbr": "rmvb",
+	  "application\/vnd.route66.link66+xml": "link66",
+	  "application\/vnd.sailingtracker.track": "st",
+	  "application\/vnd.seemail": "see",
+	  "application\/vnd.sema": "sema",
+	  "application\/vnd.semd": "semd",
+	  "application\/vnd.semf": "semf",
+	  "application\/vnd.shana.informed.formdata": "ifm",
+	  "application\/vnd.shana.informed.formtemplate": "itp",
+	  "application\/vnd.shana.informed.interchange": "iif",
+	  "application\/vnd.shana.informed.package": "ipk",
+	  "application\/vnd.simtech-mindmapper": "twd",
+	  "application\/vnd.smaf": "mmf",
+	  "application\/vnd.smart.teacher": "teacher",
+	  "application\/vnd.solent.sdkm+xml": "sdkm",
+	  "application\/vnd.spotfire.dxp": "dxp",
+	  "application\/vnd.spotfire.sfs": "sfs",
+	  "application\/vnd.stardivision.calc": "sdc",
+	  "application\/vnd.stardivision.draw": "sda",
+	  "application\/vnd.stardivision.impress": "sdd",
+	  "application\/vnd.stardivision.math": "smf",
+	  "application\/vnd.stardivision.writer": "sdw",
+	  "application\/vnd.stardivision.writer-global": "sgl",
+	  "application\/vnd.stepmania.package": "smzip",
+	  "application\/vnd.stepmania.stepchart": "sm",
+	  "application\/vnd.sun.xml.calc": "sxc",
+	  "application\/vnd.sun.xml.calc.template": "stc",
+	  "application\/vnd.sun.xml.draw": "sxd",
+	  "application\/vnd.sun.xml.draw.template": "std",
+	  "application\/vnd.sun.xml.impress": "sxi",
+	  "application\/vnd.sun.xml.impress.template": "sti",
+	  "application\/vnd.sun.xml.math": "sxm",
+	  "application\/vnd.sun.xml.writer": "sxw",
+	  "application\/vnd.sun.xml.writer.global": "sxg",
+	  "application\/vnd.sun.xml.writer.template": "stw",
+	  "application\/vnd.sus-calendar": "sus",
+	  "application\/vnd.svd": "svd",
+	  "application\/vnd.symbian.install": "sis",
+	  "application\/vnd.syncml+xml": "xsm",
+	  "application\/vnd.syncml.dm+wbxml": "bdm",
+	  "application\/vnd.syncml.dm+xml": "xdm",
+	  "application\/vnd.tao.intent-module-archive": "tao",
+	  "application\/vnd.tcpdump.pcap": "pcap",
+	  "application\/vnd.tmobile-livetv": "tmo",
+	  "application\/vnd.trid.tpt": "tpt",
+	  "application\/vnd.triscape.mxs": "mxs",
+	  "application\/vnd.trueapp": "tra",
+	  "application\/vnd.ufdl": "ufd",
+	  "application\/vnd.uiq.theme": "utz",
+	  "application\/vnd.umajin": "umj",
+	  "application\/vnd.unity": "unityweb",
+	  "application\/vnd.uoml+xml": "uoml",
+	  "application\/vnd.vcx": "vcx",
+	  "application\/vnd.visio": "vsd",
+	  "application\/vnd.visionary": "vis",
+	  "application\/vnd.vsf": "vsf",
+	  "application\/vnd.wap.wbxml": "wbxml",
+	  "application\/vnd.wap.wmlc": "wmlc",
+	  "application\/vnd.wap.wmlscriptc": "wmlsc",
+	  "application\/vnd.webturbo": "wtb",
+	  "application\/vnd.wolfram.player": "nbp",
+	  "application\/vnd.wordperfect": "wpd",
+	  "application\/vnd.wqd": "wqd",
+	  "application\/vnd.wt.stf": "stf",
+	  "application\/vnd.xara": "xar",
+	  "application\/vnd.xfdl": "xfdl",
+	  "application\/vnd.yamaha.hv-dic": "hvd",
+	  "application\/vnd.yamaha.hv-script": "hvs",
+	  "application\/vnd.yamaha.hv-voice": "hvp",
+	  "application\/vnd.yamaha.openscoreformat": "osf",
+	  "application\/vnd.yamaha.openscoreformat.osfpvg+xml": "osfpvg",
+	  "application\/vnd.yamaha.smaf-audio": "saf",
+	  "application\/vnd.yamaha.smaf-phrase": "spf",
+	  "application\/vnd.yellowriver-custom-menu": "cmp",
+	  "application\/vnd.zul": "zir",
+	  "application\/vnd.zzazz.deck+xml": "zaz",
+	  "application\/voicexml+xml": "vxml",
+	  "application\/widget": "wgt",
+	  "application\/winhlp": "hlp",
+	  "application\/wsdl+xml": "wsdl",
+	  "application\/wspolicy+xml": "wspolicy",
+	  "application\/x-7z-compressed": "7z",
+	  "application\/x-abiword": "abw",
+	  "application\/x-ace-compressed": "ace",
+	  "application\/x-apple-diskimage": "dmg",
+	  "application\/x-authorware-bin": "aab",
+	  "application\/x-authorware-map": "aam",
+	  "application\/x-authorware-seg": "aas",
+	  "application\/x-bcpio": "bcpio",
+	  "application\/x-bittorrent": "torrent",
+	  "application\/x-blorb": "blb",
+	  "application\/x-bzip": "bz",
+	  "application\/x-cbr": "cbr",
+	  "application\/x-cdlink": "vcd",
+	  "application\/x-cfs-compressed": "cfs",
+	  "application\/x-chat": "chat",
+	  "application\/x-chess-pgn": "pgn",
+	  "application\/x-conference": "nsc",
+	  "application\/x-cpio": "cpio",
+	  "application\/x-csh": "csh",
+	  "application\/x-debian-package": "deb",
+	  "application\/x-dgc-compressed": "dgc",
+	  "application\/x-director": "dir",
+	  "application\/x-doom": "wad",
+	  "application\/x-dtbncx+xml": "ncx",
+	  "application\/x-dtbook+xml": "dtb",
+	  "application\/x-dtbresource+xml": "res",
+	  "application\/x-dvi": "dvi",
+	  "application\/x-envoy": "evy",
+	  "application\/x-eva": "eva",
+	  "application\/x-font-bdf": "bdf",
+	  "application\/x-font-ghostscript": "gsf",
+	  "application\/x-font-linux-psf": "psf",
+	  "application\/x-font-pcf": "pcf",
+	  "application\/x-font-snf": "snf",
+	  "application\/x-font-type1": "pfa",
+	  "application\/x-freearc": "arc",
+	  "application\/x-futuresplash": "spl",
+	  "application\/x-gca-compressed": "gca",
+	  "application\/x-glulx": "ulx",
+	  "application\/x-gnumeric": "gnumeric",
+	  "application\/x-gramps-xml": "gramps",
+	  "application\/x-gtar": "gtar",
+	  "application\/x-hdf": "hdf",
+	  "application\/x-install-instructions": "install",
+	  "application\/x-iso9660-image": "iso",
+	  "application\/x-java-jnlp-file": "jnlp",
+	  "application\/x-latex": "latex",
+	  "application\/x-lzh-compressed": "lzh",
+	  "application\/x-mie": "mie",
+	  "application\/x-mobipocket-ebook": "prc",
+	  "application\/x-ms-application": "application",
+	  "application\/x-ms-shortcut": "lnk",
+	  "application\/x-ms-wmd": "wmd",
+	  "application\/x-ms-wmz": "wmz",
+	  "application\/x-ms-xbap": "xbap",
+	  "application\/x-msaccess": "mdb",
+	  "application\/x-msbinder": "obd",
+	  "application\/x-mscardfile": "crd",
+	  "application\/x-msclip": "clp",
+	  "application\/x-msdownload": "dll",
+	  "application\/x-msmediaview": "mvb",
+	  "application\/x-msmetafile": "wmf",
+	  "application\/x-msmoney": "mny",
+	  "application\/x-mspublisher": "pub",
+	  "application\/x-msschedule": "scd",
+	  "application\/x-msterminal": "trm",
+	  "application\/x-mswrite": "wri",
+	  "application\/x-netcdf": "nc",
+	  "application\/x-nzb": "nzb",
+	  "application\/x-pkcs12": "p12",
+	  "application\/x-pkcs7-certificates": "p7b",
+	  "application\/x-pkcs7-certreqresp": "p7r",
+	  "application\/x-research-info-systems": "ris",
+	  "application\/x-shar": "shar",
+	  "application\/x-shockwave-flash": "swf",
+	  "application\/x-silverlight-app": "xap",
+	  "application\/x-sql": "sql",
+	  "application\/x-stuffit": "sit",
+	  "application\/x-stuffitx": "sitx",
+	  "application\/x-subrip": "srt",
+	  "application\/x-sv4cpio": "sv4cpio",
+	  "application\/x-sv4crc": "sv4crc",
+	  "application\/x-t3vm-image": "t3",
+	  "application\/x-tads": "gam",
+	  "application\/x-tar": "tar",
+	  "application\/x-tcl": "tcl",
+	  "application\/x-tex": "tex",
+	  "application\/x-tex-tfm": "tfm",
+	  "application\/x-texinfo": "texinfo",
+	  "application\/x-tgif": "obj",
+	  "application\/x-ustar": "ustar",
+	  "application\/x-wais-source": "src",
+	  "application\/x-x509-ca-cert": "der",
+	  "application\/x-xfig": "fig",
+	  "application\/x-xliff+xml": "xlf",
+	  "application\/x-xpinstall": "xpi",
+	  "application\/x-xz": "xz",
+	  "application\/x-zmachine": "z1",
+	  "application\/xaml+xml": "xaml",
+	  "application\/xcap-diff+xml": "xdf",
+	  "application\/xenc+xml": "xenc",
+	  "application\/xhtml+xml": "xhtml",
+	  "application\/xml": "xsl",
+	  "application\/xml-dtd": "dtd",
+	  "application\/xop+xml": "xop",
+	  "application\/xproc+xml": "xpl",
+	  "application\/xslt+xml": "xslt",
+	  "application\/xspf+xml": "xspf",
+	  "application\/xv+xml": "mxml",
+	  "application\/yang": "yang",
+	  "application\/yin+xml": "yin",
+	  "application\/zip": "zip",
+	  "application\/rtfd": "rtfd",
+
+	  "application\/x-cglap": "cglap",
+
+	  "audio\/wav": "wav",
+	  "audio\/adpcm": "adp",
+	  "audio\/basic": "au",
+	  "audio\/midi": "mid",
+	  "audio\/mp4": "m4a",
+	  "audio\/mpeg": "mpga",
+	  "audio\/ogg": "oga",
+	  "audio\/s3m": "s3m",
+	  "audio\/silk": "sil",
+	  "audio\/vnd.dece.audio": "uva",
+	  "audio\/vnd.digital-winds": "eol",
+	  "audio\/vnd.dra": "dra",
+	  "audio\/vnd.dts": "dts",
+	  "audio\/vnd.dts.hd": "dtshd",
+	  "audio\/vnd.lucent.voice": "lvp",
+	  "audio\/vnd.ms-playready.media.pya": "pya",
+	  "audio\/vnd.nuera.ecelp4800": "ecelp4800",
+	  "audio\/vnd.nuera.ecelp7470": "ecelp7470",
+	  "audio\/vnd.nuera.ecelp9600": "ecelp9600",
+	  "audio\/vnd.rip": "rip",
+	  "audio\/webm": "weba",
+	  "audio\/x-aac": "aac",
+	  "audio\/x-aiff": "aif",
+	  "audio\/x-caf": "caf",
+	  "audio\/x-flac": "flac",
+	  "audio\/x-matroska": "mka",
+	  "audio\/x-mpegurl": "m3u",
+	  "audio\/x-ms-wax": "wax",
+	  "audio\/x-ms-wma": "wma",
+	  "audio\/x-pn-realaudio": "ram",
+	  "audio\/x-pn-realaudio-plugin": "rmp",
+	  "audio\/xm": "xm",
+
+
+	  "chemical\/x-cdx": "cdx",
+	  "chemical\/x-cif": "cif",
+	  "chemical\/x-cmdf": "cmdf",
+	  "chemical\/x-cml": "cml",
+	  "chemical\/x-csml": "csml",
+	  "chemical\/x-xyz": "xyz",
+
+	  "font\/collection": "ttc",
+	  "font\/otf": "otf",
+	  "font\/ttf": "ttf",
+	  "font\/woff": "woff",
+	  "font\/woff2": "woff2",
+
+
+	  "image\/x-ms-bmp": "bmp",
+	  "image\/x-targa": "tga",
+	  "image\/xbm": "xbm",
+	  "image\/pxm": "pxm",
+
+	  "image\/cgm": "cgm",
+	  "image\/g3fax": "g3",
+	  "image\/gif": "gif",
+	  "image\/ief": "ief",
+	  "image\/jpeg": "jpeg",
+	  "image\/jpg": "jpg",
+	  "image\/ktx": "ktx",
+	  "image\/png": "png",
+	  "image\/prs.btif": "btif",
+	  "image\/sgi": "sgi",
+	  "image\/svg+xml": "svg",
+	  "image\/tiff": "tiff",
+	  "image\/vnd.adobe.photoshop": "psd",
+	  "image\/vnd.dece.graphic": "uvi",
+	  "image\/vnd.djvu": "djvu",
+	  "image\/vnd.dvb.subtitle": "sub",
+	  "image\/vnd.dwg": "dwg",
+	  "image\/vnd.dxf": "dxf",
+	  "image\/vnd.fastbidsheet": "fbs",
+	  "image\/vnd.fpx": "fpx",
+	  "image\/vnd.fst": "fst",
+	  "image\/vnd.fujixerox.edmics-mmr": "mmr",
+	  "image\/vnd.fujixerox.edmics-rlc": "rlc",
+	  "image\/vnd.ms-modi": "mdi",
+	  "image\/vnd.ms-photo": "wdp",
+	  "image\/vnd.net-fpx": "npx",
+	  "image\/vnd.wap.wbmp": "wbmp",
+	  "image\/vnd.xiff": "xif",
+	  "image\/webp": "webp",
+	  "image\/x-3ds": "3ds",
+	  "image\/x-cmu-raster": "ras",
+	  "image\/x-cmx": "cmx",
+	  "image\/x-freehand": "fh",
+	  "image\/x-icon": "ico",
+	  "image\/x-mrsid-image": "sid",
+	  "image\/x-pcx": "pcx",
+	  "image\/x-pict": "pic",
+	  "image\/x-portable-anymap": "pnm",
+	  "image\/x-portable-bitmap": "pbm",
+	  "image\/x-portable-graymap": "pgm",
+	  "image\/x-portable-pixmap": "ppm",
+	  "image\/x-rgb": "rgb",
+	  "image\/x-xpixmap": "xpm",
+	  "image\/x-xwindowdump": "xwd",
+
+	  "image\/x-xwindowdump": "xwd",
+
+      "image/panorama+jpeg" :  "jpegp", 
+      "image/panorama+jpg" :  "jpgp", 
+      "image/panorama+png" :  "pngp", 
+
+	  "message\/rfc822": "eml",
+
+
+	  "model\/iges": "igs",
+	  "model\/mesh": "msh",
+	  "model\/vnd.collada+xml": "dae",
+	  "model\/vnd.dwf": "dwf",
+	  "model\/vnd.gdl": "gdl",
+	  "model\/vnd.gtw": "gtw",
+	  "model\/vnd.vtu": "vtu",
+	  "model\/vrml": "wrl",
+	  "model\/x3d+binary": "x3db",
+	  "model\/x3d+vrml": "x3dv",
+	  "model\/x3d+xml": "x3d",
+
+	  "model\/gltf+json": "gltf",
+	  "model\/gltf+binary": "glb",
+	  "model\/u-obj+text": "obj",
+
+
+	  "text\/x-php": "php",
+	  "text\/javascript": "js",
+	  "text\/x-python": "py",
+	  "text\/x-ruby": "rb",
+	  "text\/x-shellscript": "sh",
+	  "text\/x-perl": "pl",
+	  "text\/xml": "xml",
+	  "text\/x-csrc": "c",
+	  "text\/x-chdr": "h",
+	  "text\/x-c++src": "cpp",
+	  "text\/x-c++hdr": "hh",
+	  "text\/x-markdown": "md",
+	  "text\/x-yaml": "yml",
+	  "text\/cache-manifest": "appcache",
+	  "text\/calendar": "ics",
+	  "text\/css": "css",
+	  "text\/csv": "csv",
+	  "text\/html": "html",
+	  "text\/n3": "n3",
+	  "text\/plain": "txt",
+	  "text\/prs.lines.tag": "dsc",
+	  "text\/richtext": "rtx",
+	  "text\/sgml": "sgml",
+	  "text\/tab-separated-values": "tsv",
+	  "text\/troff": "t",
+	  "text\/turtle": "ttl",
+	  "text\/uri-list": "uri",
+	  "text\/vcard": "vcard",
+	  "text\/vnd.curl": "curl",
+	  "text\/vnd.curl.dcurl": "dcurl",
+	  "text\/vnd.curl.mcurl": "mcurl",
+	  "text\/vnd.curl.scurl": "scurl",
+	  "text\/vnd.fly": "fly",
+	  "text\/vnd.fmi.flexstor": "flx",
+	  "text\/vnd.graphviz": "gv",
+	  "text\/vnd.in3d.3dml": "3dml",
+	  "text\/vnd.in3d.spot": "spot",
+	  "text\/vnd.sun.j2me.app-descriptor": "jad",
+	  "text\/vnd.wap.wml": "wml",
+	  "text\/vnd.wap.wmlscript": "wmls",
+	  "text\/x-asm": "s",
+	  "text\/x-c": "cc",
+	  "text\/x-fortran": "f",
+	  "text\/x-java-source": "java",
+	  "text\/x-nfo": "nfo",
+	  "text\/x-opml": "opml",
+	  "text\/x-pascal": "p",
+	  "text\/x-setext": "etx",
+	  "text\/x-sfv": "sfv",
+	  "text\/x-sql": "sql",
+	  "text\/x-uuencode": "uu",
+	  "text\/x-vcalendar": "vcs",
+	  "text\/x-vcard": "vcf",
+	  "text\/x-httpd-cgi": "cgi",
+	  "text\/x-asap": "asp",
+	  "text\/x-jsp": "jsp",
+
+	  "video\/3gpp": "3gp",
+	  "video\/3gpp2": "3g2",
+	  "video\/h261": "h261",
+	  "video\/h263": "h263",
+	  "video\/h264": "h264",
+	  "video\/jpeg": "jpgv",
+	  "video\/jpm": "jpm",
+	  "video\/mj2": "mj2",
+	  "video\/MP2T": "m2ts",
+	  "video\/mp4": "mp4",
+	  "video\/mpeg": "mpeg",
+	  "video\/ogg": "ogm",
+	  "video\/quicktime": "qt",
+	  "video\/vnd.dece.hd": "uvh",
+	  "video\/vnd.dece.mobile": "uvm",
+	  "video\/vnd.dece.pd": "uvp",
+	  "video\/vnd.dece.sd": "uvs",
+	  "video\/vnd.dece.video": "uvv",
+	  "video\/vnd.dvb.file": "dvb",
+	  "video\/vnd.fvt": "fvt",
+	  "video\/vnd.mpegurl": "mxu",
+	  "video\/vnd.ms-playready.media.pyv": "pyv",
+	  "video\/vnd.uvvu.mp4": "uvu",
+	  "video\/vnd.vivo": "viv",
+	  "video\/webm": "webm",
+	  "video\/x-dv": "dv",
+	  "video\/x-f4v": "f4v",
+	  "video\/x-fli": "fli",
+	  "video\/x-flv": "flv",
+	  "video\/x-m4v": "m4v",
+	  "video\/x-matroska": "mkv",
+	  "video\/x-mng": "mng",
+	  "video\/x-ms-asf": "asf",
+	  "video\/x-ms-vob": "vob",
+	  "video\/x-ms-wmx": "wmx",
+	  "video\/x-ms-wvx": "wvx",
+	  "video\/x-msvideo": "avi",
+	  "video\/x-sgi-movie": "movie",
+	  "video\/x-smv": "smv",
+	  "video\/x-ms-wmv": "wm",
+
+	  "video\/panorama+mp4": "mp4p",
+
+	  "x-conference\/x-cooltalk": "ice",
+	  "image\/x-pixlr-data": "pxd",
+	  "image\/x-adobe-dng": "dng",
+	  "image\/x-sketch": "sketch",
+	  "image\/x-xcf": "xcf",
+	  "audio\/amr": "amr",
+	  "image\/vnd-ms.dds": "dds",
+	  "application\/plt": "plt",
+	  "application\/sat": "sat",
+	  "application\/step": "step"
+	};
+
+
+});
+
+define('skylark-io-mimes/extensions',[
+	"skylark-langx-types",
+	"./mimes",
+	"./types"
+],function(ltypes,mimes,types) { 
+	var extenstions = {};
+
+	for (var type in types)  {
+		var extNames = types[type];
+		if (ltypes.isString(extNames)) {
+			extNames = [extNames];
+		}
+		for (var i=0;i<extNames.length;i++) {
+			var extName = extNames[i];
+			
+			if (!extenstions[extName]) {
+				extenstions[extName] = type;
+			} else if (ltypes.isString(extenstions[extName])) {
+				extenstions[extName] = [extenstions[extName],type]
+			} else {
+				extenstions[extName].push(type);
+			}
+		}
+
+	}
+
+
+	return mimes.extenstions = extenstions;
+
+});
+define('skylark-io-mimes/getMimeType',[
+	"./mimes",
+	"./types"
+],function(mimes,types) { 
+	function getMimeType(ext,category) {
+		for (var t in types) {
+			if (types[t] === ext && (!category || t.startsWith(category))) {
+				return t;
+			}
+		}
+	}	
+
+	return mimes.getMimeType = getMimeType;
+});
+define('skylark-io-mimes/main',[
+	"./mimes",
+	"./extensions",
+	"./getMimeType",
+	"./types"
+],function(mimes){
+	return mimes;
+});
+define('skylark-io-mimes', ['skylark-io-mimes/main'], function (main) { return main; });
+
+define('skylark-io-streams/streams',[
+    "skylark-langx-ns"
+], function(skylark) {
+
+    return skylark.attach("io.streams");
+});
+
+define('skylark-langx-chars/chars',[
+    "skylark-langx-ns",
+    "skylark-langx-types"
+],function(skylark,types){
+
+    function isWhiteSpace(ch) {
+        return ch === 32 || ch === 9 || ch === 13 || ch === 10;
+    }
+
+    return skylark.attach("langx.chars",{
+        isWhiteSpace
+    });
+
+
+});
+define('skylark-langx-chars/main',[
+	"./chars"
+],function(chars){
+	return chars;
+});
+define('skylark-langx-chars', ['skylark-langx-chars/main'], function (main) { return main; });
+
+define('skylark-io-streams/decode-stream',[
+    "skylark-langx-events",
+    "skylark-langx-chars",
+    "./streams"
+], function(events, chars, streams) {
+    var emptyBuffer = new Uint8Array(0);
+
+
+    var DecodeStream = events.Emitter.inherit({
+        klassName : "DecodeStream",
+
+        _construct : function(maybeMinBufferLength) {
+            this._rawMinBufferLength = maybeMinBufferLength || 0;
+            this.pos = 0;
+            this.bufferLength = 0;
+            this.eof = false;
+            this.buffer = emptyBuffer;
+            this.minBufferLength = 512;
+            if (maybeMinBufferLength) {
+                while (this.minBufferLength < maybeMinBufferLength) {
+                    this.minBufferLength *= 2;
+                }
+            }
+        },
+        length : {
+            get : function () {
+                //util.unreachable('Should not access DecodeStream.length');    
+                throw new Error('Should not access DecodeStream.length') ;               
+            }
+        },
+
+        isEmpty : {
+            get : function () {
+                while (!this.eof && this.bufferLength === 0) {
+                    this.readBlock();
+                }
+                return this.bufferLength === 0;
+            }
+        },
+
+        ensureBuffer: function DecodeStream_ensureBuffer(requested) {
+            var buffer = this.buffer;
+            if (requested <= buffer.byteLength) {
+                return buffer;
+            }
+            var size = this.minBufferLength;
+            while (size < requested) {
+                size *= 2;
+            }
+            var buffer2 = new Uint8Array(size);
+            buffer2.set(buffer);
+            return this.buffer = buffer2;
+        },
+        getByte: function DecodeStream_getByte() {
+            var pos = this.pos;
+            while (this.bufferLength <= pos) {
+                if (this.eof) {
+                    return -1;
+                }
+                this.readBlock();
+            }
+            return this.buffer[this.pos++];
+        },
+        getUint16: function DecodeStream_getUint16() {
+            var b0 = this.getByte();
+            var b1 = this.getByte();
+            if (b0 === -1 || b1 === -1) {
+                return -1;
+            }
+            return (b0 << 8) + b1;
+        },
+        getInt32: function DecodeStream_getInt32() {
+            var b0 = this.getByte();
+            var b1 = this.getByte();
+            var b2 = this.getByte();
+            var b3 = this.getByte();
+            return (b0 << 24) + (b1 << 16) + (b2 << 8) + b3;
+        },
+        getBytes(length, forceClamped = false) {
+            var end, pos = this.pos;
+            if (length) {
+                this.ensureBuffer(pos + length);
+                end = pos + length;
+                while (!this.eof && this.bufferLength < end) {
+                    this.readBlock();
+                }
+                var bufEnd = this.bufferLength;
+                if (end > bufEnd) {
+                    end = bufEnd;
+                }
+            } else {
+                while (!this.eof) {
+                    this.readBlock();
+                }
+                end = this.bufferLength;
+            }
+            this.pos = end;
+            const subarray = this.buffer.subarray(pos, end);
+            return forceClamped && !(subarray instanceof Uint8ClampedArray) ? new Uint8ClampedArray(subarray) : subarray;
+        },
+        peekByte: function DecodeStream_peekByte() {
+            var peekedByte = this.getByte();
+            if (peekedByte !== -1) {
+                this.pos--;
+            }
+            return peekedByte;
+        },
+        peekBytes(length, forceClamped = false) {
+            var bytes = this.getBytes(length, forceClamped);
+            this.pos -= bytes.length;
+            return bytes;
+        },
+        makeSubStream: function DecodeStream_makeSubStream(start, length, dict) {
+            var end = start + length;
+            while (this.bufferLength <= end && !this.eof) {
+                this.readBlock();
+            }
+            return new Stream(this.buffer, start, length, dict);
+        },
+        getByteRange(begin, end) {
+            throw new Error("Should not call DecodeStream.getByteRange") ;               
+            //util.unreachable('Should not call DecodeStream.getByteRange');
+        },
+        skip: function DecodeStream_skip(n) {
+            if (!n) {
+                n = 1;
+            }
+            this.pos += n;
+        },
+        reset: function DecodeStream_reset() {
+            this.pos = 0;
+        },
+        getBaseStreams: function DecodeStream_getBaseStreams() {
+            if (this.str && this.str.getBaseStreams) {
+                return this.str.getBaseStreams();
+            }
+            return [];
+        }
+
+    });
+
+    return streams.DecodeStream = DecodeStream;
+
+});
+
+define('skylark-io-streams/ascii85-stream',[
+    "skylark-langx-chars",
+    "./streams",
+    "./decode-stream"
+], function(chars, streams, DecodeStream) {
+
+
+    var Ascii85Stream = DecodeStream.inherit({
+        klassName : "Ascii85Stream",
+
+        _construct : function(str) {
+            this.str = str;
+            this.dict = str.dict;
+            this.input = new Uint8Array(5);
+            if (maybeLength) {
+                maybeLength = 0.8 * maybeLength;
+            }
+            DecodeStream.prototype._construct.call(this, maybeLength);       
+        },
+
+        readBlock : function Ascii85Stream_readBlock() {
+            var TILDA_CHAR = 126;
+            var Z_LOWER_CHAR = 122;
+            var EOF = -1;
+            var str = this.str;
+            var c = str.getByte();
+            while (chars.isWhiteSpace(c)) {
+                c = str.getByte();
+            }
+            if (c === EOF || c === TILDA_CHAR) {
+                this.eof = true;
+                return;
+            }
+            var bufferLength = this.bufferLength, buffer;
+            var i;
+            if (c === Z_LOWER_CHAR) {
+                buffer = this.ensureBuffer(bufferLength + 4);
+                for (i = 0; i < 4; ++i) {
+                    buffer[bufferLength + i] = 0;
+                }
+                this.bufferLength += 4;
+            } else {
+                var input = this.input;
+                input[0] = c;
+                for (i = 1; i < 5; ++i) {
+                    c = str.getByte();
+                    while (chars.isWhiteSpace(c)) {
+                        c = str.getByte();
+                    }
+                    input[i] = c;
+                    if (c === EOF || c === TILDA_CHAR) {
+                        break;
+                    }
+                }
+                buffer = this.ensureBuffer(bufferLength + i - 1);
+                this.bufferLength += i - 1;
+                if (i < 5) {
+                    for (; i < 5; ++i) {
+                        input[i] = 33 + 84;
+                    }
+                    this.eof = true;
+                }
+                var t = 0;
+                for (i = 0; i < 5; ++i) {
+                    t = t * 85 + (input[i] - 33);
+                }
+                for (i = 3; i >= 0; --i) {
+                    buffer[bufferLength + i] = t & 255;
+                    t >>= 8;
+                }
+            }
+        }
+
+    });
+
+    return streams.Ascii85Stream = Ascii85Stream;
+
+});
+
+define('skylark-io-streams/ascii-hex-stream',[
+    "./streams",
+    "./decode-stream"
+], function(streams, DecodeStream) {
+
+    var AsciiHexStream = DecodeStream.inherit({
+        klassName : "AsciiHexStream",
+
+        _construct : function AsciiHexStream(str, maybeLength) {
+            this.str = str;
+            this.dict = str.dict;
+            this.firstDigit = -1;
+            if (maybeLength) {
+                maybeLength = 0.5 * maybeLength;
+            }
+
+            DecodeStream.prototype._construct.call(this,maybeLength);          
+        },
+
+        readBlock : function AsciiHexStream_readBlock() {
+            var UPSTREAM_BLOCK_SIZE = 8000;
+            var bytes = this.str.getBytes(UPSTREAM_BLOCK_SIZE);
+            if (!bytes.length) {
+                this.eof = true;
+                return;
+            }
+            var maxDecodeLength = bytes.length + 1 >> 1;
+            var buffer = this.ensureBuffer(this.bufferLength + maxDecodeLength);
+            var bufferLength = this.bufferLength;
+            var firstDigit = this.firstDigit;
+            for (var i = 0, ii = bytes.length; i < ii; i++) {
+                var ch = bytes[i], digit;
+                if (ch >= 48 && ch <= 57) {
+                    digit = ch & 15;
+                } else if (ch >= 65 && ch <= 70 || ch >= 97 && ch <= 102) {
+                    digit = (ch & 15) + 9;
+                } else if (ch === 62) {
+                    this.eof = true;
+                    break;
+                } else {
+                    continue;
+                }
+                if (firstDigit < 0) {
+                    firstDigit = digit;
+                } else {
+                    buffer[bufferLength++] = firstDigit << 4 | digit;
+                    firstDigit = -1;
+                }
+            }
+            if (firstDigit >= 0 && this.eof) {
+                buffer[bufferLength++] = firstDigit << 4;
+                firstDigit = -1;
+            }
+            this.firstDigit = firstDigit;
+            this.bufferLength = bufferLength;
+        }
+    });
+
+    return streams.AsciiHexStream = AsciiHexStream;
+});
+
+define('skylark-io-streams/_stream',[
+    "skylark-langx-events",
+    "./streams"
+], function(events,streams) {
+
+   	var Stream = events.Emitter.inherit({
+        klassName: "Stream",
+        
+        _construct: function(arrayBuffer, start, length, dict) {
+            this.bytes = arrayBuffer instanceof Uint8Array ? arrayBuffer : new Uint8Array(arrayBuffer);
+            this.start = start || 0;
+            this.pos = this.start;
+            this.end = start + length || this.bytes.length;
+            this.dict = dict;
+        },
+
+
+        length : {
+        	get : function() {
+                return this.end - this.start;
+        	}
+        },
+
+        getByte: function () {
+            if (this.pos >= this.end) {
+                return -1;
+            }
+            return this.bytes[this.pos++];
+        },
+
+        getUint16: function Stream_getUint16() {
+            var b0 = this.getByte();
+            var b1 = this.getByte();
+            if (b0 === -1 || b1 === -1) {
+                return -1;
+            }
+            return (b0 << 8) + b1;
+        },
+
+        getInt32: function Stream_getInt32() {
+            var b0 = this.getByte();
+            var b1 = this.getByte();
+            var b2 = this.getByte();
+            var b3 = this.getByte();
+            return (b0 << 24) + (b1 << 16) + (b2 << 8) + b3;
+        },
+
+        getBytes(length, forceClamped = false) {
+            var bytes = this.bytes;
+            var pos = this.pos;
+            var strEnd = this.end;
+            if (!length) {
+                const subarray = bytes.subarray(pos, strEnd);
+                return forceClamped ? new Uint8ClampedArray(subarray) : subarray;
+            }
+            var end = pos + length;
+            if (end > strEnd) {
+                end = strEnd;
+            }
+            this.pos = end;
+            const subarray = bytes.subarray(pos, end);
+            return forceClamped ? new Uint8ClampedArray(subarray) : subarray;
+        },
+
+        peekByte: function Stream_peekByte() {
+            var peekedByte = this.getByte();
+            if (peekedByte !== -1) {
+                this.pos--;
+            }
+            return peekedByte;
+        },
+
+        peekBytes(length, forceClamped = false) {
+            var bytes = this.getBytes(length, forceClamped);
+            this.pos -= bytes.length;
+            return bytes;
+        },
+
+        getByteRange(begin, end) {
+            if (begin < 0) {
+                begin = 0;
+            }
+            if (end > this.end) {
+                end = this.end;
+            }
+            return this.bytes.subarray(begin, end);
+        },
+
+        skip: function Stream_skip(n) {
+            if (!n) {
+                n = 1;
+            }
+            this.pos += n;
+        },
+
+        reset: function Stream_reset() {
+            this.pos = this.start;
+        },
+
+        moveStart: function Stream_moveStart() {
+            this.start = this.pos;
+        },
+        
+        makeSubStream: function Stream_makeSubStream(start, length, dict) {
+            return new Stream(this.bytes.buffer, start, length, dict);
+        }
+    });
+    
+    return streams.Stream = Stream;
+	
+});
+
+define('skylark-io-streams/chunked-stream',[
+    "./streams",
+    "./_stream"
+], function(streams,Stream) {
+
+
+    var ChunkedStream = Stream.inherit({
+        klassName : "ChunkedStream",
+
+        "numChunks": 0,
+        "numChunksLoaded": 0,
+
+        _construct : function(str) {
+            var length = str.length;
+            var bytes = new Uint8Array(length);
+            for (var n = 0; n < length; ++n)
+                bytes[n] = str.charCodeAt(n);
+            DecodeStream.prototype._construct.call(bytes);          
+            this.dict = stream.dict;
+        },
+
+        "numChunks": function() {
+
+        },
+
+
+        getMissingChunks: function ChunkedStream_getMissingChunks() {
+            var chunks = [];
+            for (var chunk = 0, n = this.numChunks; chunk < n; ++chunk) {
+                if (!(chunk in this.loadedChunks)) {
+                    chunks.push(chunk);
+                }
+            }
+            return chunks;
+        },
+
+        getBaseStreams: function ChunkedStream_getBaseStreams() {
+            return [this];
+        },
+
+        allChunksLoaded: function ChunkedStream_allChunksLoaded() {
+            var _ = this._;
+            return _.numChunksLoaded === _.numChunks;
+        },
+
+        onReceiveData: function(begin, chunk) {
+            var end = begin + chunk.byteLength;
+
+            assert(begin % this.chunkSize === 0, 'Bad begin offset: ' + begin);
+            // Using this.length is inaccurate here since this.start can be moved
+            // See ChunkedStream.moveStart()
+            var length = this.bytes.length;
+            assert(end % this.chunkSize === 0 || end === length,
+                'Bad end offset: ' + end);
+
+            this.bytes.set(new Uint8Array(chunk), begin);
+            var chunkSize = this.chunkSize;
+            var beginChunk = Math.floor(begin / chunkSize);
+            var endChunk = Math.floor((end - 1) / chunkSize) + 1;
+
+            for (var chunk = beginChunk; chunk < endChunk; ++chunk) {
+                if (!(chunk in this.loadedChunks)) {
+                    this.loadedChunks[chunk] = true;
+                    ++this.numChunksLoaded;
+                }
+            }
+        },
+
+        onReceiveInitialData: function(data) {
+            this.bytes.set(data);
+            this.initialDataLength = data.length;
+            var endChunk = this.end === data.length ?
+                this.numChunks : Math.floor(data.length / this.chunkSize);
+            for (var i = 0; i < endChunk; i++) {
+                this.loadedChunks[i] = true;
+                ++this.numChunksLoaded;
+            }
+        },
+
+        ensureRange: function ChunkedStream_ensureRange(begin, end) {
+            if (begin >= end) {
+                return;
+            }
+
+            if (end <= this.initialDataLength) {
+                return;
+            }
+
+            var chunkSize = this.chunkSize;
+            var beginChunk = Math.floor(begin / chunkSize);
+            var endChunk = Math.floor((end - 1) / chunkSize) + 1;
+            for (var chunk = beginChunk; chunk < endChunk; ++chunk) {
+                if (!(chunk in this.loadedChunks)) {
+                    throw new MissingDataException(begin, end);
+                }
+            }
+        },
+
+        nextEmptyChunk: function ChunkedStream_nextEmptyChunk(beginChunk) {
+            for (var chunk = beginChunk, n = this.numChunks; chunk < n; ++chunk) {
+                if (!(chunk in this.loadedChunks)) {
+                    return chunk;
+                }
+            }
+            // Wrap around to beginning
+            for (var chunk = 0; chunk < beginChunk; ++chunk) {
+                if (!(chunk in this.loadedChunks)) {
+                    return chunk;
+                }
+            }
+            return null;
+        },
+
+        hasChunk: function ChunkedStream_hasChunk(chunk) {
+            return chunk in this._.loadedChunks;
+        },
+
+        getByte: function ChunkedStream_getByte() {
+            var pos = this.pos;
+            if (pos >= this.end) {
+                return -1;
+            }
+            this.ensureRange(pos, pos + 1);
+            return this.bytes[this.pos++];
+        },
+
+        // returns subarray of original buffer
+        // should only be read
+        getBytes: function ChunkedStream_getBytes(length) {
+            var bytes = this.bytes;
+            var pos = this.pos;
+            var strEnd = this.end;
+
+            if (!length) {
+                this.ensureRange(pos, strEnd);
+                return bytes.subarray(pos, strEnd);
+            }
+
+            var end = pos + length;
+            if (end > strEnd)
+                end = strEnd;
+            this.ensureRange(pos, end);
+
+            this.pos = end;
+            return bytes.subarray(pos, end);
+        },
+
+        peekBytes: function ChunkedStream_peekBytes(length) {
+            var bytes = this.getBytes(length);
+            this.pos -= bytes.length;
+            return bytes;
+        },
+
+        getByteRange: function ChunkedStream_getBytes(begin, end) {
+            this.ensureRange(begin, end);
+            return this.bytes.subarray(begin, end);
+        },
+
+        skip: function ChunkedStream_skip(n) {
+            if (!n)
+                n = 1;
+            this.pos += n;
+        },
+
+        reset: function ChunkedStream_reset() {
+            this.pos = this.start;
+        },
+
+        moveStart: function ChunkedStream_moveStart() {
+            this.start = this.pos;
+        },
+
+        makeSubStream: function ChunkedStream_makeSubStream(start, length, dict) {
+            function ChunkedStreamSubstream() {}
+            ChunkedStreamSubstream.prototype = Object.create(this);
+            ChunkedStreamSubstream.prototype.getMissingChunks = function() {
+                var chunkSize = this.chunkSize;
+                var beginChunk = Math.floor(this.start / chunkSize);
+                var endChunk = Math.floor((this.end - 1) / chunkSize) + 1;
+                var missingChunks = [];
+                for (var chunk = beginChunk; chunk < endChunk; ++chunk) {
+                    if (!(chunk in this.loadedChunks)) {
+                        missingChunks.push(chunk);
+                    }
+                }
+                return missingChunks;
+            };
+            var subStream = new ChunkedStreamSubstream();
+            subStream.pos = subStream.start = start;
+            subStream.end = start + length || this.end;
+            subStream.dict = dict;
+            return subStream;
+        }
+    });
+
+    return streams.ChunkedStream = ChunkedStream;
+
+});
+
+define('skylark-io-streams/decrypt-stream',[
+    "./streams",
+    "./decode-stream"
+], function(streams, DecodeStream) {
+
+    var chunkSize = 512;
+
+
+    var DecryptStream = DecodeStream.inherit({
+        klassName : "DecryptStream",
+
+        _construct : function (str, maybeLength, decrypt) {
+            this.str = str;
+            this.dict = str.dict;
+            this.decrypt = decrypt;
+            this.nextChunk = null;
+            this.initialized = false;
+
+            DecodeStream.prototype._construct.call(this, maybeLength);
+        },
+
+        readBlock : function DecryptStream_readBlock() {
+            var chunk;
+            if (this.initialized) {
+                chunk = this.nextChunk;
+            } else {
+                chunk = this.str.getBytes(chunkSize);
+                this.initialized = true;
+            }
+            if (!chunk || chunk.length === 0) {
+                this.eof = true;
+                return;
+            }
+            this.nextChunk = this.str.getBytes(chunkSize);
+            var hasMoreData = this.nextChunk && this.nextChunk.length > 0;
+            var decrypt = this.decrypt;
+            chunk = decrypt(chunk, !hasMoreData);
+            var bufferLength = this.bufferLength;
+            var i, n = chunk.length;
+            var buffer = this.ensureBuffer(bufferLength + n);
+            for (i = 0; i < n; i++) {
+                buffer[bufferLength++] = chunk[i];
+            }
+            this.bufferLength = bufferLength;
+        }
+    });
+
+    return streams.DecryptStream = DecryptStream;
+});
+
+define('skylark-io-streams/fake-stream',[
+    "./streams",
+    "./decode-stream"
+], function(streams, DecodeStream) {
+
+    var FakeStream = DecodeStream.inherit({
+        klassName : "FakeStream",
+
+        _construct : function(stream) {
+            this.dict = stream.dict;
+            DecodeStream.prototype._construct.call(this);          
+        },
+
+        readBlock : function() {
+            var bufferLength = this.bufferLength;
+            bufferLength += 1024;
+            var buffer = this.ensureBuffer(bufferLength);
+            this.bufferLength = bufferLength;
+        },
+
+        getBytes : function (length) {
+            var end, pos = this.pos;
+
+            if (length) {
+                this.ensureBuffer(pos + length);
+                end = pos + length;
+
+                while (!this.eof && this.bufferLength < end)
+                    this.readBlock();
+
+                var bufEnd = this.bufferLength;
+                if (end > bufEnd)
+                    end = bufEnd;
+            } else {
+                this.eof = true;
+                end = this.bufferLength;
+            }
+
+            this.pos = end;
+            return this.buffer.subarray(pos, end);
+        }
+
+    });
+
+    return streams.FakeStream = FakeStream;
+});
+
+define('skylark-io-streams/flate-stream',[
+    "./streams",
+    "./decode-stream"
+], function(streams, DecodeStream) {
+    
+    var codeLenCodeMap = new Int32Array([
+        16,
+        17,
+        18,
+        0,
+        8,
+        7,
+        9,
+        6,
+        10,
+        5,
+        11,
+        4,
+        12,
+        3,
+        13,
+        2,
+        14,
+        1,
+        15
+    ]);
+    var lengthDecode = new Int32Array([
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        65547,
+        65549,
+        65551,
+        65553,
+        131091,
+        131095,
+        131099,
+        131103,
+        196643,
+        196651,
+        196659,
+        196667,
+        262211,
+        262227,
+        262243,
+        262259,
+        327811,
+        327843,
+        327875,
+        327907,
+        258,
+        258,
+        258
+    ]);
+    var distDecode = new Int32Array([
+        1,
+        2,
+        3,
+        4,
+        65541,
+        65543,
+        131081,
+        131085,
+        196625,
+        196633,
+        262177,
+        262193,
+        327745,
+        327777,
+        393345,
+        393409,
+        459009,
+        459137,
+        524801,
+        525057,
+        590849,
+        591361,
+        657409,
+        658433,
+        724993,
+        727041,
+        794625,
+        798721,
+        868353,
+        876545
+    ]);
+    var fixedLitCodeTab = [
+        new Int32Array([
+            459008,
+            524368,
+            524304,
+            524568,
+            459024,
+            524400,
+            524336,
+            590016,
+            459016,
+            524384,
+            524320,
+            589984,
+            524288,
+            524416,
+            524352,
+            590048,
+            459012,
+            524376,
+            524312,
+            589968,
+            459028,
+            524408,
+            524344,
+            590032,
+            459020,
+            524392,
+            524328,
+            590000,
+            524296,
+            524424,
+            524360,
+            590064,
+            459010,
+            524372,
+            524308,
+            524572,
+            459026,
+            524404,
+            524340,
+            590024,
+            459018,
+            524388,
+            524324,
+            589992,
+            524292,
+            524420,
+            524356,
+            590056,
+            459014,
+            524380,
+            524316,
+            589976,
+            459030,
+            524412,
+            524348,
+            590040,
+            459022,
+            524396,
+            524332,
+            590008,
+            524300,
+            524428,
+            524364,
+            590072,
+            459009,
+            524370,
+            524306,
+            524570,
+            459025,
+            524402,
+            524338,
+            590020,
+            459017,
+            524386,
+            524322,
+            589988,
+            524290,
+            524418,
+            524354,
+            590052,
+            459013,
+            524378,
+            524314,
+            589972,
+            459029,
+            524410,
+            524346,
+            590036,
+            459021,
+            524394,
+            524330,
+            590004,
+            524298,
+            524426,
+            524362,
+            590068,
+            459011,
+            524374,
+            524310,
+            524574,
+            459027,
+            524406,
+            524342,
+            590028,
+            459019,
+            524390,
+            524326,
+            589996,
+            524294,
+            524422,
+            524358,
+            590060,
+            459015,
+            524382,
+            524318,
+            589980,
+            459031,
+            524414,
+            524350,
+            590044,
+            459023,
+            524398,
+            524334,
+            590012,
+            524302,
+            524430,
+            524366,
+            590076,
+            459008,
+            524369,
+            524305,
+            524569,
+            459024,
+            524401,
+            524337,
+            590018,
+            459016,
+            524385,
+            524321,
+            589986,
+            524289,
+            524417,
+            524353,
+            590050,
+            459012,
+            524377,
+            524313,
+            589970,
+            459028,
+            524409,
+            524345,
+            590034,
+            459020,
+            524393,
+            524329,
+            590002,
+            524297,
+            524425,
+            524361,
+            590066,
+            459010,
+            524373,
+            524309,
+            524573,
+            459026,
+            524405,
+            524341,
+            590026,
+            459018,
+            524389,
+            524325,
+            589994,
+            524293,
+            524421,
+            524357,
+            590058,
+            459014,
+            524381,
+            524317,
+            589978,
+            459030,
+            524413,
+            524349,
+            590042,
+            459022,
+            524397,
+            524333,
+            590010,
+            524301,
+            524429,
+            524365,
+            590074,
+            459009,
+            524371,
+            524307,
+            524571,
+            459025,
+            524403,
+            524339,
+            590022,
+            459017,
+            524387,
+            524323,
+            589990,
+            524291,
+            524419,
+            524355,
+            590054,
+            459013,
+            524379,
+            524315,
+            589974,
+            459029,
+            524411,
+            524347,
+            590038,
+            459021,
+            524395,
+            524331,
+            590006,
+            524299,
+            524427,
+            524363,
+            590070,
+            459011,
+            524375,
+            524311,
+            524575,
+            459027,
+            524407,
+            524343,
+            590030,
+            459019,
+            524391,
+            524327,
+            589998,
+            524295,
+            524423,
+            524359,
+            590062,
+            459015,
+            524383,
+            524319,
+            589982,
+            459031,
+            524415,
+            524351,
+            590046,
+            459023,
+            524399,
+            524335,
+            590014,
+            524303,
+            524431,
+            524367,
+            590078,
+            459008,
+            524368,
+            524304,
+            524568,
+            459024,
+            524400,
+            524336,
+            590017,
+            459016,
+            524384,
+            524320,
+            589985,
+            524288,
+            524416,
+            524352,
+            590049,
+            459012,
+            524376,
+            524312,
+            589969,
+            459028,
+            524408,
+            524344,
+            590033,
+            459020,
+            524392,
+            524328,
+            590001,
+            524296,
+            524424,
+            524360,
+            590065,
+            459010,
+            524372,
+            524308,
+            524572,
+            459026,
+            524404,
+            524340,
+            590025,
+            459018,
+            524388,
+            524324,
+            589993,
+            524292,
+            524420,
+            524356,
+            590057,
+            459014,
+            524380,
+            524316,
+            589977,
+            459030,
+            524412,
+            524348,
+            590041,
+            459022,
+            524396,
+            524332,
+            590009,
+            524300,
+            524428,
+            524364,
+            590073,
+            459009,
+            524370,
+            524306,
+            524570,
+            459025,
+            524402,
+            524338,
+            590021,
+            459017,
+            524386,
+            524322,
+            589989,
+            524290,
+            524418,
+            524354,
+            590053,
+            459013,
+            524378,
+            524314,
+            589973,
+            459029,
+            524410,
+            524346,
+            590037,
+            459021,
+            524394,
+            524330,
+            590005,
+            524298,
+            524426,
+            524362,
+            590069,
+            459011,
+            524374,
+            524310,
+            524574,
+            459027,
+            524406,
+            524342,
+            590029,
+            459019,
+            524390,
+            524326,
+            589997,
+            524294,
+            524422,
+            524358,
+            590061,
+            459015,
+            524382,
+            524318,
+            589981,
+            459031,
+            524414,
+            524350,
+            590045,
+            459023,
+            524398,
+            524334,
+            590013,
+            524302,
+            524430,
+            524366,
+            590077,
+            459008,
+            524369,
+            524305,
+            524569,
+            459024,
+            524401,
+            524337,
+            590019,
+            459016,
+            524385,
+            524321,
+            589987,
+            524289,
+            524417,
+            524353,
+            590051,
+            459012,
+            524377,
+            524313,
+            589971,
+            459028,
+            524409,
+            524345,
+            590035,
+            459020,
+            524393,
+            524329,
+            590003,
+            524297,
+            524425,
+            524361,
+            590067,
+            459010,
+            524373,
+            524309,
+            524573,
+            459026,
+            524405,
+            524341,
+            590027,
+            459018,
+            524389,
+            524325,
+            589995,
+            524293,
+            524421,
+            524357,
+            590059,
+            459014,
+            524381,
+            524317,
+            589979,
+            459030,
+            524413,
+            524349,
+            590043,
+            459022,
+            524397,
+            524333,
+            590011,
+            524301,
+            524429,
+            524365,
+            590075,
+            459009,
+            524371,
+            524307,
+            524571,
+            459025,
+            524403,
+            524339,
+            590023,
+            459017,
+            524387,
+            524323,
+            589991,
+            524291,
+            524419,
+            524355,
+            590055,
+            459013,
+            524379,
+            524315,
+            589975,
+            459029,
+            524411,
+            524347,
+            590039,
+            459021,
+            524395,
+            524331,
+            590007,
+            524299,
+            524427,
+            524363,
+            590071,
+            459011,
+            524375,
+            524311,
+            524575,
+            459027,
+            524407,
+            524343,
+            590031,
+            459019,
+            524391,
+            524327,
+            589999,
+            524295,
+            524423,
+            524359,
+            590063,
+            459015,
+            524383,
+            524319,
+            589983,
+            459031,
+            524415,
+            524351,
+            590047,
+            459023,
+            524399,
+            524335,
+            590015,
+            524303,
+            524431,
+            524367,
+            590079
+        ]),
+        9
+    ];
+    var fixedDistCodeTab = [
+        new Int32Array([
+            327680,
+            327696,
+            327688,
+            327704,
+            327684,
+            327700,
+            327692,
+            327708,
+            327682,
+            327698,
+            327690,
+            327706,
+            327686,
+            327702,
+            327694,
+            0,
+            327681,
+            327697,
+            327689,
+            327705,
+            327685,
+            327701,
+            327693,
+            327709,
+            327683,
+            327699,
+            327691,
+            327707,
+            327687,
+            327703,
+            327695,
+            0
+        ]),
+        5
+    ];
+
+
+    var FlateStream = DecodeStream.inherit({
+        klassName : "FlateStream",
+
+        _construct :function (str, maybeLength) {
+            this.str = str;
+            this.dict = str.dict;
+            var cmf = str.getByte();
+            var flg = str.getByte();
+            if (cmf === -1 || flg === -1) {
+                throw new util.FormatError(`Invalid header in flate stream: ${ cmf }, ${ flg }`);
+            }
+            if ((cmf & 15) !== 8) {
+                throw new util.FormatError(`Unknown compression method in flate stream: ${ cmf }, ${ flg }`);
+            }
+            if (((cmf << 8) + flg) % 31 !== 0) {
+                throw new util.FormatError(`Bad FCHECK in flate stream: ${ cmf }, ${ flg }`);
+            }
+            if (flg & 32) {
+                throw new util.FormatError(`FDICT bit set in flate stream: ${ cmf }, ${ flg }`);
+            }
+            this.codeSize = 0;
+            this.codeBuf = 0;
+
+            DecodeStream.prototype._construct.call(this, maybeLength);
+        },
+
+        getBits : function FlateStream_getBits(bits) {
+            var str = this.str;
+            var codeSize = this.codeSize;
+            var codeBuf = this.codeBuf;
+            var b;
+            while (codeSize < bits) {
+                if ((b = str.getByte()) === -1) {
+                    throw new util.FormatError('Bad encoding in flate stream');
+                }
+                codeBuf |= b << codeSize;
+                codeSize += 8;
+            }
+            b = codeBuf & (1 << bits) - 1;
+            this.codeBuf = codeBuf >> bits;
+            this.codeSize = codeSize -= bits;
+            return b;
+        },
+
+        getCode : function FlateStream_getCode(table) {
+            var str = this.str;
+            var codes = table[0];
+            var maxLen = table[1];
+            var codeSize = this.codeSize;
+            var codeBuf = this.codeBuf;
+            var b;
+            while (codeSize < maxLen) {
+                if ((b = str.getByte()) === -1) {
+                    break;
+                }
+                codeBuf |= b << codeSize;
+                codeSize += 8;
+            }
+            var code = codes[codeBuf & (1 << maxLen) - 1];
+            var codeLen = code >> 16;
+            var codeVal = code & 65535;
+            if (codeLen < 1 || codeSize < codeLen) {
+                throw new util.FormatError('Bad encoding in flate stream');
+            }
+            this.codeBuf = codeBuf >> codeLen;
+            this.codeSize = codeSize - codeLen;
+            return codeVal;
+        },
+
+        generateHuffmanTable : function flateStreamGenerateHuffmanTable(lengths) {
+            var n = lengths.length;
+            var maxLen = 0;
+            var i;
+            for (i = 0; i < n; ++i) {
+                if (lengths[i] > maxLen) {
+                    maxLen = lengths[i];
+                }
+            }
+            var size = 1 << maxLen;
+            var codes = new Int32Array(size);
+            for (var len = 1, code = 0, skip = 2; len <= maxLen; ++len, code <<= 1, skip <<= 1) {
+                for (var val = 0; val < n; ++val) {
+                    if (lengths[val] === len) {
+                        var code2 = 0;
+                        var t = code;
+                        for (i = 0; i < len; ++i) {
+                            code2 = code2 << 1 | t & 1;
+                            t >>= 1;
+                        }
+                        for (i = code2; i < size; i += skip) {
+                            codes[i] = len << 16 | val;
+                        }
+                        ++code;
+                    }
+                }
+            }
+            return [
+                codes,
+                maxLen
+            ];
+        },
+
+        readBlock : function FlateStream_readBlock() {
+            var buffer, len;
+            var str = this.str;
+            var hdr = this.getBits(3);
+            if (hdr & 1) {
+                this.eof = true;
+            }
+            hdr >>= 1;
+            if (hdr === 0) {
+                var b;
+                if ((b = str.getByte()) === -1) {
+                    throw new util.FormatError('Bad block header in flate stream');
+                }
+                var blockLen = b;
+                if ((b = str.getByte()) === -1) {
+                    throw new util.FormatError('Bad block header in flate stream');
+                }
+                blockLen |= b << 8;
+                if ((b = str.getByte()) === -1) {
+                    throw new util.FormatError('Bad block header in flate stream');
+                }
+                var check = b;
+                if ((b = str.getByte()) === -1) {
+                    throw new util.FormatError('Bad block header in flate stream');
+                }
+                check |= b << 8;
+                if (check !== (~blockLen & 65535) && (blockLen !== 0 || check !== 0)) {
+                    throw new util.FormatError('Bad uncompressed block length in flate stream');
+                }
+                this.codeBuf = 0;
+                this.codeSize = 0;
+                const bufferLength = this.bufferLength, end = bufferLength + blockLen;
+                buffer = this.ensureBuffer(end);
+                this.bufferLength = end;
+                if (blockLen === 0) {
+                    if (str.peekByte() === -1) {
+                        this.eof = true;
+                    }
+                } else {
+                    const block = str.getBytes(blockLen);
+                    buffer.set(block, bufferLength);
+                    if (block.length < blockLen) {
+                        this.eof = true;
+                    }
+                }
+                return;
+            }
+            var litCodeTable;
+            var distCodeTable;
+            if (hdr === 1) {
+                litCodeTable = fixedLitCodeTab;
+                distCodeTable = fixedDistCodeTab;
+            } else if (hdr === 2) {
+                var numLitCodes = this.getBits(5) + 257;
+                var numDistCodes = this.getBits(5) + 1;
+                var numCodeLenCodes = this.getBits(4) + 4;
+                var codeLenCodeLengths = new Uint8Array(codeLenCodeMap.length);
+                var i;
+                for (i = 0; i < numCodeLenCodes; ++i) {
+                    codeLenCodeLengths[codeLenCodeMap[i]] = this.getBits(3);
+                }
+                var codeLenCodeTab = this.generateHuffmanTable(codeLenCodeLengths);
+                len = 0;
+                i = 0;
+                var codes = numLitCodes + numDistCodes;
+                var codeLengths = new Uint8Array(codes);
+                var bitsLength, bitsOffset, what;
+                while (i < codes) {
+                    var code = this.getCode(codeLenCodeTab);
+                    if (code === 16) {
+                        bitsLength = 2;
+                        bitsOffset = 3;
+                        what = len;
+                    } else if (code === 17) {
+                        bitsLength = 3;
+                        bitsOffset = 3;
+                        what = len = 0;
+                    } else if (code === 18) {
+                        bitsLength = 7;
+                        bitsOffset = 11;
+                        what = len = 0;
+                    } else {
+                        codeLengths[i++] = len = code;
+                        continue;
+                    }
+                    var repeatLength = this.getBits(bitsLength) + bitsOffset;
+                    while (repeatLength-- > 0) {
+                        codeLengths[i++] = what;
+                    }
+                }
+                litCodeTable = this.generateHuffmanTable(codeLengths.subarray(0, numLitCodes));
+                distCodeTable = this.generateHuffmanTable(codeLengths.subarray(numLitCodes, codes));
+            } else {
+                throw new util.FormatError('Unknown block type in flate stream');
+            }
+            buffer = this.buffer;
+            var limit = buffer ? buffer.length : 0;
+            var pos = this.bufferLength;
+            while (true) {
+                var code1 = this.getCode(litCodeTable);
+                if (code1 < 256) {
+                    if (pos + 1 >= limit) {
+                        buffer = this.ensureBuffer(pos + 1);
+                        limit = buffer.length;
+                    }
+                    buffer[pos++] = code1;
+                    continue;
+                }
+                if (code1 === 256) {
+                    this.bufferLength = pos;
+                    return;
+                }
+                code1 -= 257;
+                code1 = lengthDecode[code1];
+                var code2 = code1 >> 16;
+                if (code2 > 0) {
+                    code2 = this.getBits(code2);
+                }
+                len = (code1 & 65535) + code2;
+                code1 = this.getCode(distCodeTable);
+                code1 = distDecode[code1];
+                code2 = code1 >> 16;
+                if (code2 > 0) {
+                    code2 = this.getBits(code2);
+                }
+                var dist = (code1 & 65535) + code2;
+                if (pos + len >= limit) {
+                    buffer = this.ensureBuffer(pos + len);
+                    limit = buffer.length;
+                }
+                for (var k = 0; k < len; ++k, ++pos) {
+                    buffer[pos] = buffer[pos - dist];
+                }
+            }
+        }
+    });
+
+
+    return streams.FlateStream = FlateStream;
+});
+
+define('skylark-io-streams/lzw-stream',[
+    "./streams",
+    "./decode-stream"
+], function(streams, DecodeStream) {
+
+    var LZWStream = DecodeStream.inherit({
+        klassName : "LZWStream",
+
+        _construct : function (str, maybeLength, earlyChange) {
+            this.str = str;
+            this.dict = str.dict;
+            this.cachedData = 0;
+            this.bitsCached = 0;
+            var maxLzwDictionarySize = 4096;
+            var lzwState = {
+                earlyChange,
+                codeLength: 9,
+                nextCode: 258,
+                dictionaryValues: new Uint8Array(maxLzwDictionarySize),
+                dictionaryLengths: new Uint16Array(maxLzwDictionarySize),
+                dictionaryPrevCodes: new Uint16Array(maxLzwDictionarySize),
+                currentSequence: new Uint8Array(maxLzwDictionarySize),
+                currentSequenceLength: 0
+            };
+            for (var i = 0; i < 256; ++i) {
+                lzwState.dictionaryValues[i] = i;
+                lzwState.dictionaryLengths[i] = 1;
+            }
+            this.lzwState = lzwState;
+
+            DecodeStream.prototype._construct.call(this, maybeLength);
+        },
+
+        readBits: function LZWStream_readBits(n) {
+            var bitsCached = this.bitsCached;
+            var cachedData = this.cachedData;
+            while (bitsCached < n) {
+                var c = this.str.getByte();
+                if (c === -1) {
+                    this.eof = true;
+                    return null;
+                }
+                cachedData = cachedData << 8 | c;
+                bitsCached += 8;
+            }
+            this.bitsCached = bitsCached -= n;
+            this.cachedData = cachedData;
+            this.lastCode = null;
+            return cachedData >>> bitsCached & (1 << n) - 1;
+        },
+
+        readBlock : function LZWStream_readBlock() {
+            var blockSize = 512;
+            var estimatedDecodedSize = blockSize * 2, decodedSizeDelta = blockSize;
+            var i, j, q;
+            var lzwState = this.lzwState;
+            if (!lzwState) {
+                return;
+            }
+            var earlyChange = lzwState.earlyChange;
+            var nextCode = lzwState.nextCode;
+            var dictionaryValues = lzwState.dictionaryValues;
+            var dictionaryLengths = lzwState.dictionaryLengths;
+            var dictionaryPrevCodes = lzwState.dictionaryPrevCodes;
+            var codeLength = lzwState.codeLength;
+            var prevCode = lzwState.prevCode;
+            var currentSequence = lzwState.currentSequence;
+            var currentSequenceLength = lzwState.currentSequenceLength;
+            var decodedLength = 0;
+            var currentBufferLength = this.bufferLength;
+            var buffer = this.ensureBuffer(this.bufferLength + estimatedDecodedSize);
+            for (i = 0; i < blockSize; i++) {
+                var code = this.readBits(codeLength);
+                var hasPrev = currentSequenceLength > 0;
+                if (code < 256) {
+                    currentSequence[0] = code;
+                    currentSequenceLength = 1;
+                } else if (code >= 258) {
+                    if (code < nextCode) {
+                        currentSequenceLength = dictionaryLengths[code];
+                        for (j = currentSequenceLength - 1, q = code; j >= 0; j--) {
+                            currentSequence[j] = dictionaryValues[q];
+                            q = dictionaryPrevCodes[q];
+                        }
+                    } else {
+                        currentSequence[currentSequenceLength++] = currentSequence[0];
+                    }
+                } else if (code === 256) {
+                    codeLength = 9;
+                    nextCode = 258;
+                    currentSequenceLength = 0;
+                    continue;
+                } else {
+                    this.eof = true;
+                    delete this.lzwState;
+                    break;
+                }
+                if (hasPrev) {
+                    dictionaryPrevCodes[nextCode] = prevCode;
+                    dictionaryLengths[nextCode] = dictionaryLengths[prevCode] + 1;
+                    dictionaryValues[nextCode] = currentSequence[0];
+                    nextCode++;
+                    codeLength = nextCode + earlyChange & nextCode + earlyChange - 1 ? codeLength : Math.min(Math.log(nextCode + earlyChange) / 0.6931471805599453 + 1, 12) | 0;
+                }
+                prevCode = code;
+                decodedLength += currentSequenceLength;
+                if (estimatedDecodedSize < decodedLength) {
+                    do {
+                        estimatedDecodedSize += decodedSizeDelta;
+                    } while (estimatedDecodedSize < decodedLength);
+                    buffer = this.ensureBuffer(this.bufferLength + estimatedDecodedSize);
+                }
+                for (j = 0; j < currentSequenceLength; j++) {
+                    buffer[currentBufferLength++] = currentSequence[j];
+                }
+            }
+            lzwState.nextCode = nextCode;
+            lzwState.codeLength = codeLength;
+            lzwState.prevCode = prevCode;
+            lzwState.currentSequenceLength = currentSequenceLength;
+            this.bufferLength = currentBufferLength;
+        }
+    });
+
+    return streams.LZWStream = LZWStream;
+});
+
+define('skylark-io-streams/null-stream',[
+    "./streams",
+    "./_stream"
+], function( streams, Stream) {
+
+    var NullStream = Stream.inherit({
+        klassName : "NullStream",
+
+        _construct : function() {
+            Stream.prototype._construct.call(this, new Uint8Array(0));        
+        }
+    });
+
+
+    return streams.NullStream = NullStream;
+
+});
+
+define('skylark-io-streams/predictor-stream',[
+    "./streams",
+    "./decode-stream"
+], function(streams, DecodeStream) {
+
+
+    var PredictorStream = DecodeStream.inherit({
+        klassName : "PredictorStream",
+
+        _construct : function (str, maybeLength, params) {
+            if (!primitives.isDict(params)) {
+                return str;
+            }
+            var predictor = this.predictor = params.get('Predictor') || 1;
+            if (predictor <= 1) {
+                return str;
+            }
+            if (predictor !== 2 && (predictor < 10 || predictor > 15)) {
+                //throw new util.FormatError(`Unsupported predictor: ${ predictor }`);
+                throw new Error(`Unsupported predictor: ${ predictor }`);
+            }
+            if (predictor === 2) {
+                this.readBlock = this.readBlockTiff;
+            } else {
+                this.readBlock = this.readBlockPng;
+            }
+            this.str = str;
+            this.dict = str.dict;
+            var colors = this.colors = params.get('Colors') || 1;
+            var bits = this.bits = params.get('BitsPerComponent') || 8;
+            var columns = this.columns = params.get('Columns') || 1;
+            this.pixBytes = colors * bits + 7 >> 3;
+            this.rowBytes = columns * colors * bits + 7 >> 3;
+            DecodeStream.call(this, maybeLength);
+            return this;
+        },
+
+        readBlockTiff : function predictorStreamReadBlockTiff() {
+            var rowBytes = this.rowBytes;
+            var bufferLength = this.bufferLength;
+            var buffer = this.ensureBuffer(bufferLength + rowBytes);
+            var bits = this.bits;
+            var colors = this.colors;
+            var rawBytes = this.str.getBytes(rowBytes);
+            this.eof = !rawBytes.length;
+            if (this.eof) {
+                return;
+            }
+            var inbuf = 0, outbuf = 0;
+            var inbits = 0, outbits = 0;
+            var pos = bufferLength;
+            var i;
+            if (bits === 1 && colors === 1) {
+                for (i = 0; i < rowBytes; ++i) {
+                    var c = rawBytes[i] ^ inbuf;
+                    c ^= c >> 1;
+                    c ^= c >> 2;
+                    c ^= c >> 4;
+                    inbuf = (c & 1) << 7;
+                    buffer[pos++] = c;
+                }
+            } else if (bits === 8) {
+                for (i = 0; i < colors; ++i) {
+                    buffer[pos++] = rawBytes[i];
+                }
+                for (; i < rowBytes; ++i) {
+                    buffer[pos] = buffer[pos - colors] + rawBytes[i];
+                    pos++;
+                }
+            } else if (bits === 16) {
+                var bytesPerPixel = colors * 2;
+                for (i = 0; i < bytesPerPixel; ++i) {
+                    buffer[pos++] = rawBytes[i];
+                }
+                for (; i < rowBytes; i += 2) {
+                    var sum = ((rawBytes[i] & 255) << 8) + (rawBytes[i + 1] & 255) + ((buffer[pos - bytesPerPixel] & 255) << 8) + (buffer[pos - bytesPerPixel + 1] & 255);
+                    buffer[pos++] = sum >> 8 & 255;
+                    buffer[pos++] = sum & 255;
+                }
+            } else {
+                var compArray = new Uint8Array(colors + 1);
+                var bitMask = (1 << bits) - 1;
+                var j = 0, k = bufferLength;
+                var columns = this.columns;
+                for (i = 0; i < columns; ++i) {
+                    for (var kk = 0; kk < colors; ++kk) {
+                        if (inbits < bits) {
+                            inbuf = inbuf << 8 | rawBytes[j++] & 255;
+                            inbits += 8;
+                        }
+                        compArray[kk] = compArray[kk] + (inbuf >> inbits - bits) & bitMask;
+                        inbits -= bits;
+                        outbuf = outbuf << bits | compArray[kk];
+                        outbits += bits;
+                        if (outbits >= 8) {
+                            buffer[k++] = outbuf >> outbits - 8 & 255;
+                            outbits -= 8;
+                        }
+                    }
+                }
+                if (outbits > 0) {
+                    buffer[k++] = (outbuf << 8 - outbits) + (inbuf & (1 << 8 - outbits) - 1);
+                }
+            }
+            this.bufferLength += rowBytes;
+        },
+
+        readBlockPng : function predictorStreamReadBlockPng() {
+            var rowBytes = this.rowBytes;
+            var pixBytes = this.pixBytes;
+            var predictor = this.str.getByte();
+            var rawBytes = this.str.getBytes(rowBytes);
+            this.eof = !rawBytes.length;
+            if (this.eof) {
+                return;
+            }
+            var bufferLength = this.bufferLength;
+            var buffer = this.ensureBuffer(bufferLength + rowBytes);
+            var prevRow = buffer.subarray(bufferLength - rowBytes, bufferLength);
+            if (prevRow.length === 0) {
+                prevRow = new Uint8Array(rowBytes);
+            }
+            var i, j = bufferLength, up, c;
+            switch (predictor) {
+            case 0:
+                for (i = 0; i < rowBytes; ++i) {
+                    buffer[j++] = rawBytes[i];
+                }
+                break;
+            case 1:
+                for (i = 0; i < pixBytes; ++i) {
+                    buffer[j++] = rawBytes[i];
+                }
+                for (; i < rowBytes; ++i) {
+                    buffer[j] = buffer[j - pixBytes] + rawBytes[i] & 255;
+                    j++;
+                }
+                break;
+            case 2:
+                for (i = 0; i < rowBytes; ++i) {
+                    buffer[j++] = prevRow[i] + rawBytes[i] & 255;
+                }
+                break;
+            case 3:
+                for (i = 0; i < pixBytes; ++i) {
+                    buffer[j++] = (prevRow[i] >> 1) + rawBytes[i];
+                }
+                for (; i < rowBytes; ++i) {
+                    buffer[j] = (prevRow[i] + buffer[j - pixBytes] >> 1) + rawBytes[i] & 255;
+                    j++;
+                }
+                break;
+            case 4:
+                for (i = 0; i < pixBytes; ++i) {
+                    up = prevRow[i];
+                    c = rawBytes[i];
+                    buffer[j++] = up + c;
+                }
+                for (; i < rowBytes; ++i) {
+                    up = prevRow[i];
+                    var upLeft = prevRow[i - pixBytes];
+                    var left = buffer[j - pixBytes];
+                    var p = left + up - upLeft;
+                    var pa = p - left;
+                    if (pa < 0) {
+                        pa = -pa;
+                    }
+                    var pb = p - up;
+                    if (pb < 0) {
+                        pb = -pb;
+                    }
+                    var pc = p - upLeft;
+                    if (pc < 0) {
+                        pc = -pc;
+                    }
+                    c = rawBytes[i];
+                    if (pa <= pb && pa <= pc) {
+                        buffer[j++] = left + c;
+                    } else if (pb <= pc) {
+                        buffer[j++] = up + c;
+                    } else {
+                        buffer[j++] = upLeft + c;
+                    }
+                }
+                break;
+            default:
+                //throw new util.FormatError(`Unsupported predictor: ${ predictor }`);
+                throw new Error(`Unsupported predictor: ${ predictor }`);
+            }
+            this.bufferLength += rowBytes;
+        }
+    });
+
+    return streams.PredictorStream = PredictorStream;
+});
+
+define('skylark-io-streams/run-length-stream',[
+    "skylark-langx-chars",
+    "./streams",
+    "./decode-stream"
+], function(chars, streams, DecodeStream) {
+
+    var RunLengthStream = DecodeStream.inherit({
+        klassName : "RunLengthStream",
+
+        _construct : function (str, maybeLength) {
+            this.str = str;
+            this.dict = str.dict;
+            DecodeStream.prototype._construct.call(this, maybeLength);       
+        },
+
+        readBlock : function RunLengthStream_readBlock() {
+            var repeatHeader = this.str.getBytes(2);
+            if (!repeatHeader || repeatHeader.length < 2 || repeatHeader[0] === 128) {
+                this.eof = true;
+                return;
+            }
+            var buffer;
+            var bufferLength = this.bufferLength;
+            var n = repeatHeader[0];
+            if (n < 128) {
+                buffer = this.ensureBuffer(bufferLength + n + 1);
+                buffer[bufferLength++] = repeatHeader[1];
+                if (n > 0) {
+                    var source = this.str.getBytes(n);
+                    buffer.set(source, bufferLength);
+                    bufferLength += n;
+                }
+            } else {
+                n = 257 - n;
+                var b = repeatHeader[1];
+                buffer = this.ensureBuffer(bufferLength + n + 1);
+                for (var i = 0; i < n; i++) {
+                    buffer[bufferLength++] = b;
+                }
+            }
+            this.bufferLength = bufferLength;
+        }
+    });
+
+    return streams.RunLengthStream = RunLengthStream;
+
+});
+
+define('skylark-io-streams/streams-sequence-stream',[
+    "skylark-langx-chars",
+    "./streams",
+    "./decode-stream"
+], function(chars, streams, DecodeStream) {
+
+
+    var StreamsSequenceStream = DecodeStream.inherit({
+        klassName : "StreamsSequenceStream",
+
+        _construct : function(_streams) {
+            this.streams = _streams;
+            let maybeLength = 0;
+            for (let i = 0, ii = _streams.length; i < ii; i++) {
+                const stream = _streams[i];
+                if (stream instanceof DecodeStream) {
+                    maybeLength += stream._rawMinBufferLength;
+                } else {
+                    maybeLength += stream.length;
+                }
+            }
+            DecodeStream.prototype._construct.call(this, maybeLength);       
+        },
+
+        readBlock : function streamSequenceStreamReadBlock() {
+            var _streams = this.streams;
+            if (streams.length === 0) {
+                this.eof = true;
+                return;
+            }
+            var stream = _streams.shift();
+            var chunk = _streams.getBytes();
+            var bufferLength = this.bufferLength;
+            var newLength = bufferLength + chunk.length;
+            var buffer = this.ensureBuffer(newLength);
+            buffer.set(chunk, bufferLength);
+            this.bufferLength = newLength;
+        },
+
+        getBaseStreams : function StreamsSequenceStream_getBaseStreams() {
+            var baseStreams = [];
+            for (var i = 0, ii = this.streams.length; i < ii; i++) {
+                var stream = this.streams[i];
+                if (stream.getBaseStreams) {
+                    baseStreams.push(...stream.getBaseStreams());
+                }
+            }
+            return baseStreams;
+        }
+    });
+
+    return streams.StreamsSequenceStream = StreamsSequenceStream;
+
+});
+
+define('skylark-io-streams/string-stream',[
+    "./streams",
+    "./_stream"
+], function(streams, Stream) {
+
+    var StringStream = Stream.inherit({
+        klassName : "StringStream",
+
+        _construct : function(str) {
+            //const bytes = util.stringToBytes(str);
+            //TODO: chartCodeAt() >255
+            var length = str.length;
+            var bytes = new Uint8Array(length);
+            for (var n = 0; n < length; ++n)
+                bytes[n] = str.charCodeAt(n);
+
+            Stream.prototype._construct.call(this,bytes);          
+        }
+    });
+
+
+    return streams.StringStream = StringStream;
+
+});
+
+define('skylark-io-streams/main',[
+    "./streams",
+    "./ascii85-stream",
+    "./ascii-hex-stream",
+    "./chunked-stream",
+    "./decode-stream",
+    "./decrypt-stream",
+    "./fake-stream",
+    "./flate-stream",
+    "./lzw-stream",
+    "./null-stream",
+    "./predictor-stream",
+    "./run-length-stream",
+    "./_stream",
+    "./streams-sequence-stream",
+    "./string-stream"
+], function(streams) {
+
+	return streams;
+});
+define('skylark-io-streams', ['skylark-io-streams/main'], function (main) { return main; });
+
+define('skylark-net-http/xhr',[
+  "skylark-langx-ns/ns",
+  "skylark-langx-types",
+  "skylark-langx-objects",
+  "skylark-langx-arrays",
+  "skylark-langx-funcs",
+  "skylark-langx-async/deferred",
+  "skylark-langx-emitter/evented",
+  "skylark-langx-urls/is-cross-origin",
+  "./http"
+],function(skylark,types,objects,arrays,funcs,Deferred,Evented,isCrossOrigin,http){
+
+    var each = objects.each,
+        mixin = objects.mixin,
+        noop = funcs.noop,
+        isArray = types.isArray,
+        isFunction = types.isFunction,
+        isPlainObject = types.isPlainObject,
+        type = types.type;
+ 
+     var getAbsoluteUrl = (function() {
+        var a;
+
+        return function(url) {
+            if (!a) a = document.createElement('a');
+            a.href = url;
+
+            return a.href;
+        };
+    })();
+   
+    var Xhr = (function(){
+        var jsonpID = 0,
+            key,
+            name,
+            rscript = /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+            scriptTypeRE = /^(?:text|application)\/javascript/i,
+            xmlTypeRE = /^(?:text|application)\/xml/i,
+            jsonType = 'application/json',
+            htmlType = 'text/html',
+            blankRE = /^\s*$/;
+
+        var XhrDefaultOptions = {
+            async: true,
+
+            // Default type of request
+            type: 'GET',
+            // Callback that is executed before request
+            beforeSend: noop,
+            // Callback that is executed if the request succeeds
+            success: noop,
+            // Callback that is executed the the server drops error
+            error: noop,
+            // Callback that is executed on request complete (both: error and success)
+            complete: noop,
+            // The context for the callbacks
+            context: null,
+            // Whether to trigger "global" Ajax events
+            global: true,
+
+            // MIME types mapping
+            // IIS returns Javascript as "application/x-javascript"
+            accepts: {
+                script: 'text/javascript, application/javascript, application/x-javascript',
+                json: 'application/json',
+                xml: 'application/xml, text/xml',
+                html: 'text/html',
+                text: 'text/plain'
+            },
+            // Whether the request is to another domain
+            crossDomain: false,
+            // Default timeout
+            timeout: 0,
+            // Whether data should be serialized to string
+            processData: false,
+            // Whether the browser should be allowed to cache GET responses
+            cache: true,
+
+            traditional : false,
+            
+            xhrFields : {
+                ///withCredentials : false
+            }
+        };
+
+        function mimeToDataType(mime) {
+            if (mime) {
+                mime = mime.split(';', 2)[0];
+            }
+            if (mime) {
+                if (mime == htmlType) {
+                    return "html";
+                } else if (mime == jsonType) {
+                    return "json";
+                } else if (scriptTypeRE.test(mime)) {
+                    return "script";
+                } else if (xmlTypeRE.test(mime)) {
+                    return "xml";
+                }
+            }
+            return "text";
+        }
+
+        function appendQuery(url, query) {
+            if (query == '') return url
+            return (url + '&' + query).replace(/[&?]{1,2}/, '?')
+        }
+
+        // serialize payload and append it to the URL for GET requests
+        function serializeData(options) {
+            options.data = options.data || options.query;
+            if (options.processData && options.data && type(options.data) != "string") {
+                options.data = param(options.data, options.traditional);
+            }
+            if (options.data && (!options.type || options.type.toUpperCase() == 'GET')) {
+                if (type(options.data) != "string") {
+                    options.data = param(options.data, options.traditional);
+                }
+                options.url = appendQuery(options.url, options.data);
+                options.data = undefined;
+            }
+        }
+        
+        function serialize(params, obj, traditional, scope) {
+            var t, array = isArray(obj),
+                hash = isPlainObject(obj)
+            each(obj, function(key, value) {
+                t =type(value);
+                if (scope) key = traditional ? scope :
+                    scope + '[' + (hash || t == 'object' || t == 'array' ? key : '') + ']'
+                // handle data in serializeArray() format
+                if (!scope && array) params.add(value.name, value.value)
+                // recurse into nested objects
+                else if (t == "array" || (!traditional && t == "object"))
+                    serialize(params, value, traditional, key)
+                else params.add(key, value)
+            })
+        }
+
+        var param = function(obj, traditional) {
+            var params = []
+            params.add = function(key, value) {
+                if (isFunction(value)) {
+                  value = value();
+                }
+                if (value == null) {
+                  value = "";
+                }
+                this.push(encodeURIComponent(key) + '=' + encodeURIComponent(value));
+            };
+            serialize(params, obj, traditional)
+            return params.join('&').replace(/%20/g, '+')
+        };
+
+        var Xhr = Evented.inherit({
+            klassName : "Xhr",
+
+            _request  : function(args) {
+                var _ = this._,
+                    self = this,
+                    options = mixin({},XhrDefaultOptions,_.options,args),
+                    xhr = _.xhr = new XMLHttpRequest();
+
+                serializeData(options)
+
+                if (options.beforeSend) {
+                    options.beforeSend.call(this, xhr, options);
+                }                
+
+                var dataType = options.dataType || options.handleAs,
+                    mime = options.mimeType || options.accepts[dataType],
+                    headers = options.headers,
+                    xhrFields = options.xhrFields,
+                    isFormData = options.data && options.data instanceof FormData,
+                    basicAuthorizationToken = options.basicAuthorizationToken,
+                    type = options.type,
+                    url = options.url,
+                    async = options.async,
+                    user = options.user , 
+                    password = options.password,
+                    deferred = new Deferred(),
+                    contentType = options.contentType || (isFormData ? false : 'application/x-www-form-urlencoded');
+
+                if (xhrFields) {
+                    for (name in xhrFields) {
+                        xhr[name] = xhrFields[name];
+                    }
+                }
+
+                if (mime && mime.indexOf(',') > -1) {
+                    mime = mime.split(',', 2)[0];
+                }
+                if (mime && xhr.overrideMimeType) {
+                    xhr.overrideMimeType(mime);
+                }
+
+                if (dataType == "blob" || dataType == "arraybuffer") {
+                    xhr.responseType = dataType;
+                }
+
+                var finish = function() {
+                    xhr.onloadend = noop;
+                    xhr.onabort = noop;
+                    xhr.onprogress = noop;
+                    xhr.ontimeout = noop;
+                    xhr = null;
+                }
+                var onloadend = function() {
+                    var result, error = false
+                    if ((xhr.status >= 200 && xhr.status < 300) || xhr.status == 304 || (xhr.status == 0 && getAbsoluteUrl(url).startsWith('file:'))) {
+                        dataType = dataType || mimeToDataType(options.mimeType || xhr.getResponseHeader('content-type'));
+
+                        //result = xhr.responseText;
+                        try {
+                            if (dataType == 'script') {
+                                eval(xhr.responseText);
+                            } else if (dataType == 'xml') {
+                                result = xhr.responseXML;
+                            } else if (dataType == 'json') {
+                                result = blankRE.test(xhr.responseText) ? null : JSON.parse(xhr.responseText);
+                            } else if (dataType == "blob") {
+                                result = xhr.response; // new Blob([xhr.response]);
+                            } else if (dataType == "arraybuffer") {
+                                result = xhr.response;
+                            } else {
+                                //if (dataType == "text" || dataType=="html")
+                                result = xhr.responseText;
+                            }
+                        } catch (e) { 
+                            error = e;
+                        }
+
+                        if (error) {
+                            deferred.reject(error,xhr.status,xhr);
+                        } else {
+                            deferred.resolve(result,xhr.status,xhr);
+                        }
+                    } else {
+                        deferred.reject(new Error(xhr.statusText),xhr.status,xhr);
+                    }
+                    finish();
+                };
+                
+                var onabort = function() {
+                    if (deferred) {
+                        deferred.reject(new Error("abort"),xhr.status,xhr);
+                    }
+                    finish();                 
+                }
+ 
+                var ontimeout = function() {
+                    if (deferred) {
+                        deferred.reject(new Error("timeout"),xhr.status,xhr);
+                    }
+                    finish();                 
+                }
+
+                var onprogress = function(evt) {
+                    if (deferred) {
+                        deferred.notify(evt,xhr.status,xhr);
+                    }
+                }
+
+                xhr.onloadend = onloadend;
+                xhr.onabort = onabort;
+                xhr.ontimeout = ontimeout;
+                xhr.onprogress = onprogress;
+
+                xhr.open(type, url, async, user, password);
+               
+                if (headers) {
+                    for ( var key in headers) {
+                        var value = headers[key];
+ 
+                        if(key.toLowerCase() === 'content-type'){
+                            contentType = value;
+                        } else {
+                           xhr.setRequestHeader(key, value);
+                        }
+                    }
+                }   
+
+                if  (contentType && contentType !== false){
+                    xhr.setRequestHeader('Content-Type', contentType);
+                }
+
+                if(!headers || !('X-Requested-With' in headers)){
+                    if (!isCrossOrigin(url)) {// for s02
+                      xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest'); 
+                    }
+                }
+
+
+                //If basicAuthorizationToken is defined set its value into "Authorization" header
+                if (basicAuthorizationToken) {
+                    xhr.setRequestHeader("Authorization", basicAuthorizationToken);
+                }
+
+                xhr.send(options.data ? options.data : null);
+
+                return deferred.promise;
+
+            },
+
+            "abort": function() {
+                var _ = this._,
+                    xhr = _.xhr;
+
+                if (xhr) {
+                    xhr.abort();
+                }    
+            },
+
+
+            "request": function(args) {
+                return this._request(args);
+            },
+
+            get : function(args) {
+                args = args || {};
+                args.type = "GET";
+                return this._request(args);
+            },
+
+            post : function(args) {
+                args = args || {};
+                args.type = "POST";
+                return this._request(args);
+            },
+
+            patch : function(args) {
+                args = args || {};
+                args.type = "PATCH";
+                return this._request(args);
+            },
+
+            put : function(args) {
+                args = args || {};
+                args.type = "PUT";
+                return this._request(args);
+            },
+
+            del : function(args) {
+                args = args || {};
+                args.type = "DELETE";
+                return this._request(args);
+            },
+
+            "init": function(options) {
+                this._ = {
+                    options : options || {}
+                };
+            }
+        });
+
+        ["request","get","post","put","del","patch"].forEach(function(name){
+            Xhr[name] = function(url,args) {
+                var xhr = new Xhr({"url" : url});
+                return xhr[name](args);
+            };
+        });
+
+        Xhr.defaultOptions = XhrDefaultOptions;
+        Xhr.param = param;
+
+        return Xhr;
+    })();
+
+    return http.Xhr = Xhr;  
+});
+define('skylark-net-http/restful',[
+    "skylark-langx-objects",
+    "skylark-langx-strings",
+    "skylark-langx-emitter/evented",    
+    "./xhr"
+],function(objects,strings,Evented,Xhr){
+    var mixin = objects.mixin,
+        substitute = strings.substitute;
+
+    var Restful = Evented.inherit({
+        "klassName" : "Restful",
+
+        "idAttribute": "id",
+        
+        getBaseUrl : function(args) {
+            //$$baseEndpoint : "/files/${fileId}/comments",
+            var baseEndpoint = substitute(this.baseEndpoint,args),
+                baseUrl = this.server + this.basePath + baseEndpoint;
+            if (args[this.idAttribute]!==undefined) {
+                baseUrl = baseUrl + "/" + args[this.idAttribute]; 
+            }
+            return baseUrl;
+        },
+        _head : function(args) {
+            //get resource metadata .
+            //args : id and other info for the resource ,ex
+            //{
+            //  "id" : 234,  // the own id, required
+            //  "fileId"   : 2 // the parent resource id, option by resource
+            //}
+        },
+        _get : function(args) {
+            //get resource ,one or list .
+            //args : id and other info for the resource ,ex
+            //{
+            //  "id" : 234,  // the own id, null if list
+            //  "fileId"   : 2 // the parent resource id, option by resource
+            //}
+            return Xhr.get(this.getBaseUrl(args),args);
+        },
+        _post  : function(args,verb) {
+            //create or move resource .
+            //args : id and other info for the resource ,ex
+            //{
+            //  "id" : 234,  // the own id, required
+            //  "data" : body // the own data,required
+            //  "fileId"   : 2 // the parent resource id, option by resource
+            //}
+            //verb : the verb ,ex: copy,touch,trash,untrash,watch
+            var url = this.getBaseUrl(args);
+            if (verb) {
+                url = url + "/" + verb;
+            }
+            return Xhr.post(url, args);
+        },
+
+        _put  : function(args,verb) {
+            //update resource .
+            //args : id and other info for the resource ,ex
+            //{
+            //  "id" : 234,  // the own id, required
+            //  "data" : body // the own data,required
+            //  "fileId"   : 2 // the parent resource id, option by resource
+            //}
+            //verb : the verb ,ex: copy,touch,trash,untrash,watch
+            var url = this.getBaseUrl(args);
+            if (verb) {
+                url = url + "/" + verb;
+            }
+            return Xhr.put(url, args);
+        },
+
+        _delete : function(args) {
+            //delete resource . 
+            //args : id and other info for the resource ,ex
+            //{
+            //  "id" : 234,  // the own id, required
+            //  "fileId"   : 2 // the parent resource id, option by resource
+            //}         
+
+            // HTTP request : DELETE http://center.utilhub.com/registry/v1/apps/{appid}
+            var url = this.getBaseUrl(args);
+            return Xhr.del(url);
+        },
+
+        _patch : function(args){
+            //update resource metadata. 
+            //args : id and other info for the resource ,ex
+            //{
+            //  "id" : 234,  // the own id, required
+            //  "data" : body // the own data,required
+            //  "fileId"   : 2 // the parent resource id, option by resource
+            //}
+            var url = this.getBaseUrl(args);
+            return Xhr.patch(url, args);
+        },
+        query: function(params) {
+            
+            return this._post(params);
+        },
+
+        retrieve: function(params) {
+            return this._get(params);
+        },
+
+        create: function(params) {
+            return this._post(params);
+        },
+
+        update: function(params) {
+            return this._put(params);
+        },
+
+        delete: function(params) {
+            // HTTP request : DELETE http://center.utilhub.com/registry/v1/apps/{appid}
+            return this._delete(params);
+        },
+
+        patch: function(params) {
+           // HTTP request : PATCH http://center.utilhub.com/registry/v1/apps/{appid}
+            return this._patch(params);
+        },
+        init: function(params) {
+            mixin(this,params);
+ //           this._xhr = XHRx();
+       }
+    });
+
+    return Restful;
+});
+define('skylark-net-http/upload',[
+    "skylark-langx-types",
+    "skylark-langx-objects",
+    "skylark-langx-arrays",
+    "skylark-langx-async/deferred",
+    "skylark-langx-emitter/evented",    
+    "./xhr",
+    "./http"
+],function(types, objects, arrays, Deferred, Evented,Xhr, http){
+
+    var blobSlice = Blob.prototype.slice || Blob.prototype.webkitSlice || Blob.prototype.mozSlice;
+
+
+    /*
+     *Class for uploading files using xhr.
+     */
+    var Upload = Evented.inherit({
+        klassName : "Upload",
+
+        _construct : function(options) {
+            this._options = objects.mixin({
+                debug: false,
+                url: '/upload',
+                headers : {
+
+                },
+                // maximum number of concurrent uploads
+                maxConnections: 999,
+                // To upload large files in smaller chunks, set the following option
+                // to a preferred maximum chunk size. If set to 0, null or undefined,
+                // or the browser does not support the required Blob API, files will
+                // be uploaded as a whole.
+                maxChunkSize: undefined,
+
+                onProgress: function(id, fileName, loaded, total){
+                },
+                onComplete: function(id, fileName,result,status,xhr){
+                },
+                onCancel: function(id, fileName){
+                },
+                onFailure : function(id,fileName,e) {                    
+                }
+            },options);
+
+            this._queue = [];
+            // params for files in queue
+            this._params = [];
+
+            this._files = [];
+            this._xhrs = [];
+
+            // current loaded size in bytes for each file
+            this._loaded = [];
+
+        },
+
+        /**
+         * Adds file to the queue
+         * Returns id to use with upload, cancel
+         **/
+        add: function(file){
+            return this._files.push(file) - 1;
+        },
+
+        /**
+         * Sends the file identified by id and additional query params to the server.
+         */
+        send: function(id, params){
+            if (!this._files[id]) {
+                // Already sended or canceled
+                return ;
+            }
+            if (this._queue.indexOf(id)>-1) {
+                // Already in the queue
+                return;
+            }
+            var len = this._queue.push(id);
+
+            var copy = objects.clone(params);
+
+            this._params[id] = copy;
+
+            // if too many active uploads, wait...
+            if (len <= this._options.maxConnections){
+                this._send(id, this._params[id]);
+            }     
+        },
+
+        /**
+         * Sends all files  and additional query params to the server.
+         */
+        sendAll: function(params){
+           for( var id = 0; id <this._files.length; id++) {
+                this.send(id,params);
+            }
+        },
+
+        /**
+         * Cancels file upload by id
+         */
+        cancel: function(id){
+            this._cancel(id);
+            this._dequeue(id);
+        },
+
+        /**
+         * Cancells all uploads
+         */
+        cancelAll: function(){
+            for (var i=0; i<this._queue.length; i++){
+                this._cancel(this._queue[i]);
+            }
+            this._queue = [];
+        },
+
+        getName: function(id){
+            var file = this._files[id];
+            return file.fileName != null ? file.fileName : file.name;
+        },
+
+        getSize: function(id){
+            var file = this._files[id];
+            return file.fileSize != null ? file.fileSize : file.size;
+        },
+
+        /**
+         * Returns uploaded bytes for file identified by id
+         */
+        getLoaded: function(id){
+            return this._loaded[id] || 0;
+        },
+
+
+        /**
+         * Sends the file identified by id and additional query params to the server
+         * @param {Object} params name-value string pairs
+         */
+        _send: function(id, params){
+            var options = this._options,
+                name = this.getName(id),
+                size = this.getSize(id),
+                chunkSize = options.maxChunkSize || 0,
+                curUploadingSize,
+                curLoadedSize = 0,
+                file = this._files[id],
+                args = {
+                    headers : objects.clone(options.headers)                    
+                };
+
+            this._loaded[id] = this._loaded[id] || 0;
+
+            var xhr = this._xhrs[id] = new Xhr({
+                url : options.url
+            });
+
+            if (chunkSize)  {
+
+                args.data = blobSlice.call(
+                    file,
+                    this._loaded[id],
+                    this._loaded[id] + chunkSize,
+                    file.type
+                );
+                // Store the current chunk size, as the blob itself
+                // will be dereferenced after data processing:
+                curUploadingSize = args.data.size;
+                // Expose the chunk bytes position range:
+                args.headers["content-range"] = 'bytes ' + this._loaded[id] + '-' +
+                    (this._loaded[id] + curUploadingSize - 1) + '/' + size;
+                args.headers["Content-Type"] = "application/octet-stream";
+            }  else {
+                curUploadingSize = size;
+                var formParamName =  params.formParamName,
+                    formData = params.formData;
+
+                if (formParamName) {
+                    if (!formData) {
+                        formData = new FormData();
+                    }
+                    formData.append(formParamName,file);
+                    args.data = formData;
+    
+                } else {
+                    args.headers["Content-Type"] = file.type || "application/octet-stream";
+                    args.data = file;
+                }
+            }
+
+
+            var self = this;
+            xhr.post(
+                args
+            ).progress(function(e){
+                if (e.lengthComputable){
+                    curLoadedSize = curLoadedSize + e.loaded;
+                    self._loaded[id] = self._loaded[id] + e.loaded;
+                    self._options.onProgress(id, name, self._loaded[id], size);
+                }
+            }).then(function(result,status,xhr){
+                if (!self._files[id]) {
+                    // the request was aborted/cancelled
+                    return;
+                }
+
+                if (curLoadedSize < curUploadingSize) {
+                    // Create a progress event if no final progress event
+                    // with loaded equaling total has been triggered
+                    // for this chunk:
+                    self._loaded[id] = self._loaded[id] + curUploadingSize - curLoadedSize;
+                    self._options.onProgress(id, name, self._loaded[id], size);                    
+                }
+
+                if (self._loaded[id] <size) {
+                    // File upload not yet complete,
+                    // continue with the next chunk:
+                    self._send(id,params);
+                } else {
+                    self._options.onComplete(id,name,result,status,xhr);
+
+                    self._files[id] = null;
+                    self._xhrs[id] = null;
+                    self._dequeue(id);
+                }
+
+
+            }).catch(function(e){
+                self._options.onFailure(id,name,e);
+
+                self._files[id] = null;
+                self._xhrs[id] = null;
+                self._dequeue(id);
+            });
+        },
+
+        _cancel: function(id){
+            this._options.onCancel(id, this.getName(id));
+
+            this._files[id] = null;
+
+            if (this._xhrs[id]){
+                this._xhrs[id].abort();
+                this._xhrs[id] = null;
+            }
+        },
+
+        /**
+         * Returns id of files being uploaded or
+         * waiting for their turn
+         */
+        getQueue: function(){
+            return this._queue;
+        },
+
+
+        /**
+         * Removes element from queue, starts upload of next
+         */
+        _dequeue: function(id){
+            var i = arrays.inArray(id,this._queue);
+            this._queue.splice(i, 1);
+
+            var max = this._options.maxConnections;
+
+            if (this._queue.length >= max && i < max){
+                var nextId = this._queue[max-1];
+                this._send(nextId, this._params[nextId]);
+            }
+        }
+    });
+
+
+  Upload.send = function(file, options) {
+    var uploader = new Upload(options);
+    var id = uploader.add(file);
+    return uploader.send(id,options);
+  };
+
+  Upload.sendAll = function(files,options) {
+      var uploader = new Upload(options);
+      for (var i = 0, len = files.length; i < len; i++) {
+        this.add(file[i]);
+      }
+      return uploader.send(options);
+  };
+
+    return http.Upload = Upload;    
+});
+define('skylark-net-http/main',[
+	"./http",
+	"./restful",
+	"./Xhr",
+	"./upload"
+],function(http){
+	return http;
+});
+define('skylark-net-http', ['skylark-net-http/main'], function (main) { return main; });
+
 define('skylark-domx-forms/forms',[
 	"skylark-langx/skylark"
 ],function(skylark){
@@ -29265,376 +42988,6 @@ define('skylark-jquery/core',[
     return window.jQuery = window.$ = query;
 });
 
-define('skylark-net-http/xhr',[
-  "skylark-langx-ns/ns",
-  "skylark-langx-types",
-  "skylark-langx-objects",
-  "skylark-langx-arrays",
-  "skylark-langx-funcs",
-  "skylark-langx-async/deferred",
-  "skylark-langx-emitter/evented",
-  "skylark-langx-urls/is-cross-origin",
-  "./http"
-],function(skylark,types,objects,arrays,funcs,Deferred,Evented,isCrossOrigin,http){
-
-    var each = objects.each,
-        mixin = objects.mixin,
-        noop = funcs.noop,
-        isArray = types.isArray,
-        isFunction = types.isFunction,
-        isPlainObject = types.isPlainObject,
-        type = types.type;
- 
-     var getAbsoluteUrl = (function() {
-        var a;
-
-        return function(url) {
-            if (!a) a = document.createElement('a');
-            a.href = url;
-
-            return a.href;
-        };
-    })();
-   
-    var Xhr = (function(){
-        var jsonpID = 0,
-            key,
-            name,
-            rscript = /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
-            scriptTypeRE = /^(?:text|application)\/javascript/i,
-            xmlTypeRE = /^(?:text|application)\/xml/i,
-            jsonType = 'application/json',
-            htmlType = 'text/html',
-            blankRE = /^\s*$/;
-
-        var XhrDefaultOptions = {
-            async: true,
-
-            // Default type of request
-            type: 'GET',
-            // Callback that is executed before request
-            beforeSend: noop,
-            // Callback that is executed if the request succeeds
-            success: noop,
-            // Callback that is executed the the server drops error
-            error: noop,
-            // Callback that is executed on request complete (both: error and success)
-            complete: noop,
-            // The context for the callbacks
-            context: null,
-            // Whether to trigger "global" Ajax events
-            global: true,
-
-            // MIME types mapping
-            // IIS returns Javascript as "application/x-javascript"
-            accepts: {
-                script: 'text/javascript, application/javascript, application/x-javascript',
-                json: 'application/json',
-                xml: 'application/xml, text/xml',
-                html: 'text/html',
-                text: 'text/plain'
-            },
-            // Whether the request is to another domain
-            crossDomain: false,
-            // Default timeout
-            timeout: 0,
-            // Whether data should be serialized to string
-            processData: false,
-            // Whether the browser should be allowed to cache GET responses
-            cache: true,
-
-            traditional : false,
-            
-            xhrFields : {
-                ///withCredentials : false
-            }
-        };
-
-        function mimeToDataType(mime) {
-            if (mime) {
-                mime = mime.split(';', 2)[0];
-            }
-            if (mime) {
-                if (mime == htmlType) {
-                    return "html";
-                } else if (mime == jsonType) {
-                    return "json";
-                } else if (scriptTypeRE.test(mime)) {
-                    return "script";
-                } else if (xmlTypeRE.test(mime)) {
-                    return "xml";
-                }
-            }
-            return "text";
-        }
-
-        function appendQuery(url, query) {
-            if (query == '') return url
-            return (url + '&' + query).replace(/[&?]{1,2}/, '?')
-        }
-
-        // serialize payload and append it to the URL for GET requests
-        function serializeData(options) {
-            options.data = options.data || options.query;
-            if (options.processData && options.data && type(options.data) != "string") {
-                options.data = param(options.data, options.traditional);
-            }
-            if (options.data && (!options.type || options.type.toUpperCase() == 'GET')) {
-                if (type(options.data) != "string") {
-                    options.data = param(options.data, options.traditional);
-                }
-                options.url = appendQuery(options.url, options.data);
-                options.data = undefined;
-            }
-        }
-        
-        function serialize(params, obj, traditional, scope) {
-            var t, array = isArray(obj),
-                hash = isPlainObject(obj)
-            each(obj, function(key, value) {
-                t =type(value);
-                if (scope) key = traditional ? scope :
-                    scope + '[' + (hash || t == 'object' || t == 'array' ? key : '') + ']'
-                // handle data in serializeArray() format
-                if (!scope && array) params.add(value.name, value.value)
-                // recurse into nested objects
-                else if (t == "array" || (!traditional && t == "object"))
-                    serialize(params, value, traditional, key)
-                else params.add(key, value)
-            })
-        }
-
-        var param = function(obj, traditional) {
-            var params = []
-            params.add = function(key, value) {
-                if (isFunction(value)) {
-                  value = value();
-                }
-                if (value == null) {
-                  value = "";
-                }
-                this.push(encodeURIComponent(key) + '=' + encodeURIComponent(value));
-            };
-            serialize(params, obj, traditional)
-            return params.join('&').replace(/%20/g, '+')
-        };
-
-        var Xhr = Evented.inherit({
-            klassName : "Xhr",
-
-            _request  : function(args) {
-                var _ = this._,
-                    self = this,
-                    options = mixin({},XhrDefaultOptions,_.options,args),
-                    xhr = _.xhr = new XMLHttpRequest();
-
-                serializeData(options)
-
-                if (options.beforeSend) {
-                    options.beforeSend.call(this, xhr, options);
-                }                
-
-                var dataType = options.dataType || options.handleAs,
-                    mime = options.mimeType || options.accepts[dataType],
-                    headers = options.headers,
-                    xhrFields = options.xhrFields,
-                    isFormData = options.data && options.data instanceof FormData,
-                    basicAuthorizationToken = options.basicAuthorizationToken,
-                    type = options.type,
-                    url = options.url,
-                    async = options.async,
-                    user = options.user , 
-                    password = options.password,
-                    deferred = new Deferred(),
-                    contentType = options.contentType || (isFormData ? false : 'application/x-www-form-urlencoded');
-
-                if (xhrFields) {
-                    for (name in xhrFields) {
-                        xhr[name] = xhrFields[name];
-                    }
-                }
-
-                if (mime && mime.indexOf(',') > -1) {
-                    mime = mime.split(',', 2)[0];
-                }
-                if (mime && xhr.overrideMimeType) {
-                    xhr.overrideMimeType(mime);
-                }
-
-                if (dataType == "blob" || dataType == "arraybuffer") {
-                    xhr.responseType = dataType;
-                }
-
-                var finish = function() {
-                    xhr.onloadend = noop;
-                    xhr.onabort = noop;
-                    xhr.onprogress = noop;
-                    xhr.ontimeout = noop;
-                    xhr = null;
-                }
-                var onloadend = function() {
-                    var result, error = false
-                    if ((xhr.status >= 200 && xhr.status < 300) || xhr.status == 304 || (xhr.status == 0 && getAbsoluteUrl(url).startsWith('file:'))) {
-                        dataType = dataType || mimeToDataType(options.mimeType || xhr.getResponseHeader('content-type'));
-
-                        //result = xhr.responseText;
-                        try {
-                            if (dataType == 'script') {
-                                eval(xhr.responseText);
-                            } else if (dataType == 'xml') {
-                                result = xhr.responseXML;
-                            } else if (dataType == 'json') {
-                                result = blankRE.test(xhr.responseText) ? null : JSON.parse(xhr.responseText);
-                            } else if (dataType == "blob") {
-                                result = xhr.response; // new Blob([xhr.response]);
-                            } else if (dataType == "arraybuffer") {
-                                result = xhr.response;
-                            } else {
-                                //if (dataType == "text" || dataType=="html")
-                                result = xhr.responseText;
-                            }
-                        } catch (e) { 
-                            error = e;
-                        }
-
-                        if (error) {
-                            deferred.reject(error,xhr.status,xhr);
-                        } else {
-                            deferred.resolve(result,xhr.status,xhr);
-                        }
-                    } else {
-                        deferred.reject(new Error(xhr.statusText),xhr.status,xhr);
-                    }
-                    finish();
-                };
-                
-                var onabort = function() {
-                    if (deferred) {
-                        deferred.reject(new Error("abort"),xhr.status,xhr);
-                    }
-                    finish();                 
-                }
- 
-                var ontimeout = function() {
-                    if (deferred) {
-                        deferred.reject(new Error("timeout"),xhr.status,xhr);
-                    }
-                    finish();                 
-                }
-
-                var onprogress = function(evt) {
-                    if (deferred) {
-                        deferred.notify(evt,xhr.status,xhr);
-                    }
-                }
-
-                xhr.onloadend = onloadend;
-                xhr.onabort = onabort;
-                xhr.ontimeout = ontimeout;
-                xhr.onprogress = onprogress;
-
-                xhr.open(type, url, async, user, password);
-               
-                if (headers) {
-                    for ( var key in headers) {
-                        var value = headers[key];
- 
-                        if(key.toLowerCase() === 'content-type'){
-                            contentType = value;
-                        } else {
-                           xhr.setRequestHeader(key, value);
-                        }
-                    }
-                }   
-
-                if  (contentType && contentType !== false){
-                    xhr.setRequestHeader('Content-Type', contentType);
-                }
-
-                if(!headers || !('X-Requested-With' in headers)){
-                    if (!isCrossOrigin(url)) {// for s02
-                      xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest'); 
-                    }
-                }
-
-
-                //If basicAuthorizationToken is defined set its value into "Authorization" header
-                if (basicAuthorizationToken) {
-                    xhr.setRequestHeader("Authorization", basicAuthorizationToken);
-                }
-
-                xhr.send(options.data ? options.data : null);
-
-                return deferred.promise;
-
-            },
-
-            "abort": function() {
-                var _ = this._,
-                    xhr = _.xhr;
-
-                if (xhr) {
-                    xhr.abort();
-                }    
-            },
-
-
-            "request": function(args) {
-                return this._request(args);
-            },
-
-            get : function(args) {
-                args = args || {};
-                args.type = "GET";
-                return this._request(args);
-            },
-
-            post : function(args) {
-                args = args || {};
-                args.type = "POST";
-                return this._request(args);
-            },
-
-            patch : function(args) {
-                args = args || {};
-                args.type = "PATCH";
-                return this._request(args);
-            },
-
-            put : function(args) {
-                args = args || {};
-                args.type = "PUT";
-                return this._request(args);
-            },
-
-            del : function(args) {
-                args = args || {};
-                args.type = "DELETE";
-                return this._request(args);
-            },
-
-            "init": function(options) {
-                this._ = {
-                    options : options || {}
-                };
-            }
-        });
-
-        ["request","get","post","put","del","patch"].forEach(function(name){
-            Xhr[name] = function(url,args) {
-                var xhr = new Xhr({"url" : url});
-                return xhr[name](args);
-            };
-        });
-
-        Xhr.defaultOptions = XhrDefaultOptions;
-        Xhr.param = param;
-
-        return Xhr;
-    })();
-
-    return http.Xhr = Xhr;  
-});
 define('skylark-jquery/ajax',[
     "skylark-langx/langx",
     "skylark-net-http/xhr",
@@ -32970,2120 +46323,35 @@ define('skylark-data-entities/main',[
 });
 define('skylark-data-entities', ['skylark-data-entities/main'], function (main) { return main; });
 
-define('skylark-io-streams/streams',[
-    "skylark-langx-ns"
-], function(skylark) {
-
-    return skylark.attach("io.streams");
-});
-
-define('skylark-langx-chars/chars',[
-    "skylark-langx-ns",
-    "skylark-langx-types"
-],function(skylark,types){
-
-    function isWhiteSpace(ch) {
-        return ch === 32 || ch === 9 || ch === 13 || ch === 10;
-    }
-
-    return skylark.attach("langx.chars",{
-        isWhiteSpace
-    });
-
-
-});
-define('skylark-langx-chars/main',[
-	"./chars"
-],function(chars){
-	return chars;
-});
-define('skylark-langx-chars', ['skylark-langx-chars/main'], function (main) { return main; });
-
-define('skylark-io-streams/decode-stream',[
-    "skylark-langx-events",
-    "skylark-langx-chars",
-    "./streams"
-], function(events, chars, streams) {
-    var emptyBuffer = new Uint8Array(0);
-
-
-    var DecodeStream = events.Emitter.inherit({
-        klassName : "DecodeStream",
-
-        _construct : function(maybeMinBufferLength) {
-            this._rawMinBufferLength = maybeMinBufferLength || 0;
-            this.pos = 0;
-            this.bufferLength = 0;
-            this.eof = false;
-            this.buffer = emptyBuffer;
-            this.minBufferLength = 512;
-            if (maybeMinBufferLength) {
-                while (this.minBufferLength < maybeMinBufferLength) {
-                    this.minBufferLength *= 2;
-                }
-            }
-        },
-        length : {
-            get : function () {
-                //util.unreachable('Should not access DecodeStream.length');    
-                throw new Error('Should not access DecodeStream.length') ;               
-            }
-        },
-
-        isEmpty : {
-            get : function () {
-                while (!this.eof && this.bufferLength === 0) {
-                    this.readBlock();
-                }
-                return this.bufferLength === 0;
-            }
-        },
-
-        ensureBuffer: function DecodeStream_ensureBuffer(requested) {
-            var buffer = this.buffer;
-            if (requested <= buffer.byteLength) {
-                return buffer;
-            }
-            var size = this.minBufferLength;
-            while (size < requested) {
-                size *= 2;
-            }
-            var buffer2 = new Uint8Array(size);
-            buffer2.set(buffer);
-            return this.buffer = buffer2;
-        },
-        getByte: function DecodeStream_getByte() {
-            var pos = this.pos;
-            while (this.bufferLength <= pos) {
-                if (this.eof) {
-                    return -1;
-                }
-                this.readBlock();
-            }
-            return this.buffer[this.pos++];
-        },
-        getUint16: function DecodeStream_getUint16() {
-            var b0 = this.getByte();
-            var b1 = this.getByte();
-            if (b0 === -1 || b1 === -1) {
-                return -1;
-            }
-            return (b0 << 8) + b1;
-        },
-        getInt32: function DecodeStream_getInt32() {
-            var b0 = this.getByte();
-            var b1 = this.getByte();
-            var b2 = this.getByte();
-            var b3 = this.getByte();
-            return (b0 << 24) + (b1 << 16) + (b2 << 8) + b3;
-        },
-        getBytes(length, forceClamped = false) {
-            var end, pos = this.pos;
-            if (length) {
-                this.ensureBuffer(pos + length);
-                end = pos + length;
-                while (!this.eof && this.bufferLength < end) {
-                    this.readBlock();
-                }
-                var bufEnd = this.bufferLength;
-                if (end > bufEnd) {
-                    end = bufEnd;
-                }
-            } else {
-                while (!this.eof) {
-                    this.readBlock();
-                }
-                end = this.bufferLength;
-            }
-            this.pos = end;
-            const subarray = this.buffer.subarray(pos, end);
-            return forceClamped && !(subarray instanceof Uint8ClampedArray) ? new Uint8ClampedArray(subarray) : subarray;
-        },
-        peekByte: function DecodeStream_peekByte() {
-            var peekedByte = this.getByte();
-            if (peekedByte !== -1) {
-                this.pos--;
-            }
-            return peekedByte;
-        },
-        peekBytes(length, forceClamped = false) {
-            var bytes = this.getBytes(length, forceClamped);
-            this.pos -= bytes.length;
-            return bytes;
-        },
-        makeSubStream: function DecodeStream_makeSubStream(start, length, dict) {
-            var end = start + length;
-            while (this.bufferLength <= end && !this.eof) {
-                this.readBlock();
-            }
-            return new Stream(this.buffer, start, length, dict);
-        },
-        getByteRange(begin, end) {
-            throw new Error("Should not call DecodeStream.getByteRange") ;               
-            //util.unreachable('Should not call DecodeStream.getByteRange');
-        },
-        skip: function DecodeStream_skip(n) {
-            if (!n) {
-                n = 1;
-            }
-            this.pos += n;
-        },
-        reset: function DecodeStream_reset() {
-            this.pos = 0;
-        },
-        getBaseStreams: function DecodeStream_getBaseStreams() {
-            if (this.str && this.str.getBaseStreams) {
-                return this.str.getBaseStreams();
-            }
-            return [];
-        }
-
-    });
-
-    return streams.DecodeStream = DecodeStream;
-
-});
-
-define('skylark-io-streams/ascii85-stream',[
-    "skylark-langx-chars",
-    "./streams",
-    "./decode-stream"
-], function(chars, streams, DecodeStream) {
-
-
-    var Ascii85Stream = DecodeStream.inherit({
-        klassName : "Ascii85Stream",
-
-        _construct : function(str) {
-            this.str = str;
-            this.dict = str.dict;
-            this.input = new Uint8Array(5);
-            if (maybeLength) {
-                maybeLength = 0.8 * maybeLength;
-            }
-            DecodeStream.prototype._construct.call(this, maybeLength);       
-        },
-
-        readBlock : function Ascii85Stream_readBlock() {
-            var TILDA_CHAR = 126;
-            var Z_LOWER_CHAR = 122;
-            var EOF = -1;
-            var str = this.str;
-            var c = str.getByte();
-            while (chars.isWhiteSpace(c)) {
-                c = str.getByte();
-            }
-            if (c === EOF || c === TILDA_CHAR) {
-                this.eof = true;
-                return;
-            }
-            var bufferLength = this.bufferLength, buffer;
-            var i;
-            if (c === Z_LOWER_CHAR) {
-                buffer = this.ensureBuffer(bufferLength + 4);
-                for (i = 0; i < 4; ++i) {
-                    buffer[bufferLength + i] = 0;
-                }
-                this.bufferLength += 4;
-            } else {
-                var input = this.input;
-                input[0] = c;
-                for (i = 1; i < 5; ++i) {
-                    c = str.getByte();
-                    while (chars.isWhiteSpace(c)) {
-                        c = str.getByte();
-                    }
-                    input[i] = c;
-                    if (c === EOF || c === TILDA_CHAR) {
-                        break;
-                    }
-                }
-                buffer = this.ensureBuffer(bufferLength + i - 1);
-                this.bufferLength += i - 1;
-                if (i < 5) {
-                    for (; i < 5; ++i) {
-                        input[i] = 33 + 84;
-                    }
-                    this.eof = true;
-                }
-                var t = 0;
-                for (i = 0; i < 5; ++i) {
-                    t = t * 85 + (input[i] - 33);
-                }
-                for (i = 3; i >= 0; --i) {
-                    buffer[bufferLength + i] = t & 255;
-                    t >>= 8;
-                }
-            }
-        }
-
-    });
-
-    return streams.Ascii85Stream = Ascii85Stream;
-
-});
-
-define('skylark-io-streams/ascii-hex-stream',[
-    "./streams",
-    "./decode-stream"
-], function(streams, DecodeStream) {
-
-    var AsciiHexStream = DecodeStream.inherit({
-        klassName : "AsciiHexStream",
-
-        _construct : function AsciiHexStream(str, maybeLength) {
-            this.str = str;
-            this.dict = str.dict;
-            this.firstDigit = -1;
-            if (maybeLength) {
-                maybeLength = 0.5 * maybeLength;
-            }
-
-            DecodeStream.prototype._construct.call(this,maybeLength);          
-        },
-
-        readBlock : function AsciiHexStream_readBlock() {
-            var UPSTREAM_BLOCK_SIZE = 8000;
-            var bytes = this.str.getBytes(UPSTREAM_BLOCK_SIZE);
-            if (!bytes.length) {
-                this.eof = true;
-                return;
-            }
-            var maxDecodeLength = bytes.length + 1 >> 1;
-            var buffer = this.ensureBuffer(this.bufferLength + maxDecodeLength);
-            var bufferLength = this.bufferLength;
-            var firstDigit = this.firstDigit;
-            for (var i = 0, ii = bytes.length; i < ii; i++) {
-                var ch = bytes[i], digit;
-                if (ch >= 48 && ch <= 57) {
-                    digit = ch & 15;
-                } else if (ch >= 65 && ch <= 70 || ch >= 97 && ch <= 102) {
-                    digit = (ch & 15) + 9;
-                } else if (ch === 62) {
-                    this.eof = true;
-                    break;
-                } else {
-                    continue;
-                }
-                if (firstDigit < 0) {
-                    firstDigit = digit;
-                } else {
-                    buffer[bufferLength++] = firstDigit << 4 | digit;
-                    firstDigit = -1;
-                }
-            }
-            if (firstDigit >= 0 && this.eof) {
-                buffer[bufferLength++] = firstDigit << 4;
-                firstDigit = -1;
-            }
-            this.firstDigit = firstDigit;
-            this.bufferLength = bufferLength;
-        }
-    });
-
-    return streams.AsciiHexStream = AsciiHexStream;
-});
-
-define('skylark-io-streams/_stream',[
-    "skylark-langx-events",
-    "./streams"
-], function(events,streams) {
-
-   	var Stream = events.Emitter.inherit({
-        klassName: "Stream",
-        
-        _construct: function(arrayBuffer, start, length, dict) {
-            this.bytes = arrayBuffer instanceof Uint8Array ? arrayBuffer : new Uint8Array(arrayBuffer);
-            this.start = start || 0;
-            this.pos = this.start;
-            this.end = start + length || this.bytes.length;
-            this.dict = dict;
-        },
-
-
-        length : {
-        	get : function() {
-                return this.end - this.start;
-        	}
-        },
-
-        getByte: function () {
-            if (this.pos >= this.end) {
-                return -1;
-            }
-            return this.bytes[this.pos++];
-        },
-
-        getUint16: function Stream_getUint16() {
-            var b0 = this.getByte();
-            var b1 = this.getByte();
-            if (b0 === -1 || b1 === -1) {
-                return -1;
-            }
-            return (b0 << 8) + b1;
-        },
-
-        getInt32: function Stream_getInt32() {
-            var b0 = this.getByte();
-            var b1 = this.getByte();
-            var b2 = this.getByte();
-            var b3 = this.getByte();
-            return (b0 << 24) + (b1 << 16) + (b2 << 8) + b3;
-        },
-
-        getBytes(length, forceClamped = false) {
-            var bytes = this.bytes;
-            var pos = this.pos;
-            var strEnd = this.end;
-            if (!length) {
-                const subarray = bytes.subarray(pos, strEnd);
-                return forceClamped ? new Uint8ClampedArray(subarray) : subarray;
-            }
-            var end = pos + length;
-            if (end > strEnd) {
-                end = strEnd;
-            }
-            this.pos = end;
-            const subarray = bytes.subarray(pos, end);
-            return forceClamped ? new Uint8ClampedArray(subarray) : subarray;
-        },
-
-        peekByte: function Stream_peekByte() {
-            var peekedByte = this.getByte();
-            if (peekedByte !== -1) {
-                this.pos--;
-            }
-            return peekedByte;
-        },
-
-        peekBytes(length, forceClamped = false) {
-            var bytes = this.getBytes(length, forceClamped);
-            this.pos -= bytes.length;
-            return bytes;
-        },
-
-        getByteRange(begin, end) {
-            if (begin < 0) {
-                begin = 0;
-            }
-            if (end > this.end) {
-                end = this.end;
-            }
-            return this.bytes.subarray(begin, end);
-        },
-
-        skip: function Stream_skip(n) {
-            if (!n) {
-                n = 1;
-            }
-            this.pos += n;
-        },
-
-        reset: function Stream_reset() {
-            this.pos = this.start;
-        },
-
-        moveStart: function Stream_moveStart() {
-            this.start = this.pos;
-        },
-        
-        makeSubStream: function Stream_makeSubStream(start, length, dict) {
-            return new Stream(this.bytes.buffer, start, length, dict);
-        }
-    });
-    
-    return streams.Stream = Stream;
-	
-});
-
-define('skylark-io-streams/chunked-stream',[
-    "./streams",
-    "./_stream"
-], function(streams,Stream) {
-
-
-    var ChunkedStream = Stream.inherit({
-        klassName : "ChunkedStream",
-
-        "numChunks": 0,
-        "numChunksLoaded": 0,
-
-        _construct : function(str) {
-            var length = str.length;
-            var bytes = new Uint8Array(length);
-            for (var n = 0; n < length; ++n)
-                bytes[n] = str.charCodeAt(n);
-            DecodeStream.prototype._construct.call(bytes);          
-            this.dict = stream.dict;
-        },
-
-        "numChunks": function() {
-
-        },
-
-
-        getMissingChunks: function ChunkedStream_getMissingChunks() {
-            var chunks = [];
-            for (var chunk = 0, n = this.numChunks; chunk < n; ++chunk) {
-                if (!(chunk in this.loadedChunks)) {
-                    chunks.push(chunk);
-                }
-            }
-            return chunks;
-        },
-
-        getBaseStreams: function ChunkedStream_getBaseStreams() {
-            return [this];
-        },
-
-        allChunksLoaded: function ChunkedStream_allChunksLoaded() {
-            var _ = this._;
-            return _.numChunksLoaded === _.numChunks;
-        },
-
-        onReceiveData: function(begin, chunk) {
-            var end = begin + chunk.byteLength;
-
-            assert(begin % this.chunkSize === 0, 'Bad begin offset: ' + begin);
-            // Using this.length is inaccurate here since this.start can be moved
-            // See ChunkedStream.moveStart()
-            var length = this.bytes.length;
-            assert(end % this.chunkSize === 0 || end === length,
-                'Bad end offset: ' + end);
-
-            this.bytes.set(new Uint8Array(chunk), begin);
-            var chunkSize = this.chunkSize;
-            var beginChunk = Math.floor(begin / chunkSize);
-            var endChunk = Math.floor((end - 1) / chunkSize) + 1;
-
-            for (var chunk = beginChunk; chunk < endChunk; ++chunk) {
-                if (!(chunk in this.loadedChunks)) {
-                    this.loadedChunks[chunk] = true;
-                    ++this.numChunksLoaded;
-                }
-            }
-        },
-
-        onReceiveInitialData: function(data) {
-            this.bytes.set(data);
-            this.initialDataLength = data.length;
-            var endChunk = this.end === data.length ?
-                this.numChunks : Math.floor(data.length / this.chunkSize);
-            for (var i = 0; i < endChunk; i++) {
-                this.loadedChunks[i] = true;
-                ++this.numChunksLoaded;
-            }
-        },
-
-        ensureRange: function ChunkedStream_ensureRange(begin, end) {
-            if (begin >= end) {
-                return;
-            }
-
-            if (end <= this.initialDataLength) {
-                return;
-            }
-
-            var chunkSize = this.chunkSize;
-            var beginChunk = Math.floor(begin / chunkSize);
-            var endChunk = Math.floor((end - 1) / chunkSize) + 1;
-            for (var chunk = beginChunk; chunk < endChunk; ++chunk) {
-                if (!(chunk in this.loadedChunks)) {
-                    throw new MissingDataException(begin, end);
-                }
-            }
-        },
-
-        nextEmptyChunk: function ChunkedStream_nextEmptyChunk(beginChunk) {
-            for (var chunk = beginChunk, n = this.numChunks; chunk < n; ++chunk) {
-                if (!(chunk in this.loadedChunks)) {
-                    return chunk;
-                }
-            }
-            // Wrap around to beginning
-            for (var chunk = 0; chunk < beginChunk; ++chunk) {
-                if (!(chunk in this.loadedChunks)) {
-                    return chunk;
-                }
-            }
-            return null;
-        },
-
-        hasChunk: function ChunkedStream_hasChunk(chunk) {
-            return chunk in this._.loadedChunks;
-        },
-
-        getByte: function ChunkedStream_getByte() {
-            var pos = this.pos;
-            if (pos >= this.end) {
-                return -1;
-            }
-            this.ensureRange(pos, pos + 1);
-            return this.bytes[this.pos++];
-        },
-
-        // returns subarray of original buffer
-        // should only be read
-        getBytes: function ChunkedStream_getBytes(length) {
-            var bytes = this.bytes;
-            var pos = this.pos;
-            var strEnd = this.end;
-
-            if (!length) {
-                this.ensureRange(pos, strEnd);
-                return bytes.subarray(pos, strEnd);
-            }
-
-            var end = pos + length;
-            if (end > strEnd)
-                end = strEnd;
-            this.ensureRange(pos, end);
-
-            this.pos = end;
-            return bytes.subarray(pos, end);
-        },
-
-        peekBytes: function ChunkedStream_peekBytes(length) {
-            var bytes = this.getBytes(length);
-            this.pos -= bytes.length;
-            return bytes;
-        },
-
-        getByteRange: function ChunkedStream_getBytes(begin, end) {
-            this.ensureRange(begin, end);
-            return this.bytes.subarray(begin, end);
-        },
-
-        skip: function ChunkedStream_skip(n) {
-            if (!n)
-                n = 1;
-            this.pos += n;
-        },
-
-        reset: function ChunkedStream_reset() {
-            this.pos = this.start;
-        },
-
-        moveStart: function ChunkedStream_moveStart() {
-            this.start = this.pos;
-        },
-
-        makeSubStream: function ChunkedStream_makeSubStream(start, length, dict) {
-            function ChunkedStreamSubstream() {}
-            ChunkedStreamSubstream.prototype = Object.create(this);
-            ChunkedStreamSubstream.prototype.getMissingChunks = function() {
-                var chunkSize = this.chunkSize;
-                var beginChunk = Math.floor(this.start / chunkSize);
-                var endChunk = Math.floor((this.end - 1) / chunkSize) + 1;
-                var missingChunks = [];
-                for (var chunk = beginChunk; chunk < endChunk; ++chunk) {
-                    if (!(chunk in this.loadedChunks)) {
-                        missingChunks.push(chunk);
-                    }
-                }
-                return missingChunks;
-            };
-            var subStream = new ChunkedStreamSubstream();
-            subStream.pos = subStream.start = start;
-            subStream.end = start + length || this.end;
-            subStream.dict = dict;
-            return subStream;
-        }
-    });
-
-    return streams.ChunkedStream = ChunkedStream;
-
-});
-
-define('skylark-io-streams/decrypt-stream',[
-    "./streams",
-    "./decode-stream"
-], function(streams, DecodeStream) {
-
-    var chunkSize = 512;
-
-
-    var DecryptStream = DecodeStream.inherit({
-        klassName : "DecryptStream",
-
-        _construct : function (str, maybeLength, decrypt) {
-            this.str = str;
-            this.dict = str.dict;
-            this.decrypt = decrypt;
-            this.nextChunk = null;
-            this.initialized = false;
-
-            DecodeStream.prototype._construct.call(this, maybeLength);
-        },
-
-        readBlock : function DecryptStream_readBlock() {
-            var chunk;
-            if (this.initialized) {
-                chunk = this.nextChunk;
-            } else {
-                chunk = this.str.getBytes(chunkSize);
-                this.initialized = true;
-            }
-            if (!chunk || chunk.length === 0) {
-                this.eof = true;
-                return;
-            }
-            this.nextChunk = this.str.getBytes(chunkSize);
-            var hasMoreData = this.nextChunk && this.nextChunk.length > 0;
-            var decrypt = this.decrypt;
-            chunk = decrypt(chunk, !hasMoreData);
-            var bufferLength = this.bufferLength;
-            var i, n = chunk.length;
-            var buffer = this.ensureBuffer(bufferLength + n);
-            for (i = 0; i < n; i++) {
-                buffer[bufferLength++] = chunk[i];
-            }
-            this.bufferLength = bufferLength;
-        }
-    });
-
-    return streams.DecryptStream = DecryptStream;
-});
-
-define('skylark-io-streams/fake-stream',[
-    "./streams",
-    "./decode-stream"
-], function(streams, DecodeStream) {
-
-    var FakeStream = DecodeStream.inherit({
-        klassName : "FakeStream",
-
-        _construct : function(stream) {
-            this.dict = stream.dict;
-            DecodeStream.prototype._construct.call(this);          
-        },
-
-        readBlock : function() {
-            var bufferLength = this.bufferLength;
-            bufferLength += 1024;
-            var buffer = this.ensureBuffer(bufferLength);
-            this.bufferLength = bufferLength;
-        },
-
-        getBytes : function (length) {
-            var end, pos = this.pos;
-
-            if (length) {
-                this.ensureBuffer(pos + length);
-                end = pos + length;
-
-                while (!this.eof && this.bufferLength < end)
-                    this.readBlock();
-
-                var bufEnd = this.bufferLength;
-                if (end > bufEnd)
-                    end = bufEnd;
-            } else {
-                this.eof = true;
-                end = this.bufferLength;
-            }
-
-            this.pos = end;
-            return this.buffer.subarray(pos, end);
-        }
-
-    });
-
-    return streams.FakeStream = FakeStream;
-});
-
-define('skylark-io-streams/flate-stream',[
-    "./streams",
-    "./decode-stream"
-], function(streams, DecodeStream) {
-    
-    var codeLenCodeMap = new Int32Array([
-        16,
-        17,
-        18,
-        0,
-        8,
-        7,
-        9,
-        6,
-        10,
-        5,
-        11,
-        4,
-        12,
-        3,
-        13,
-        2,
-        14,
-        1,
-        15
-    ]);
-    var lengthDecode = new Int32Array([
-        3,
-        4,
-        5,
-        6,
-        7,
-        8,
-        9,
-        10,
-        65547,
-        65549,
-        65551,
-        65553,
-        131091,
-        131095,
-        131099,
-        131103,
-        196643,
-        196651,
-        196659,
-        196667,
-        262211,
-        262227,
-        262243,
-        262259,
-        327811,
-        327843,
-        327875,
-        327907,
-        258,
-        258,
-        258
-    ]);
-    var distDecode = new Int32Array([
-        1,
-        2,
-        3,
-        4,
-        65541,
-        65543,
-        131081,
-        131085,
-        196625,
-        196633,
-        262177,
-        262193,
-        327745,
-        327777,
-        393345,
-        393409,
-        459009,
-        459137,
-        524801,
-        525057,
-        590849,
-        591361,
-        657409,
-        658433,
-        724993,
-        727041,
-        794625,
-        798721,
-        868353,
-        876545
-    ]);
-    var fixedLitCodeTab = [
-        new Int32Array([
-            459008,
-            524368,
-            524304,
-            524568,
-            459024,
-            524400,
-            524336,
-            590016,
-            459016,
-            524384,
-            524320,
-            589984,
-            524288,
-            524416,
-            524352,
-            590048,
-            459012,
-            524376,
-            524312,
-            589968,
-            459028,
-            524408,
-            524344,
-            590032,
-            459020,
-            524392,
-            524328,
-            590000,
-            524296,
-            524424,
-            524360,
-            590064,
-            459010,
-            524372,
-            524308,
-            524572,
-            459026,
-            524404,
-            524340,
-            590024,
-            459018,
-            524388,
-            524324,
-            589992,
-            524292,
-            524420,
-            524356,
-            590056,
-            459014,
-            524380,
-            524316,
-            589976,
-            459030,
-            524412,
-            524348,
-            590040,
-            459022,
-            524396,
-            524332,
-            590008,
-            524300,
-            524428,
-            524364,
-            590072,
-            459009,
-            524370,
-            524306,
-            524570,
-            459025,
-            524402,
-            524338,
-            590020,
-            459017,
-            524386,
-            524322,
-            589988,
-            524290,
-            524418,
-            524354,
-            590052,
-            459013,
-            524378,
-            524314,
-            589972,
-            459029,
-            524410,
-            524346,
-            590036,
-            459021,
-            524394,
-            524330,
-            590004,
-            524298,
-            524426,
-            524362,
-            590068,
-            459011,
-            524374,
-            524310,
-            524574,
-            459027,
-            524406,
-            524342,
-            590028,
-            459019,
-            524390,
-            524326,
-            589996,
-            524294,
-            524422,
-            524358,
-            590060,
-            459015,
-            524382,
-            524318,
-            589980,
-            459031,
-            524414,
-            524350,
-            590044,
-            459023,
-            524398,
-            524334,
-            590012,
-            524302,
-            524430,
-            524366,
-            590076,
-            459008,
-            524369,
-            524305,
-            524569,
-            459024,
-            524401,
-            524337,
-            590018,
-            459016,
-            524385,
-            524321,
-            589986,
-            524289,
-            524417,
-            524353,
-            590050,
-            459012,
-            524377,
-            524313,
-            589970,
-            459028,
-            524409,
-            524345,
-            590034,
-            459020,
-            524393,
-            524329,
-            590002,
-            524297,
-            524425,
-            524361,
-            590066,
-            459010,
-            524373,
-            524309,
-            524573,
-            459026,
-            524405,
-            524341,
-            590026,
-            459018,
-            524389,
-            524325,
-            589994,
-            524293,
-            524421,
-            524357,
-            590058,
-            459014,
-            524381,
-            524317,
-            589978,
-            459030,
-            524413,
-            524349,
-            590042,
-            459022,
-            524397,
-            524333,
-            590010,
-            524301,
-            524429,
-            524365,
-            590074,
-            459009,
-            524371,
-            524307,
-            524571,
-            459025,
-            524403,
-            524339,
-            590022,
-            459017,
-            524387,
-            524323,
-            589990,
-            524291,
-            524419,
-            524355,
-            590054,
-            459013,
-            524379,
-            524315,
-            589974,
-            459029,
-            524411,
-            524347,
-            590038,
-            459021,
-            524395,
-            524331,
-            590006,
-            524299,
-            524427,
-            524363,
-            590070,
-            459011,
-            524375,
-            524311,
-            524575,
-            459027,
-            524407,
-            524343,
-            590030,
-            459019,
-            524391,
-            524327,
-            589998,
-            524295,
-            524423,
-            524359,
-            590062,
-            459015,
-            524383,
-            524319,
-            589982,
-            459031,
-            524415,
-            524351,
-            590046,
-            459023,
-            524399,
-            524335,
-            590014,
-            524303,
-            524431,
-            524367,
-            590078,
-            459008,
-            524368,
-            524304,
-            524568,
-            459024,
-            524400,
-            524336,
-            590017,
-            459016,
-            524384,
-            524320,
-            589985,
-            524288,
-            524416,
-            524352,
-            590049,
-            459012,
-            524376,
-            524312,
-            589969,
-            459028,
-            524408,
-            524344,
-            590033,
-            459020,
-            524392,
-            524328,
-            590001,
-            524296,
-            524424,
-            524360,
-            590065,
-            459010,
-            524372,
-            524308,
-            524572,
-            459026,
-            524404,
-            524340,
-            590025,
-            459018,
-            524388,
-            524324,
-            589993,
-            524292,
-            524420,
-            524356,
-            590057,
-            459014,
-            524380,
-            524316,
-            589977,
-            459030,
-            524412,
-            524348,
-            590041,
-            459022,
-            524396,
-            524332,
-            590009,
-            524300,
-            524428,
-            524364,
-            590073,
-            459009,
-            524370,
-            524306,
-            524570,
-            459025,
-            524402,
-            524338,
-            590021,
-            459017,
-            524386,
-            524322,
-            589989,
-            524290,
-            524418,
-            524354,
-            590053,
-            459013,
-            524378,
-            524314,
-            589973,
-            459029,
-            524410,
-            524346,
-            590037,
-            459021,
-            524394,
-            524330,
-            590005,
-            524298,
-            524426,
-            524362,
-            590069,
-            459011,
-            524374,
-            524310,
-            524574,
-            459027,
-            524406,
-            524342,
-            590029,
-            459019,
-            524390,
-            524326,
-            589997,
-            524294,
-            524422,
-            524358,
-            590061,
-            459015,
-            524382,
-            524318,
-            589981,
-            459031,
-            524414,
-            524350,
-            590045,
-            459023,
-            524398,
-            524334,
-            590013,
-            524302,
-            524430,
-            524366,
-            590077,
-            459008,
-            524369,
-            524305,
-            524569,
-            459024,
-            524401,
-            524337,
-            590019,
-            459016,
-            524385,
-            524321,
-            589987,
-            524289,
-            524417,
-            524353,
-            590051,
-            459012,
-            524377,
-            524313,
-            589971,
-            459028,
-            524409,
-            524345,
-            590035,
-            459020,
-            524393,
-            524329,
-            590003,
-            524297,
-            524425,
-            524361,
-            590067,
-            459010,
-            524373,
-            524309,
-            524573,
-            459026,
-            524405,
-            524341,
-            590027,
-            459018,
-            524389,
-            524325,
-            589995,
-            524293,
-            524421,
-            524357,
-            590059,
-            459014,
-            524381,
-            524317,
-            589979,
-            459030,
-            524413,
-            524349,
-            590043,
-            459022,
-            524397,
-            524333,
-            590011,
-            524301,
-            524429,
-            524365,
-            590075,
-            459009,
-            524371,
-            524307,
-            524571,
-            459025,
-            524403,
-            524339,
-            590023,
-            459017,
-            524387,
-            524323,
-            589991,
-            524291,
-            524419,
-            524355,
-            590055,
-            459013,
-            524379,
-            524315,
-            589975,
-            459029,
-            524411,
-            524347,
-            590039,
-            459021,
-            524395,
-            524331,
-            590007,
-            524299,
-            524427,
-            524363,
-            590071,
-            459011,
-            524375,
-            524311,
-            524575,
-            459027,
-            524407,
-            524343,
-            590031,
-            459019,
-            524391,
-            524327,
-            589999,
-            524295,
-            524423,
-            524359,
-            590063,
-            459015,
-            524383,
-            524319,
-            589983,
-            459031,
-            524415,
-            524351,
-            590047,
-            459023,
-            524399,
-            524335,
-            590015,
-            524303,
-            524431,
-            524367,
-            590079
-        ]),
-        9
-    ];
-    var fixedDistCodeTab = [
-        new Int32Array([
-            327680,
-            327696,
-            327688,
-            327704,
-            327684,
-            327700,
-            327692,
-            327708,
-            327682,
-            327698,
-            327690,
-            327706,
-            327686,
-            327702,
-            327694,
-            0,
-            327681,
-            327697,
-            327689,
-            327705,
-            327685,
-            327701,
-            327693,
-            327709,
-            327683,
-            327699,
-            327691,
-            327707,
-            327687,
-            327703,
-            327695,
-            0
-        ]),
-        5
-    ];
-
-
-    var FlateStream = DecodeStream.inherit({
-        klassName : "FlateStream",
-
-        _construct :function (str, maybeLength) {
-            this.str = str;
-            this.dict = str.dict;
-            var cmf = str.getByte();
-            var flg = str.getByte();
-            if (cmf === -1 || flg === -1) {
-                throw new util.FormatError(`Invalid header in flate stream: ${ cmf }, ${ flg }`);
-            }
-            if ((cmf & 15) !== 8) {
-                throw new util.FormatError(`Unknown compression method in flate stream: ${ cmf }, ${ flg }`);
-            }
-            if (((cmf << 8) + flg) % 31 !== 0) {
-                throw new util.FormatError(`Bad FCHECK in flate stream: ${ cmf }, ${ flg }`);
-            }
-            if (flg & 32) {
-                throw new util.FormatError(`FDICT bit set in flate stream: ${ cmf }, ${ flg }`);
-            }
-            this.codeSize = 0;
-            this.codeBuf = 0;
-
-            DecodeStream.prototype._construct.call(this, maybeLength);
-        },
-
-        getBits : function FlateStream_getBits(bits) {
-            var str = this.str;
-            var codeSize = this.codeSize;
-            var codeBuf = this.codeBuf;
-            var b;
-            while (codeSize < bits) {
-                if ((b = str.getByte()) === -1) {
-                    throw new util.FormatError('Bad encoding in flate stream');
-                }
-                codeBuf |= b << codeSize;
-                codeSize += 8;
-            }
-            b = codeBuf & (1 << bits) - 1;
-            this.codeBuf = codeBuf >> bits;
-            this.codeSize = codeSize -= bits;
-            return b;
-        },
-
-        getCode : function FlateStream_getCode(table) {
-            var str = this.str;
-            var codes = table[0];
-            var maxLen = table[1];
-            var codeSize = this.codeSize;
-            var codeBuf = this.codeBuf;
-            var b;
-            while (codeSize < maxLen) {
-                if ((b = str.getByte()) === -1) {
-                    break;
-                }
-                codeBuf |= b << codeSize;
-                codeSize += 8;
-            }
-            var code = codes[codeBuf & (1 << maxLen) - 1];
-            var codeLen = code >> 16;
-            var codeVal = code & 65535;
-            if (codeLen < 1 || codeSize < codeLen) {
-                throw new util.FormatError('Bad encoding in flate stream');
-            }
-            this.codeBuf = codeBuf >> codeLen;
-            this.codeSize = codeSize - codeLen;
-            return codeVal;
-        },
-
-        generateHuffmanTable : function flateStreamGenerateHuffmanTable(lengths) {
-            var n = lengths.length;
-            var maxLen = 0;
-            var i;
-            for (i = 0; i < n; ++i) {
-                if (lengths[i] > maxLen) {
-                    maxLen = lengths[i];
-                }
-            }
-            var size = 1 << maxLen;
-            var codes = new Int32Array(size);
-            for (var len = 1, code = 0, skip = 2; len <= maxLen; ++len, code <<= 1, skip <<= 1) {
-                for (var val = 0; val < n; ++val) {
-                    if (lengths[val] === len) {
-                        var code2 = 0;
-                        var t = code;
-                        for (i = 0; i < len; ++i) {
-                            code2 = code2 << 1 | t & 1;
-                            t >>= 1;
-                        }
-                        for (i = code2; i < size; i += skip) {
-                            codes[i] = len << 16 | val;
-                        }
-                        ++code;
-                    }
-                }
-            }
-            return [
-                codes,
-                maxLen
-            ];
-        },
-
-        readBlock : function FlateStream_readBlock() {
-            var buffer, len;
-            var str = this.str;
-            var hdr = this.getBits(3);
-            if (hdr & 1) {
-                this.eof = true;
-            }
-            hdr >>= 1;
-            if (hdr === 0) {
-                var b;
-                if ((b = str.getByte()) === -1) {
-                    throw new util.FormatError('Bad block header in flate stream');
-                }
-                var blockLen = b;
-                if ((b = str.getByte()) === -1) {
-                    throw new util.FormatError('Bad block header in flate stream');
-                }
-                blockLen |= b << 8;
-                if ((b = str.getByte()) === -1) {
-                    throw new util.FormatError('Bad block header in flate stream');
-                }
-                var check = b;
-                if ((b = str.getByte()) === -1) {
-                    throw new util.FormatError('Bad block header in flate stream');
-                }
-                check |= b << 8;
-                if (check !== (~blockLen & 65535) && (blockLen !== 0 || check !== 0)) {
-                    throw new util.FormatError('Bad uncompressed block length in flate stream');
-                }
-                this.codeBuf = 0;
-                this.codeSize = 0;
-                const bufferLength = this.bufferLength, end = bufferLength + blockLen;
-                buffer = this.ensureBuffer(end);
-                this.bufferLength = end;
-                if (blockLen === 0) {
-                    if (str.peekByte() === -1) {
-                        this.eof = true;
-                    }
-                } else {
-                    const block = str.getBytes(blockLen);
-                    buffer.set(block, bufferLength);
-                    if (block.length < blockLen) {
-                        this.eof = true;
-                    }
-                }
-                return;
-            }
-            var litCodeTable;
-            var distCodeTable;
-            if (hdr === 1) {
-                litCodeTable = fixedLitCodeTab;
-                distCodeTable = fixedDistCodeTab;
-            } else if (hdr === 2) {
-                var numLitCodes = this.getBits(5) + 257;
-                var numDistCodes = this.getBits(5) + 1;
-                var numCodeLenCodes = this.getBits(4) + 4;
-                var codeLenCodeLengths = new Uint8Array(codeLenCodeMap.length);
-                var i;
-                for (i = 0; i < numCodeLenCodes; ++i) {
-                    codeLenCodeLengths[codeLenCodeMap[i]] = this.getBits(3);
-                }
-                var codeLenCodeTab = this.generateHuffmanTable(codeLenCodeLengths);
-                len = 0;
-                i = 0;
-                var codes = numLitCodes + numDistCodes;
-                var codeLengths = new Uint8Array(codes);
-                var bitsLength, bitsOffset, what;
-                while (i < codes) {
-                    var code = this.getCode(codeLenCodeTab);
-                    if (code === 16) {
-                        bitsLength = 2;
-                        bitsOffset = 3;
-                        what = len;
-                    } else if (code === 17) {
-                        bitsLength = 3;
-                        bitsOffset = 3;
-                        what = len = 0;
-                    } else if (code === 18) {
-                        bitsLength = 7;
-                        bitsOffset = 11;
-                        what = len = 0;
-                    } else {
-                        codeLengths[i++] = len = code;
-                        continue;
-                    }
-                    var repeatLength = this.getBits(bitsLength) + bitsOffset;
-                    while (repeatLength-- > 0) {
-                        codeLengths[i++] = what;
-                    }
-                }
-                litCodeTable = this.generateHuffmanTable(codeLengths.subarray(0, numLitCodes));
-                distCodeTable = this.generateHuffmanTable(codeLengths.subarray(numLitCodes, codes));
-            } else {
-                throw new util.FormatError('Unknown block type in flate stream');
-            }
-            buffer = this.buffer;
-            var limit = buffer ? buffer.length : 0;
-            var pos = this.bufferLength;
-            while (true) {
-                var code1 = this.getCode(litCodeTable);
-                if (code1 < 256) {
-                    if (pos + 1 >= limit) {
-                        buffer = this.ensureBuffer(pos + 1);
-                        limit = buffer.length;
-                    }
-                    buffer[pos++] = code1;
-                    continue;
-                }
-                if (code1 === 256) {
-                    this.bufferLength = pos;
-                    return;
-                }
-                code1 -= 257;
-                code1 = lengthDecode[code1];
-                var code2 = code1 >> 16;
-                if (code2 > 0) {
-                    code2 = this.getBits(code2);
-                }
-                len = (code1 & 65535) + code2;
-                code1 = this.getCode(distCodeTable);
-                code1 = distDecode[code1];
-                code2 = code1 >> 16;
-                if (code2 > 0) {
-                    code2 = this.getBits(code2);
-                }
-                var dist = (code1 & 65535) + code2;
-                if (pos + len >= limit) {
-                    buffer = this.ensureBuffer(pos + len);
-                    limit = buffer.length;
-                }
-                for (var k = 0; k < len; ++k, ++pos) {
-                    buffer[pos] = buffer[pos - dist];
-                }
-            }
-        }
-    });
-
-
-    return streams.FlateStream = FlateStream;
-});
-
-define('skylark-io-streams/lzw-stream',[
-    "./streams",
-    "./decode-stream"
-], function(streams, DecodeStream) {
-
-    var LZWStream = DecodeStream.inherit({
-        klassName : "LZWStream",
-
-        _construct : function (str, maybeLength, earlyChange) {
-            this.str = str;
-            this.dict = str.dict;
-            this.cachedData = 0;
-            this.bitsCached = 0;
-            var maxLzwDictionarySize = 4096;
-            var lzwState = {
-                earlyChange,
-                codeLength: 9,
-                nextCode: 258,
-                dictionaryValues: new Uint8Array(maxLzwDictionarySize),
-                dictionaryLengths: new Uint16Array(maxLzwDictionarySize),
-                dictionaryPrevCodes: new Uint16Array(maxLzwDictionarySize),
-                currentSequence: new Uint8Array(maxLzwDictionarySize),
-                currentSequenceLength: 0
-            };
-            for (var i = 0; i < 256; ++i) {
-                lzwState.dictionaryValues[i] = i;
-                lzwState.dictionaryLengths[i] = 1;
-            }
-            this.lzwState = lzwState;
-
-            DecodeStream.prototype._construct.call(this, maybeLength);
-        },
-
-        readBits: function LZWStream_readBits(n) {
-            var bitsCached = this.bitsCached;
-            var cachedData = this.cachedData;
-            while (bitsCached < n) {
-                var c = this.str.getByte();
-                if (c === -1) {
-                    this.eof = true;
-                    return null;
-                }
-                cachedData = cachedData << 8 | c;
-                bitsCached += 8;
-            }
-            this.bitsCached = bitsCached -= n;
-            this.cachedData = cachedData;
-            this.lastCode = null;
-            return cachedData >>> bitsCached & (1 << n) - 1;
-        },
-
-        readBlock : function LZWStream_readBlock() {
-            var blockSize = 512;
-            var estimatedDecodedSize = blockSize * 2, decodedSizeDelta = blockSize;
-            var i, j, q;
-            var lzwState = this.lzwState;
-            if (!lzwState) {
-                return;
-            }
-            var earlyChange = lzwState.earlyChange;
-            var nextCode = lzwState.nextCode;
-            var dictionaryValues = lzwState.dictionaryValues;
-            var dictionaryLengths = lzwState.dictionaryLengths;
-            var dictionaryPrevCodes = lzwState.dictionaryPrevCodes;
-            var codeLength = lzwState.codeLength;
-            var prevCode = lzwState.prevCode;
-            var currentSequence = lzwState.currentSequence;
-            var currentSequenceLength = lzwState.currentSequenceLength;
-            var decodedLength = 0;
-            var currentBufferLength = this.bufferLength;
-            var buffer = this.ensureBuffer(this.bufferLength + estimatedDecodedSize);
-            for (i = 0; i < blockSize; i++) {
-                var code = this.readBits(codeLength);
-                var hasPrev = currentSequenceLength > 0;
-                if (code < 256) {
-                    currentSequence[0] = code;
-                    currentSequenceLength = 1;
-                } else if (code >= 258) {
-                    if (code < nextCode) {
-                        currentSequenceLength = dictionaryLengths[code];
-                        for (j = currentSequenceLength - 1, q = code; j >= 0; j--) {
-                            currentSequence[j] = dictionaryValues[q];
-                            q = dictionaryPrevCodes[q];
-                        }
-                    } else {
-                        currentSequence[currentSequenceLength++] = currentSequence[0];
-                    }
-                } else if (code === 256) {
-                    codeLength = 9;
-                    nextCode = 258;
-                    currentSequenceLength = 0;
-                    continue;
-                } else {
-                    this.eof = true;
-                    delete this.lzwState;
-                    break;
-                }
-                if (hasPrev) {
-                    dictionaryPrevCodes[nextCode] = prevCode;
-                    dictionaryLengths[nextCode] = dictionaryLengths[prevCode] + 1;
-                    dictionaryValues[nextCode] = currentSequence[0];
-                    nextCode++;
-                    codeLength = nextCode + earlyChange & nextCode + earlyChange - 1 ? codeLength : Math.min(Math.log(nextCode + earlyChange) / 0.6931471805599453 + 1, 12) | 0;
-                }
-                prevCode = code;
-                decodedLength += currentSequenceLength;
-                if (estimatedDecodedSize < decodedLength) {
-                    do {
-                        estimatedDecodedSize += decodedSizeDelta;
-                    } while (estimatedDecodedSize < decodedLength);
-                    buffer = this.ensureBuffer(this.bufferLength + estimatedDecodedSize);
-                }
-                for (j = 0; j < currentSequenceLength; j++) {
-                    buffer[currentBufferLength++] = currentSequence[j];
-                }
-            }
-            lzwState.nextCode = nextCode;
-            lzwState.codeLength = codeLength;
-            lzwState.prevCode = prevCode;
-            lzwState.currentSequenceLength = currentSequenceLength;
-            this.bufferLength = currentBufferLength;
-        }
-    });
-
-    return streams.LZWStream = LZWStream;
-});
-
-define('skylark-io-streams/null-stream',[
-    "./streams",
-    "./_stream"
-], function( streams, Stream) {
-
-    var NullStream = Stream.inherit({
-        klassName : "NullStream",
-
-        _construct : function() {
-            Stream.prototype._construct.call(this, new Uint8Array(0));        
-        }
-    });
-
-
-    return streams.NullStream = NullStream;
-
-});
-
-define('skylark-io-streams/predictor-stream',[
-    "./streams",
-    "./decode-stream"
-], function(streams, DecodeStream) {
-
-
-    var PredictorStream = DecodeStream.inherit({
-        klassName : "PredictorStream",
-
-        _construct : function (str, maybeLength, params) {
-            if (!primitives.isDict(params)) {
-                return str;
-            }
-            var predictor = this.predictor = params.get('Predictor') || 1;
-            if (predictor <= 1) {
-                return str;
-            }
-            if (predictor !== 2 && (predictor < 10 || predictor > 15)) {
-                //throw new util.FormatError(`Unsupported predictor: ${ predictor }`);
-                throw new Error(`Unsupported predictor: ${ predictor }`);
-            }
-            if (predictor === 2) {
-                this.readBlock = this.readBlockTiff;
-            } else {
-                this.readBlock = this.readBlockPng;
-            }
-            this.str = str;
-            this.dict = str.dict;
-            var colors = this.colors = params.get('Colors') || 1;
-            var bits = this.bits = params.get('BitsPerComponent') || 8;
-            var columns = this.columns = params.get('Columns') || 1;
-            this.pixBytes = colors * bits + 7 >> 3;
-            this.rowBytes = columns * colors * bits + 7 >> 3;
-            DecodeStream.call(this, maybeLength);
-            return this;
-        },
-
-        readBlockTiff : function predictorStreamReadBlockTiff() {
-            var rowBytes = this.rowBytes;
-            var bufferLength = this.bufferLength;
-            var buffer = this.ensureBuffer(bufferLength + rowBytes);
-            var bits = this.bits;
-            var colors = this.colors;
-            var rawBytes = this.str.getBytes(rowBytes);
-            this.eof = !rawBytes.length;
-            if (this.eof) {
-                return;
-            }
-            var inbuf = 0, outbuf = 0;
-            var inbits = 0, outbits = 0;
-            var pos = bufferLength;
-            var i;
-            if (bits === 1 && colors === 1) {
-                for (i = 0; i < rowBytes; ++i) {
-                    var c = rawBytes[i] ^ inbuf;
-                    c ^= c >> 1;
-                    c ^= c >> 2;
-                    c ^= c >> 4;
-                    inbuf = (c & 1) << 7;
-                    buffer[pos++] = c;
-                }
-            } else if (bits === 8) {
-                for (i = 0; i < colors; ++i) {
-                    buffer[pos++] = rawBytes[i];
-                }
-                for (; i < rowBytes; ++i) {
-                    buffer[pos] = buffer[pos - colors] + rawBytes[i];
-                    pos++;
-                }
-            } else if (bits === 16) {
-                var bytesPerPixel = colors * 2;
-                for (i = 0; i < bytesPerPixel; ++i) {
-                    buffer[pos++] = rawBytes[i];
-                }
-                for (; i < rowBytes; i += 2) {
-                    var sum = ((rawBytes[i] & 255) << 8) + (rawBytes[i + 1] & 255) + ((buffer[pos - bytesPerPixel] & 255) << 8) + (buffer[pos - bytesPerPixel + 1] & 255);
-                    buffer[pos++] = sum >> 8 & 255;
-                    buffer[pos++] = sum & 255;
-                }
-            } else {
-                var compArray = new Uint8Array(colors + 1);
-                var bitMask = (1 << bits) - 1;
-                var j = 0, k = bufferLength;
-                var columns = this.columns;
-                for (i = 0; i < columns; ++i) {
-                    for (var kk = 0; kk < colors; ++kk) {
-                        if (inbits < bits) {
-                            inbuf = inbuf << 8 | rawBytes[j++] & 255;
-                            inbits += 8;
-                        }
-                        compArray[kk] = compArray[kk] + (inbuf >> inbits - bits) & bitMask;
-                        inbits -= bits;
-                        outbuf = outbuf << bits | compArray[kk];
-                        outbits += bits;
-                        if (outbits >= 8) {
-                            buffer[k++] = outbuf >> outbits - 8 & 255;
-                            outbits -= 8;
-                        }
-                    }
-                }
-                if (outbits > 0) {
-                    buffer[k++] = (outbuf << 8 - outbits) + (inbuf & (1 << 8 - outbits) - 1);
-                }
-            }
-            this.bufferLength += rowBytes;
-        },
-
-        readBlockPng : function predictorStreamReadBlockPng() {
-            var rowBytes = this.rowBytes;
-            var pixBytes = this.pixBytes;
-            var predictor = this.str.getByte();
-            var rawBytes = this.str.getBytes(rowBytes);
-            this.eof = !rawBytes.length;
-            if (this.eof) {
-                return;
-            }
-            var bufferLength = this.bufferLength;
-            var buffer = this.ensureBuffer(bufferLength + rowBytes);
-            var prevRow = buffer.subarray(bufferLength - rowBytes, bufferLength);
-            if (prevRow.length === 0) {
-                prevRow = new Uint8Array(rowBytes);
-            }
-            var i, j = bufferLength, up, c;
-            switch (predictor) {
-            case 0:
-                for (i = 0; i < rowBytes; ++i) {
-                    buffer[j++] = rawBytes[i];
-                }
-                break;
-            case 1:
-                for (i = 0; i < pixBytes; ++i) {
-                    buffer[j++] = rawBytes[i];
-                }
-                for (; i < rowBytes; ++i) {
-                    buffer[j] = buffer[j - pixBytes] + rawBytes[i] & 255;
-                    j++;
-                }
-                break;
-            case 2:
-                for (i = 0; i < rowBytes; ++i) {
-                    buffer[j++] = prevRow[i] + rawBytes[i] & 255;
-                }
-                break;
-            case 3:
-                for (i = 0; i < pixBytes; ++i) {
-                    buffer[j++] = (prevRow[i] >> 1) + rawBytes[i];
-                }
-                for (; i < rowBytes; ++i) {
-                    buffer[j] = (prevRow[i] + buffer[j - pixBytes] >> 1) + rawBytes[i] & 255;
-                    j++;
-                }
-                break;
-            case 4:
-                for (i = 0; i < pixBytes; ++i) {
-                    up = prevRow[i];
-                    c = rawBytes[i];
-                    buffer[j++] = up + c;
-                }
-                for (; i < rowBytes; ++i) {
-                    up = prevRow[i];
-                    var upLeft = prevRow[i - pixBytes];
-                    var left = buffer[j - pixBytes];
-                    var p = left + up - upLeft;
-                    var pa = p - left;
-                    if (pa < 0) {
-                        pa = -pa;
-                    }
-                    var pb = p - up;
-                    if (pb < 0) {
-                        pb = -pb;
-                    }
-                    var pc = p - upLeft;
-                    if (pc < 0) {
-                        pc = -pc;
-                    }
-                    c = rawBytes[i];
-                    if (pa <= pb && pa <= pc) {
-                        buffer[j++] = left + c;
-                    } else if (pb <= pc) {
-                        buffer[j++] = up + c;
-                    } else {
-                        buffer[j++] = upLeft + c;
-                    }
-                }
-                break;
-            default:
-                //throw new util.FormatError(`Unsupported predictor: ${ predictor }`);
-                throw new Error(`Unsupported predictor: ${ predictor }`);
-            }
-            this.bufferLength += rowBytes;
-        }
-    });
-
-    return streams.PredictorStream = PredictorStream;
-});
-
-define('skylark-io-streams/run-length-stream',[
-    "skylark-langx-chars",
-    "./streams",
-    "./decode-stream"
-], function(chars, streams, DecodeStream) {
-
-    var RunLengthStream = DecodeStream.inherit({
-        klassName : "RunLengthStream",
-
-        _construct : function (str, maybeLength) {
-            this.str = str;
-            this.dict = str.dict;
-            DecodeStream.prototype._construct.call(this, maybeLength);       
-        },
-
-        readBlock : function RunLengthStream_readBlock() {
-            var repeatHeader = this.str.getBytes(2);
-            if (!repeatHeader || repeatHeader.length < 2 || repeatHeader[0] === 128) {
-                this.eof = true;
-                return;
-            }
-            var buffer;
-            var bufferLength = this.bufferLength;
-            var n = repeatHeader[0];
-            if (n < 128) {
-                buffer = this.ensureBuffer(bufferLength + n + 1);
-                buffer[bufferLength++] = repeatHeader[1];
-                if (n > 0) {
-                    var source = this.str.getBytes(n);
-                    buffer.set(source, bufferLength);
-                    bufferLength += n;
-                }
-            } else {
-                n = 257 - n;
-                var b = repeatHeader[1];
-                buffer = this.ensureBuffer(bufferLength + n + 1);
-                for (var i = 0; i < n; i++) {
-                    buffer[bufferLength++] = b;
-                }
-            }
-            this.bufferLength = bufferLength;
-        }
-    });
-
-    return streams.RunLengthStream = RunLengthStream;
-
-});
-
-define('skylark-io-streams/streams-sequence-stream',[
-    "skylark-langx-chars",
-    "./streams",
-    "./decode-stream"
-], function(chars, streams, DecodeStream) {
-
-
-    var StreamsSequenceStream = DecodeStream.inherit({
-        klassName : "StreamsSequenceStream",
-
-        _construct : function(_streams) {
-            this.streams = _streams;
-            let maybeLength = 0;
-            for (let i = 0, ii = _streams.length; i < ii; i++) {
-                const stream = _streams[i];
-                if (stream instanceof DecodeStream) {
-                    maybeLength += stream._rawMinBufferLength;
-                } else {
-                    maybeLength += stream.length;
-                }
-            }
-            DecodeStream.prototype._construct.call(this, maybeLength);       
-        },
-
-        readBlock : function streamSequenceStreamReadBlock() {
-            var _streams = this.streams;
-            if (streams.length === 0) {
-                this.eof = true;
-                return;
-            }
-            var stream = _streams.shift();
-            var chunk = _streams.getBytes();
-            var bufferLength = this.bufferLength;
-            var newLength = bufferLength + chunk.length;
-            var buffer = this.ensureBuffer(newLength);
-            buffer.set(chunk, bufferLength);
-            this.bufferLength = newLength;
-        },
-
-        getBaseStreams : function StreamsSequenceStream_getBaseStreams() {
-            var baseStreams = [];
-            for (var i = 0, ii = this.streams.length; i < ii; i++) {
-                var stream = this.streams[i];
-                if (stream.getBaseStreams) {
-                    baseStreams.push(...stream.getBaseStreams());
-                }
-            }
-            return baseStreams;
-        }
-    });
-
-    return streams.StreamsSequenceStream = StreamsSequenceStream;
-
-});
-
-define('skylark-io-streams/string-stream',[
-    "./streams",
-    "./_stream"
-], function(streams, Stream) {
-
-    var StringStream = Stream.inherit({
-        klassName : "StringStream",
-
-        _construct : function(str) {
-            //const bytes = util.stringToBytes(str);
-            //TODO: chartCodeAt() >255
-            var length = str.length;
-            var bytes = new Uint8Array(length);
-            for (var n = 0; n < length; ++n)
-                bytes[n] = str.charCodeAt(n);
-
-            Stream.prototype._construct.call(this,bytes);          
-        }
-    });
-
-
-    return streams.StringStream = StringStream;
-
-});
-
-define('skylark-io-streams/main',[
-    "./streams",
-    "./ascii85-stream",
-    "./ascii-hex-stream",
-    "./chunked-stream",
-    "./decode-stream",
-    "./decrypt-stream",
-    "./fake-stream",
-    "./flate-stream",
-    "./lzw-stream",
-    "./null-stream",
-    "./predictor-stream",
-    "./run-length-stream",
-    "./_stream",
-    "./streams-sequence-stream",
-    "./string-stream"
-], function(streams) {
-
-	return streams;
-});
-define('skylark-io-streams', ['skylark-io-streams/main'], function (main) { return main; });
-
 define('skylark-slax-runtime/skylark',[
 	"./slax",
 	"skylark-langx",
 	"skylark-domx",
 	"skylark-domx-files",
 	"skylark-domx-images",
+	"skylark-domx-i18n",
+	"skylark-domx-plugins-base",
 	"skylark-domx-plugins-colors",
+	"skylark-domx-plugins-groups",
+	"skylark-domx-plugins-pictures",
+	"skylark-domx-plugins-players",
+	"skylark-domx-plugins-panels",
+	"skylark-domx-plugins-embeds",
+	"skylark-domx-plugins-sandboxs",
+	"skylark-domx-plugins-menus",	
+	"skylark-domx-plugins-popups",	
+	"skylark-devices-keyboard",	
+	"skylark-devices-orientation",	
+	"skylark-devices-points",	
+	"skylark-devices-webgl",
+	"skylark-io-mimes",
+	"skylark-io-caches",
+	"skylark-io-streams",
+	"skylark-net-http",
 	"skylark-jquery",
 	"skylark-appify-spa",
 	"skylark-data-entities",
-	"skylark-io-streams"
+	
 ],function(slax,skylark){
 	return slax.skylark = skylark;
 });
