@@ -23,9 +23,10 @@ define([
 	"skylark-io-caches",
 	"skylark-io-streams",
 	"skylark-net-http",
-	"skylark-jquery",
+	"skylark-appify-routers",
 	"skylark-appify-spa",
 	"skylark-data-entities",
+	"skylark-jquery"
 	
 ],function(slax,skylark){
 	return slax.skylark = skylark;
