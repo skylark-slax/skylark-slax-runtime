@@ -1,0 +1,166 @@
+
+.lark-carousel.coverflow .items-container {
+  overflow: hidden;
+}
+
+.lark-carousel.coverflow .items  {
+  display: block;
+  white-space: nowrap;
+  word-spacing: -0.25em;
+  -webkit-transform-origin: 50% 50%;
+      -ms-transform-origin: 50% 50%;
+          transform-origin: 50% 50%;
+  -webkit-backface-visibility: hidden;
+          backface-visibility: hidden;
+}
+
+.lark-carousel.coverflow .item {
+  display: inline-block;
+  white-space: normal;
+  word-spacing: normal;
+  vertical-align: bottom;
+}
+
+.lark-carousel.coverflow .item.past,
+.lark-carousel.coverflow .item.future {
+  cursor: pointer;
+}
+
+.lark-carousel.coverflow .item  {
+  -webkit-transition: all 350ms ease-in-out;
+  -o-transition: all 350ms ease-in-out;
+  transition: all 350ms ease-in-out;
+  -webkit-transition-timing-function: cubic-bezier(0.56, 0.12, 0.12, 0.98);
+       -o-transition-timing-function: cubic-bezier(0.56, 0.12, 0.12, 0.98);
+          transition-timing-function: cubic-bezier(0.56, 0.12, 0.12, 0.98);
+}
+
+
+/* @group  Carousel Theme */
+
+.lark-carousel .item.past,
+.lark-carousel .item.future {
+  opacity: 0;
+  -webkit-transition-delay: 115ms;
+       -o-transition-delay: 115ms;
+          transition-delay: 115ms;
+}
+
+.lark-carousel .item.past-2,
+.lark-carousel .item.future-2 {
+  opacity: 0.6;
+  -webkit-transition-delay: 90ms;
+       -o-transition-delay: 90ms;
+          transition-delay: 90ms;
+}
+
+.lark-carousel .item.past-1,
+.lark-carousel .item.future-1 {
+  opacity: 0.8;
+  -webkit-transition-delay: 60ms;
+       -o-transition-delay: 60ms;
+          transition-delay: 60ms;
+}
+
+.lark-carousel .item.past {
+  -webkit-transform: translateX(100%) rotateY(-20deg) scale(0.5);
+          transform: translateX(100%) rotateY(-20deg) scale(0.5);
+}
+
+.lark-carousel .item.past-2  {
+  -webkit-transform: translateX(25%) rotateY(40deg) scale(0.65);
+          transform: translateX(25%) rotateY(40deg) scale(0.65);
+}
+
+.lark-carousel .item.past-1 {
+  -webkit-transform: rotateY(45deg) scale(0.8);
+          transform: rotateY(45deg) scale(0.8);
+}
+.lark-carousel .item.future {
+  -webkit-transform: translateX(-100%) rotateY(20deg) scale(0.5);
+          transform: translateX(-100%) rotateY(20deg) scale(0.5);
+}
+.lark-carousel .item.future-2 {
+  -webkit-transform: translateX(-25%) rotateY(-40deg) scale(0.65);
+          transform: translateX(-25%) rotateY(-40deg) scale(0.65);
+}
+.lark-carousel .item.future-1 {
+  -webkit-transform: rotateY(-45deg) scale(0.8);
+          transform: rotateY(-45deg) scale(0.8);
+}
+.lark-carousel.no-rotate .item.past {
+  -webkit-transform: translateX(175%) scale(0.5);
+      -ms-transform: translateX(175%) scale(0.5);
+          transform: translateX(175%) scale(0.5);
+}
+.lark-carousel.no-rotate .item.past-2 {
+  -webkit-transform: translateX(25%) scale(0.65);
+      -ms-transform: translateX(25%) scale(0.65);
+          transform: translateX(25%) scale(0.65);
+}
+.lark-carousel.no-rotate .item.past-1 {
+  -webkit-transform: translateX(0%) scale(0.8);
+      -ms-transform: translateX(0%) scale(0.8);
+          transform: translateX(0%) scale(0.8);
+}
+.lark-carousel.no-rotate .item.future {
+  -webkit-transform: translateX(-175%) scale(0.5);
+      -ms-transform: translateX(-175%) scale(0.5);
+          transform: translateX(-175%) scale(0.5);
+}
+.lark-carousel.no-rotate .item.future-2 {
+  -webkit-transform: translateX(-25%) scale(0.65);
+      -ms-transform: translateX(-25%) scale(0.65);
+          transform: translateX(-25%) scale(0.65);
+}
+.lark-carousel.no-rotate .item.future-1 {
+  -webkit-transform: translateX(0%) scale(0.8);
+      -ms-transform: translateX(0%) scale(0.8);
+          transform: translateX(0%) scale(0.8);
+}
+.lark-carousel .item.current {
+  -webkit-transform: translateX(0) scale(1);
+          transform: translateX(0) scale(1);
+  -webkit-transition-delay: 60ms;
+       -o-transition-delay: 60ms;
+          transition-delay: 60ms;
+}
+
+
+
+.lark-carousel.coverflow .item {
+  -webkit-perspective: 800px;
+          perspective: 800px;
+}
+
+.lark-carousel .item.past .content{
+  -webkit-transform: rotateY(-20deg);
+          transform: rotateY(-20deg);
+}
+
+.lark-carousel .item.past-2  .content {
+  -webkit-transform: rotateY(40deg);
+          transform: rotateY(40deg);
+}
+
+.lark-carousel .item.past-1  .content{
+  -webkit-transform: rotateY(45deg);
+          transform: rotateY(45deg);
+}
+.lark-carousel .item.future  .content{
+  -webkit-transform: rotateY(20deg);
+          transform: rotateY(20deg);
+}
+.lark-carousel .item.future-2  .content{
+  -webkit-transform: rotateY(-40deg);
+          transform: ) rotateY(-40deg);
+}
+.lark-carousel .item.future-1  .content{
+  -webkit-transform: rotateY(-45deg);
+          transform: rotateY(-45deg);
+}
+
+.lark-carousel .item.current {
+  -webkit-transform: rotateY(0deg);
+          transform: rotateY(0deg);
+}

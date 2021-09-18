@@ -1,0 +1,75 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Carousel</title>
+  <link rel="stylesheet" href="../../skins/default/carousel.css">
+  <link rel="stylesheet" href="../../skins/default/carousel-slide.css">
+  <link rel="stylesheet" href="../../skins/default/indicators.css">
+
+      <style>
+      .item img {
+        width : 100%;
+        height : 100%;
+      }
+
+      #carousel-example-generic {
+          width: 750px;
+          height: 450px;
+          margin: 1em auto;
+      }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="page-header">
+    <h1>Carousel <small>Bootstrap Carousel Component </small></h1>
+  </div>
+
+  <div id="carousel-example-generic" class="lark-carousel slide">
+    <div class="items">
+      <div class="item  active">
+        <img alt="First slide" src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c0/Big_Buck_Bunny_4K.webm/4000px--Big_Buck_Bunny_4K.webm.jpg">
+      </div>
+      <div class="item">
+        <img alt="Second slide" src="https://i.imgur.com/MUSw4Zu.jpg">
+      </div>
+      <div class="item">
+        <img alt="Third slide" src="https://secure-a.vimeocdn.com/ts/448/835/448835699_960.jpg">
+      </div>
+    </div>
+    <ol class="indicators">
+      <li data-index="0" class="active"></li>
+      <li data-index="1" class=""></li>
+      <li data-index="2" class=""></li>
+    </ol>
+
+    <a class="prev">‹</a>
+    <a class="next">›</a>
+  </div>
+
+</div>
+
+<script type="text/javascript" src="../require.js" data-main="../bootstrap.js"></script>
+
+<script>
+      var initPage = function(langx,domx) {
+        var $ = domx.query;
+        $(function () {
+          $('#carousel-example-generic').plugin("lark.groups.carousel",{
+            mode : "slide"
+          }); 
+          $('#carousel-example-generic').focus();
+          $(document).on("keydown",function(evt){
+            console.log(evt.keyCode);
+          })
+        }); 
+
+    };
+</script>
+</body>
+</html>

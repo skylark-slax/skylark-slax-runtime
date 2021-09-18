@@ -1,0 +1,95 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Carousel</title>
+  <link rel="stylesheet" href="../themes/twbs/css/bootstrap.css">
+
+      <style>
+      .carousel-item {
+        transition: transform 2s ease, opacity .5s ease;
+      }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="page-header">
+    <h1>Carousel <small>Bootstrap Carousel Component </small></h1>
+  </div>
+
+  <div id="carousel-example-generic" class="carousel slide">
+    <ol class="carousel-indicators">
+      <li data-slide-to="0" class="active"></li>
+      <li data-slide-to="1" class=""></li>
+      <li data-slide-to="2" class=""></li>
+    </ol>
+    <div class="carousel-inner">
+      <div class="item carousel-item active">
+        <img alt="First slide" src="http://37.media.tumblr.com/tumblr_m8tay0JcfG1qa42jro1_1280.jpg">
+      </div>
+      <div class="item carousel-item">
+        <img alt="Second slide" src="http://37.media.tumblr.com/tumblr_m8tazfiVYJ1qa42jro1_1280.jpg">
+      </div>
+      <div class="item carousel-item">
+        <img alt="Third slide" src="http://38.media.tumblr.com/tumblr_m8tb2rVsD31qa42jro1_1280.jpg">
+      </div>
+    </div>
+    <a class="left carousel-control carousel-control-prev"  data-slide="prev">
+      <span class="glyphicon glyphicon-chevron-left carousel-control-prev-icon" ></span>
+    </a>
+    <a class="right carousel-control carousel-control-next" data-slide="next">
+      <span class="glyphicon glyphicon-chevron-right carousel-control-next-icon"></span>
+    </a>
+  </div>
+
+</div>
+
+<script type="text/javascript" src="../require.js" data-main="../bootstrap.js"></script>
+
+<script>
+      var initPage = function(langx,domx) {
+        var $ = domx.query;
+        $(function () {
+          $('#carousel-example-generic').plugin("lark.groups.carousel",{
+            cycle : {
+              interval:2000
+            },
+            selectors :{
+              itemsContainer : ".carousel-inner",
+              indicatorsContainer : ".carousel-indicators"
+            },
+            controls : {
+              selectors : {
+                // The class for the "prev" control:
+                prev: '.carousel-control-prev',
+                // The class for the "next" control:
+                next: '.carousel-control-next'
+              }
+            },
+            indicators : {
+
+              indicator : {
+                indexAttrName : "data-slide-to"
+              }
+            },
+            item : {
+              selector : ".carousel-item",
+              classes : {
+                base : "carousel-item"
+              }
+            }
+          }); 
+          $('#carousel-example-generic').focus();
+          $(document).on("keydown",function(evt){
+            console.log(evt.keyCode);
+          })
+        }); 
+
+    };
+</script>
+</body>
+</html>

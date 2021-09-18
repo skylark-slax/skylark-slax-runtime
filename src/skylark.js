@@ -1,5 +1,6 @@
 define([
 	"./slax",
+	"skylark-langx-ns",
 	"skylark-langx",
 	"skylark-langx-logging",
 	"skylark-domx",

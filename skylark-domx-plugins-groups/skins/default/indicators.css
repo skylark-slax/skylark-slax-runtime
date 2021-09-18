@@ -1,0 +1,76 @@
+@charset "UTF-8";
+
+.lark-carousel > .indicators {
+  position: absolute;
+  top: auto;
+  right: 15px;
+  bottom: 15px;
+  left: 15px;
+  margin: 0 40px;
+  padding: 0;
+  list-style: none;
+  text-align: center;
+  line-height: 10px;
+}
+
+.lark-carousel > .indicators > li {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin: 6px 3px 0 3px;
+  -webkit-box-sizing: content-box;
+     -moz-box-sizing: content-box;
+          box-sizing: content-box;
+  border: 1px solid transparent;
+  background: #ccc;
+  background: rgba(255, 255, 255, 0.25) center no-repeat;
+  border-radius: 5px;
+  box-shadow: 0 0 2px #000;
+  opacity: 0.5;
+  cursor: pointer;
+}
+
+.lark-carousel > .indicators > li:hover,
+.lark-carousel > .indicators > .active {
+  background-color: #fff;
+  border-color: #fff;
+  opacity: 1;
+}
+
+
+.lark-carousel > .indicators > li:after {
+  opacity: 0;
+  display: block;
+  position: absolute;
+  content: '';
+  top: -5em;
+  width: 75px;
+  height: 75px;
+  transition: transform 600ms ease-out, opacity 400ms ease-out;
+  transform: translateX(-50%) translateY(0) translateZ(0px);
+  pointer-events:none;
+}
+
+.lark-carousel > .indicators > li:hover:after {
+  opacity: 1;
+  border-radius: 50%;
+  background: inherit;
+  transform: translateX(-50%) translateY(-5px) translateZ(0px);
+}
+
+.lark-carousel > .indicators > .active:after {
+  display: none;
+}
+
+
+.lark-carousel-single > .indicators {
+  display: none;
+}
+.lark-carousel > .indicators {
+  -webkit-user-select: none;
+   -khtml-user-select: none;
+     -moz-user-select: none;
+      -ms-user-select: none;
+          user-select: none;
+}
+

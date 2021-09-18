@@ -34180,11 +34180,18 @@ define('skylark-domx-plugins-panels/tabstrip',[
         }
       },
 
-      add : function() {
+      //Activates a tab specified as a selector. 
+      activateTab : function(tab) {
+        if (langx.isNumber(tab)) {
+          $(this.$tabs[tab]).plugin(TabButton.prototype.pluginName).show();
+        }
+      },
+
+      addTab : function() {
         //TODO
       },
 
-      remove : function(){
+      removeTab : function(){
         //TODO
       }
     });
@@ -47189,6 +47196,7 @@ define('skylark-jquery', ['skylark-jquery/main'], function (main) { return main;
 
 define('skylark-slax-runtime/skylark',[
 	"./slax",
+	"skylark-langx-ns",
 	"skylark-langx",
 	"skylark-langx-logging",
 	"skylark-domx",

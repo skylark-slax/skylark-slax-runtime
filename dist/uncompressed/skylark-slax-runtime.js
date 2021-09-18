@@ -230,6 +230,7 @@ define('skylark-slax-runtime/caches',[
 });
 define('skylark-slax-runtime/skylark',[
 	"./slax",
+	"skylark-langx-ns",
 	"skylark-langx",
 	"skylark-langx-logging",
 	"skylark-domx",

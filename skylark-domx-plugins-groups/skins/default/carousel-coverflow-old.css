@@ -1,0 +1,167 @@
+
+.lark-carousel.coverflow .items  {
+  display: block;
+  white-space: nowrap;
+  word-spacing: -0.25em;
+  -webkit-transform-origin: 50% 50%;
+      -ms-transform-origin: 50% 50%;
+          transform-origin: 50% 50%;
+  -webkit-backface-visibility: hidden;
+          backface-visibility: hidden;
+}
+
+.lark-carousel.coverflow .item {
+  display: inline-block;
+  white-space: normal;
+  word-spacing: normal;
+  vertical-align: bottom;
+}
+
+.lark-carousel.coverflow .item.past,
+.lark-carousel.coverflow .item.future {
+  cursor: pointer;
+}
+
+.lark-carousel.coverflow .items,
+.lark-carousel.coverflow .item,
+.lark-carousel.coverflow .item  .content {
+  -webkit-transition: all 350ms ease-in-out;
+  -o-transition: all 350ms ease-in-out;
+  transition: all 350ms ease-in-out;
+  -webkit-transition-timing-function: cubic-bezier(0.56, 0.12, 0.12, 0.98);
+       -o-transition-timing-function: cubic-bezier(0.56, 0.12, 0.12, 0.98);
+          transition-timing-function: cubic-bezier(0.56, 0.12, 0.12, 0.98);
+}
+
+.lark-carousel.coverflow .item {
+  -webkit-perspective: 800px;
+          perspective: 800px;
+}
+
+/* @group Flipster Coverflow Theme */
+
+
+.lark-carousel.coverflow1 .items  {
+  padding-bottom: 5%;
+}
+
+.lark-carousel.coverflow1 .item .content {
+  -webkit-transform-origin: 50% 100%;
+      -ms-transform-origin: 50% 100%;
+          transform-origin: 50% 100%;
+  box-reflect: below 0 -webkit-gradient(linear, left bottom, left top, color-stop(0.05, rgba(255, 255, 255, 0.12)), color-stop(0.2, transparent));
+  -webkit-box-reflect: below 0 -webkit-gradient(linear, left bottom, left top, color-stop(0.05, rgba(255, 255, 255, 0.12)), color-stop(0.2, transparent));
+}
+
+
+.lark-carousel.coverflow1 .item.past .content {
+  -webkit-transform-origin: 0% 50%;
+      -ms-transform-origin: 0% 50%;
+          transform-origin: 0% 50%;
+  -webkit-transform: scale(0.75) rotateY(55deg);
+          transform: scale(0.75) rotateY(55deg);
+}
+
+.lark-carousel.coverflow1 .item.future .content {
+  -webkit-transform-origin: 100% 50%;
+      -ms-transform-origin: 100% 50%;
+          transform-origin: 100% 50%;
+  -webkit-transform: scale(0.75) rotateY(-55deg);
+          transform: scale(0.75) rotateY(-55deg);
+}
+
+.lark-carousel.coverflow1 .item.current .content {
+  -webkit-transform: rotateY(0deg);
+          transform: rotateY(0deg);
+}
+
+
+/* @group Flipster Carousel Theme */
+
+.lark-carousel.coverflow2 .item.past,
+.lark-carousel.coverflow2 .item.future {
+  opacity: 0;
+  -webkit-transition-delay: 115ms;
+       -o-transition-delay: 115ms;
+          transition-delay: 115ms;
+}
+
+.lark-carousel.coverflow2 .item.past-2,
+.lark-carousel.coverflow2 .item.future-2 {
+  opacity: 0.6;
+  -webkit-transition-delay: 90ms;
+       -o-transition-delay: 90ms;
+          transition-delay: 90ms;
+}
+
+.lark-carousel.coverflow2 .item.past-1,
+.lark-carousel.coverflow2 .item.future-1 {
+  opacity: 0.8;
+  -webkit-transition-delay: 60ms;
+       -o-transition-delay: 60ms;
+          transition-delay: 60ms;
+}
+
+.lark-carousel.coverflow2 .item.past .content {
+  -webkit-transform: translateX(100%) rotateY(-20deg) scale(0.5);
+          transform: translateX(100%) rotateY(-20deg) scale(0.5);
+}
+
+.lark-carousel.coverflow2 .item.past-2  .content {
+  -webkit-transform: translateX(25%) rotateY(40deg) scale(0.65);
+          transform: translateX(25%) rotateY(40deg) scale(0.65);
+}
+
+.lark-carousel.coverflow2 .item.past-1 .content {
+  -webkit-transform: rotateY(45deg) scale(0.8);
+          transform: rotateY(45deg) scale(0.8);
+}
+.lark-carousel.coverflow2 .item.future .content {
+  -webkit-transform: translateX(-100%) rotateY(20deg) scale(0.5);
+          transform: translateX(-100%) rotateY(20deg) scale(0.5);
+}
+.lark-carousel.coverflow2 .item.future-2 .content {
+  -webkit-transform: translateX(-25%) rotateY(-40deg) scale(0.65);
+          transform: translateX(-25%) rotateY(-40deg) scale(0.65);
+}
+.lark-carousel.coverflow2 .item.future-1 .content {
+  -webkit-transform: rotateY(-45deg) scale(0.8);
+          transform: rotateY(-45deg) scale(0.8);
+}
+.lark-carousel.coverflow2.no-rotate .item.past .content {
+  -webkit-transform: translateX(175%) scale(0.5);
+      -ms-transform: translateX(175%) scale(0.5);
+          transform: translateX(175%) scale(0.5);
+}
+.lark-carousel.coverflow2.no-rotate .item.past-2 .content {
+  -webkit-transform: translateX(25%) scale(0.65);
+      -ms-transform: translateX(25%) scale(0.65);
+          transform: translateX(25%) scale(0.65);
+}
+.lark-carousel.coverflow2.no-rotate .item.past-1 .content {
+  -webkit-transform: translateX(0%) scale(0.8);
+      -ms-transform: translateX(0%) scale(0.8);
+          transform: translateX(0%) scale(0.8);
+}
+.lark-carousel.coverflow2.no-rotate .item.future .content {
+  -webkit-transform: translateX(-175%) scale(0.5);
+      -ms-transform: translateX(-175%) scale(0.5);
+          transform: translateX(-175%) scale(0.5);
+}
+.lark-carousel.coverflow2.no-rotate .item.future-2 .content {
+  -webkit-transform: translateX(-25%) scale(0.65);
+      -ms-transform: translateX(-25%) scale(0.65);
+          transform: translateX(-25%) scale(0.65);
+}
+.lark-carousel.coverflow2.no-rotate .item.future-1 .content {
+  -webkit-transform: translateX(0%) scale(0.8);
+      -ms-transform: translateX(0%) scale(0.8);
+          transform: translateX(0%) scale(0.8);
+}
+.lark-carousel.coverflow2 .item.current .content {
+  -webkit-transform: translateX(0) rotateY(0deg) scale(1);
+          transform: translateX(0) rotateY(0deg) scale(1);
+  -webkit-transition-delay: 60ms;
+       -o-transition-delay: 60ms;
+          transition-delay: 60ms;
+}
