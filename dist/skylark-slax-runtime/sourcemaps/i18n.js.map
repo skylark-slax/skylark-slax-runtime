@@ -1,1 +1,1 @@
-{"version":3,"sources":["i18n.js"],"names":["define"],"mappings":";;;;;;;AAAAA,UAAU","file":"../i18n.js","sourcesContent":["define([],function(){\r\n\r\n\tfunction translate() {\r\n\t\t\r\n\t}\r\n\r\n});"]}
+{"version":3,"sources":["i18n.js"],"names":["define"],"mappings":";;;;;;;AAAAA,OAAO,GAAG,YAMT","file":"../i18n.js","sourcesContent":["define([],function(){\r\n\r\n\tfunction translate() {\r\n\t\t\r\n\t}\r\n\r\n});"]}

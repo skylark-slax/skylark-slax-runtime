@@ -5,5 +5,5 @@
  * @link https://github.com/skylark-slax/skylark-slax-runtime/
  * @license MIT
  */
-cdefine(["./slax"],function(n){var i={};return n.templates={engine:function(n,e){if(void 0===e)return i[n];i[n]=e}}});
-//# sourceMappingURL=sourcemaps/templates.js.map
+define(["./slax"],function(e){var n={};return defien("services",[],function(){return n}),e.services=n});
+//# sourceMappingURL=sourcemaps/services.js.map

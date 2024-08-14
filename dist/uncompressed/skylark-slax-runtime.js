@@ -5,10 +5,8 @@
  * @link https://github.com/skylark-slax/skylark-slax-runtime/
  * @license MIT
  */
-(function(factory,globals) {
-  var define = globals.define,
-      require = globals.require,
-      isAmd = (typeof define === 'function' && define.amd),
+(function(factory,globals,define,require) {
+  var isAmd = (typeof define === 'function' && define.amd),
       isCmd = (!isAmd && typeof exports !== 'undefined');
 
   if (!isAmd && !define) {
@@ -100,7 +98,7 @@ define('skylark-slax-runtime/slax',[
 
     },
     _rootUrl = "",  //The root url of slax system
-    _baseUrl = "";  //the base url of slax app
+    _baseUrl = "";  //the base url of slax page
 
 
 
@@ -128,7 +126,7 @@ define('skylark-slax-runtime/slax',[
                             if (slaxRoot == undefined) {
                                 slaxRoot = slaxDir;
                             }
-                            slaxApp = script.getAttribute("data-slax-app");
+                            slaxApp = script.getAttribute("data-slax-page") || script.getAttribute("data-slax-app");
                         }
 
 
@@ -182,31 +180,31 @@ define('skylark-slax-runtime/slax',[
                 let bootFunc = window[cfg.boot];
                 bootFunc(cfg);
             } else {
-                var initApp = function(spa, _cfg) {
+                var initPage = function(spa, _cfg) {
                     _cfg = _cfg || cfg;
       
-                    var app = spa(_cfg);
+                    var page = slax.page = spa(_cfg);
 
                     hoster.global.go =  function(path, force) {
-                        app.go(path, force);
+                        page.go(path, force);
                     };
 
-                    app.prepare().then(function(){
-                        app.run();
+                    page.prepare().then(function(){
+                        page.run();
                     });
                 };
                 if(cfg.spaModule) {
                     require([cfg.spaModule], function(spa) {
                         if(spa._start) {
                             spa._start().then(function(_cfg){
-                                initApp(spa, _cfg);
+                                initPage(spa, _cfg);
                             });
                         } else {
-                            initApp(spa);
+                            initPage(spa);
                         }
                     });
                 } else {
-                    initApp(skylark.spa);
+                    initPage(skylark.spa);
                 }                
             }
         }
@@ -228,6 +226,115 @@ define('skylark-slax-runtime/caches',[
 	//session
 	return slax.caches = caches;
 });
+define('skylark-io-diskfs/download',[
+    "skylark-langx/types",
+    "./diskfs"
+],function(types,diskfs){
+
+    function downloadFile(data, name) {
+        if (window.navigator.msSaveBlob) {
+            if (types.isString(data)) {
+                data = dataURItoBlob(data);
+            }
+            window.navigator.msSaveBlob(data, name);
+        } else {
+            var a = document.createElement('a');
+            if (data instanceof Blob) {
+                data = URL.createObjectURL(data);
+            }
+            a.href = data;
+            a.setAttribute('download', name || 'noname');
+            //a.dispatchEvent(new CustomEvent('click'));
+            a.click();
+        }
+    }
+
+    return diskfs.downlad = downloadFile;
+
+});
+
+define('skylark-io-diskfs/read',[
+    "skylark-langx-async/deferred",
+    "./diskfs"
+],function(Deferred, diskfs){
+
+    function readFile(file, params) {
+        params = params || {};
+        var d = new Deferred,
+            reader = new FileReader();
+
+        reader.onload = function(evt) {
+            d.resolve(evt.target.result);
+        };
+        reader.onerror = function(e) {
+            var code = e.target.error.code;
+            if (code === 2) {
+                alert('please don\'t open this page using protocol fill:///');
+            } else {
+                alert('error code: ' + code);
+            }
+        };
+
+        if (params.asArrayBuffer) {
+            reader.readAsArrayBuffer(file);
+        } else if (params.asDataUrl) {
+            reader.readAsDataURL(file);
+        } else if (params.asText) {
+            reader.readAsText(file);
+        } else {
+            reader.readAsArrayBuffer(file);
+        }
+
+        return d.promise;
+    }
+
+    return diskfs.read = diskfs.readFile = readFile;
+    
+});
+
+define('skylark-io-diskfs/read-image',[
+    "skylark-langx-async/deferred",
+    "./diskfs",
+    "./read"
+],function(Deferred, diskfs,read){
+
+	function readImage(fileObj) {
+        var d = new Deferred,
+	    	img = new Image();
+
+	    img.onload = function() {
+	      d.resolve(img);
+	    };
+	    img.onerror = function(e) {
+	      d.reject(e);
+	    };
+
+	    read(fileObj,{
+	    	asDataUrl : true
+	    }).then(function(dataUrl){
+	        img.src = dataUrl;
+	    }).catch(function(e){
+	    	d.reject(e);
+	    });
+
+	    return d.promise;
+	}
+
+	return diskfs.readImage = readImage;
+
+});
+define('skylark-io-diskfs/main',[
+	"./diskfs",
+	"./download",
+	"./read",
+	"./read-image",
+	"./select",
+	"./webentry"
+],function(diskfs){
+	return diskfs;
+});
+define('skylark-io-diskfs', ['skylark-io-diskfs/main'], function (main) { return main; });
+
 define('skylark-slax-runtime/skylark',[
 	"./slax",
 	"skylark-langx-ns",
@@ -261,7 +368,6 @@ define('skylark-slax-runtime/skylark',[
 	"skylark-appify-spa",
 	"skylark-data-entities",
 	"skylark-jquery"
-	
 ],function(slax,skylark){
 	return slax.skylark = skylark;
 });
@@ -275,5 +381,5 @@ define('skylark-slax-runtime/main',[
 define('skylark-slax-runtime', ['skylark-slax-runtime/main'], function (main) { return main; });
 
 
-},this);
+},this,define,require);
 //# sourceMappingURL=sourcemaps/skylark-slax-runtime.js.map

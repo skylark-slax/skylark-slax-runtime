@@ -12,7 +12,7 @@ define([
 
     },
     _rootUrl = "",  //The root url of slax system
-    _baseUrl = "";  //the base url of slax app
+    _baseUrl = "";  //the base url of slax page
 
 
 
@@ -40,7 +40,7 @@ define([
                             if (slaxRoot == undefined) {
                                 slaxRoot = slaxDir;
                             }
-                            slaxApp = script.getAttribute("data-slax-app");
+                            slaxApp = script.getAttribute("data-slax-page") || script.getAttribute("data-slax-app");
                         }
 
 
@@ -94,31 +94,31 @@ define([
                 let bootFunc = window[cfg.boot];
                 bootFunc(cfg);
             } else {
-                var initApp = function(spa, _cfg) {
+                var initPage = function(spa, _cfg) {
                     _cfg = _cfg || cfg;
       
-                    var app = spa(_cfg);
+                    var page = slax.page = spa(_cfg);
 
                     hoster.global.go =  function(path, force) {
-                        app.go(path, force);
+                        page.go(path, force);
                     };
 
-                    app.prepare().then(function(){
-                        app.run();
+                    page.prepare().then(function(){
+                        page.run();
                     });
                 };
                 if(cfg.spaModule) {
                     require([cfg.spaModule], function(spa) {
                         if(spa._start) {
                             spa._start().then(function(_cfg){
-                                initApp(spa, _cfg);
+                                initPage(spa, _cfg);
                             });
                         } else {
-                            initApp(spa);
+                            initPage(spa);
                         }
                     });
                 } else {
-                    initApp(skylark.spa);
+                    initPage(skylark.spa);
                 }                
             }
         }

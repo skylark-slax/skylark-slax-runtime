@@ -31,7 +31,6 @@ define([
 	"skylark-appify-spa",
 	"skylark-data-entities",
 	"skylark-jquery"
-	
 ],function(slax,skylark){
 	return slax.skylark = skylark;
 });
