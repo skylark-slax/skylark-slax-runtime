@@ -3978,12 +3978,385 @@ define('skylark-langx-events/create-event',[
 
     return events.createEvent = createEvent;	
 });
+define('skylark-langx-events/Emitter',[
+  "skylark-langx-types",
+  "skylark-langx-objects",
+  "skylark-langx-arrays",
+  "skylark-langx-klass",
+  "./events",
+  "./event",
+  "./listener"
+],function(types,objects,arrays,klass,events,Event,Listener){
+    var slice = Array.prototype.slice,
+        compact = arrays.compact,
+        isDefined = types.isDefined,
+        isPlainObject = types.isPlainObject,
+        isFunction = types.isFunction,
+        isString = types.isString,
+        isEmptyObject = types.isEmptyObject,
+        mixin = objects.mixin,
+        safeMixin = objects.safeMixin;
+
+    function parse(event) {
+        var segs = ("" + event).split(".");
+        return {
+            name: segs[0],
+            ns: segs.slice(1).join(" ")
+        };
+    }
+
+    
+    var queues  = new Map();
+
+
+    var Emitter = Listener.inherit({
+        _prepareArgs : function(e,args) {
+            if (isDefined(args)) {
+                args = [e].concat(args);
+            } else {
+                args = [e];
+            }
+            return args;
+        },
+
+        on: function(events, selector, data, callback, ctx, /*used internally*/ one) {
+            var self = this,
+                _hub = this._hub || (this._hub = {});
+
+            if (isPlainObject(events)) {
+                ctx = callback;
+                each(events, function(type, fn) {
+                    self.on(type, selector, data, fn, ctx, one);
+                });
+                return this;
+            }
+
+            if (!isString(selector) && !isFunction(callback)) {
+                ctx = callback;
+                callback = data;
+                data = selector;
+                selector = undefined;
+            }
+
+            if (isFunction(data)) {
+                ctx = callback;
+                callback = data;
+                data = null;
+            }
+
+            if (!callback ) {
+                throw new Error("No callback function");
+            } else if (!isFunction(callback)) {
+                throw new Error("The callback  is not afunction");
+            }
+
+            if (isString(events)) {
+                events = events.split(/\s/)
+            }
+
+            events.forEach(function(event) {
+                var parsed = parse(event),
+                    name = parsed.name,
+                    ns = parsed.ns;
+
+                (_hub[name] || (_hub[name] = [])).push({
+                    fn: callback,
+                    selector: selector,
+                    data: data,
+                    ctx: ctx,
+                    ns : ns,
+                    one: one
+                });
+            });
+
+            return this;
+        },
+
+        one: function(events, selector, data, callback, ctx) {
+            return this.on(events, selector, data, callback, ctx, 1);
+        },
+
+        emit: function(e /*,argument list*/ ) {
+            if (!this._hub) {
+                return this;
+            }
+
+            var self = this;
+
+            if (isString(e)) {
+                e = new Event(e); //new CustomEvent(e);
+            }
+
+            Object.defineProperty(e,"target",{
+                value : this
+            });
+
+            var args = slice.call(arguments, 1);
+
+            args = this._prepareArgs(e,args);
+
+            [e.type || e.name, "all"].forEach(function(eventName) {
+                var parsed = parse(eventName),
+                    name = parsed.name,
+                    ns = parsed.ns;
+
+                var listeners = self._hub[name];
+                if (!listeners) {
+                    return;
+                }
+
+                var len = listeners.length,
+                    reCompact = false;
+
+                for (var i = 0; i < len; i++) {
+                    if (e.isImmediatePropagationStopped && e.isImmediatePropagationStopped()) {
+                        return this;
+                    }
+                    var listener = listeners[i];
+                    if (ns && (!listener.ns ||  !listener.ns.startsWith(ns))) {
+                        continue;
+                    }
+
+                    if (listener.data) {
+                        e.data = mixin({}, listener.data, e.data);
+                    }
+                    if (args.length == 2 && isPlainObject(args[1])) {
+                        e.data = e.data || {};
+                        mixin(e.data,args[1]);
+                    }
+
+                    listener.fn.apply(listener.ctx, args);
+                    if (listener.one) {
+                        listeners[i] = null;
+                        reCompact = true;
+                    }
+                }
+
+                if (reCompact) {
+                    self._hub[eventName] = compact(listeners);
+                }
+
+            });
+            return this;
+        },
+
+        queueEmit : function (event) {
+            const type = event.type || event;
+            let map = queues.get(this);
+            if (!map) {
+                map = new Map();
+                queues.set(this, map);
+            }
+            const oldTimeout = map.get(type);
+            map.delete(type);
+            window.clearTimeout(oldTimeout);
+            const timeout = window.setTimeout(() => {
+                if (map.size === 0) {
+                    map = null;
+                    queues.delete(this);
+                }
+                this.trigger(event);
+            }, 0);
+            map.set(type, timeout);
+        },
+
+        listened: function(event) {
+            var evtArr = ((this._hub || (this._events = {}))[event] || []);
+            return evtArr.length > 0;
+        },
+
+        off: function(events, callback) {
+            if (!events) {
+              this._hub = null;
+              return;
+            }
+            var _hub = this._hub || (this._hub = {});
+            if (isString(events)) {
+                events = events.split(/\s/)
+            }
+
+            events.forEach(function(event) {
+                var parsed = parse(event),
+                    name = parsed.name,
+                    ns = parsed.ns;
+
+                var evts = _hub[name];
+
+                if (evts) {
+                    var liveEvents = [];
+
+                    if (callback || ns) {
+                        for (var i = 0, len = evts.length; i < len; i++) {
+                            
+                            if (callback && evts[i].fn !== callback && evts[i].fn._ !== callback) {
+                                liveEvents.push(evts[i]);
+                                continue;
+                            } 
+
+                            if (ns && (!evts[i].ns || evts[i].ns.indexOf(ns)!=0)) {
+                                liveEvents.push(evts[i]);
+                                continue;
+                            }
+                        }
+                    }
+
+                    if (liveEvents.length) {
+                        _hub[name] = liveEvents;
+                    } else {
+                        delete _hub[name];
+                    }
+
+                }
+            });
+
+            return this;
+        },
+
+        trigger  : function() {
+            return this.emit.apply(this,arguments);
+        },
+
+        queueTrigger : function (event) {
+            return this.queueEmit.apply(this,arguments);
+        }
+
+    });
+
+
+    return events.Emitter = Emitter;
+
+});
+define('skylark-langx-events/optioned-emitter',[
+    "skylark-langx-objects",
+    "skylark-langx-events/Emitter",
+    "./events"
+], function(
+    objects,
+    Emitter, 
+    events
+) {
+    "use strict";
+
+    function parentClass(ctor){
+        if (ctor.hasOwnProperty("superclass")) {
+            return ctor.superclass;
+        }
+
+        return Object.getPrototypeOf(ctor);
+    }
+
+ 
+    var OptionedEmitter =   Emitter.inherit({
+        klassName: "OptionedEmitter",
+
+        _construct : function(options) {
+           this._initOptions(options);
+        },
+
+        _initOptions : function(options) {
+          var ctor = this.constructor,
+              cache = ctor.cache = (ctor.hasOwnProperty("cache") ? ctor.cache : {}),
+              defaults = cache.defaults;
+          if (!defaults) {
+            var  ctors = [];
+            do {
+              ctors.unshift(ctor);
+              if (ctor === OptionedEmitter) {
+                break;
+              }
+              ctor = parentClass(ctor);
+            } while (ctor);
+
+            defaults = cache.defaults = {};
+            for (var i=0;i<ctors.length;i++) {
+              ctor = ctors[i];
+              if (ctor.prototype.hasOwnProperty("options")) {
+                objects.mixin(defaults,ctor.prototype.options,true);
+              }
+              if (ctor.hasOwnProperty("options")) {
+                objects.mixin(defaults,ctor.options,true);
+              }
+            }
+          }
+          Object.defineProperty(this,"options",{
+            value :objects.mixin({},defaults,options,true)
+          });
+
+          //return this.options = langx.mixin({},defaults,options);
+          return this.options;
+        },
+
+
+        option: function( key, value ) {
+            var options = key;
+            var parts;
+            var curOption;
+            var i;
+
+            if ( arguments.length === 0 ) {
+
+                // Don't return a reference to the internal hash
+                return objects.mixin( {}, this.options );
+            }
+
+            if ( typeof key === "string" ) {
+
+                // Handle nested keys, e.g., "foo.bar" => { foo: { bar: ___ } }
+                options = {};
+                parts = key.split( "." );
+                key = parts.shift();
+                if ( parts.length ) {
+                    curOption = options[ key ] = objects.mixin( {}, this.options[ key ] );
+                    for ( i = 0; i < parts.length - 1; i++ ) {
+                        curOption[ parts[ i ] ] = curOption[ parts[ i ] ] || {};
+                        curOption = curOption[ parts[ i ] ];
+                    }
+                    key = parts.pop();
+                    if ( arguments.length === 1 ) {
+                        return curOption[ key ] === undefined ? null : curOption[ key ];
+                    }
+                    curOption[ key ] = value;
+                } else {
+                    if ( arguments.length === 1 ) {
+                        return this.options[ key ] === undefined ? null : this.options[ key ];
+                    }
+                    options[ key ] = value;
+                }
+            }
+
+            this._setOptions( options );
+
+            return this;
+        },
+
+        _setOptions: function( options ) {
+            var key;
+
+            for ( key in options ) {
+                this._setOption( key, options[ key ] );
+            }
+
+            return this;
+        },
+
+        _setOption: function( key, value ) {
+
+            this.options[ key ] = value;
+
+            return this;
+        }
+    });
+
+
+    return  events.OptionedEmitter = OptionedEmitter;
+});
 define('skylark-langx-events/main',[
 	"./events",
 	"./event",
 	"./listener",
 	"./emitter",
-	"./create-event"
+	"./create-event",
+	"./optioned-emitter"
 ],function(events){
 	return events;
 });
@@ -21999,254 +22372,6 @@ define('skylark-io-caches/cookie',[
 });
 
 
-define('skylark-langx-events/Emitter',[
-  "skylark-langx-types",
-  "skylark-langx-objects",
-  "skylark-langx-arrays",
-  "skylark-langx-klass",
-  "./events",
-  "./event",
-  "./listener"
-],function(types,objects,arrays,klass,events,Event,Listener){
-    var slice = Array.prototype.slice,
-        compact = arrays.compact,
-        isDefined = types.isDefined,
-        isPlainObject = types.isPlainObject,
-        isFunction = types.isFunction,
-        isString = types.isString,
-        isEmptyObject = types.isEmptyObject,
-        mixin = objects.mixin,
-        safeMixin = objects.safeMixin;
-
-    function parse(event) {
-        var segs = ("" + event).split(".");
-        return {
-            name: segs[0],
-            ns: segs.slice(1).join(" ")
-        };
-    }
-
-    
-    var queues  = new Map();
-
-
-    var Emitter = Listener.inherit({
-        _prepareArgs : function(e,args) {
-            if (isDefined(args)) {
-                args = [e].concat(args);
-            } else {
-                args = [e];
-            }
-            return args;
-        },
-
-        on: function(events, selector, data, callback, ctx, /*used internally*/ one) {
-            var self = this,
-                _hub = this._hub || (this._hub = {});
-
-            if (isPlainObject(events)) {
-                ctx = callback;
-                each(events, function(type, fn) {
-                    self.on(type, selector, data, fn, ctx, one);
-                });
-                return this;
-            }
-
-            if (!isString(selector) && !isFunction(callback)) {
-                ctx = callback;
-                callback = data;
-                data = selector;
-                selector = undefined;
-            }
-
-            if (isFunction(data)) {
-                ctx = callback;
-                callback = data;
-                data = null;
-            }
-
-            if (!callback ) {
-                throw new Error("No callback function");
-            } else if (!isFunction(callback)) {
-                throw new Error("The callback  is not afunction");
-            }
-
-            if (isString(events)) {
-                events = events.split(/\s/)
-            }
-
-            events.forEach(function(event) {
-                var parsed = parse(event),
-                    name = parsed.name,
-                    ns = parsed.ns;
-
-                (_hub[name] || (_hub[name] = [])).push({
-                    fn: callback,
-                    selector: selector,
-                    data: data,
-                    ctx: ctx,
-                    ns : ns,
-                    one: one
-                });
-            });
-
-            return this;
-        },
-
-        one: function(events, selector, data, callback, ctx) {
-            return this.on(events, selector, data, callback, ctx, 1);
-        },
-
-        emit: function(e /*,argument list*/ ) {
-            if (!this._hub) {
-                return this;
-            }
-
-            var self = this;
-
-            if (isString(e)) {
-                e = new Event(e); //new CustomEvent(e);
-            }
-
-            Object.defineProperty(e,"target",{
-                value : this
-            });
-
-            var args = slice.call(arguments, 1);
-
-            args = this._prepareArgs(e,args);
-
-            [e.type || e.name, "all"].forEach(function(eventName) {
-                var parsed = parse(eventName),
-                    name = parsed.name,
-                    ns = parsed.ns;
-
-                var listeners = self._hub[name];
-                if (!listeners) {
-                    return;
-                }
-
-                var len = listeners.length,
-                    reCompact = false;
-
-                for (var i = 0; i < len; i++) {
-                    if (e.isImmediatePropagationStopped && e.isImmediatePropagationStopped()) {
-                        return this;
-                    }
-                    var listener = listeners[i];
-                    if (ns && (!listener.ns ||  !listener.ns.startsWith(ns))) {
-                        continue;
-                    }
-
-                    if (listener.data) {
-                        e.data = mixin({}, listener.data, e.data);
-                    }
-                    if (args.length == 2 && isPlainObject(args[1])) {
-                        e.data = e.data || {};
-                        mixin(e.data,args[1]);
-                    }
-
-                    listener.fn.apply(listener.ctx, args);
-                    if (listener.one) {
-                        listeners[i] = null;
-                        reCompact = true;
-                    }
-                }
-
-                if (reCompact) {
-                    self._hub[eventName] = compact(listeners);
-                }
-
-            });
-            return this;
-        },
-
-        queueEmit : function (event) {
-            const type = event.type || event;
-            let map = queues.get(this);
-            if (!map) {
-                map = new Map();
-                queues.set(this, map);
-            }
-            const oldTimeout = map.get(type);
-            map.delete(type);
-            window.clearTimeout(oldTimeout);
-            const timeout = window.setTimeout(() => {
-                if (map.size === 0) {
-                    map = null;
-                    queues.delete(this);
-                }
-                this.trigger(event);
-            }, 0);
-            map.set(type, timeout);
-        },
-
-        listened: function(event) {
-            var evtArr = ((this._hub || (this._events = {}))[event] || []);
-            return evtArr.length > 0;
-        },
-
-        off: function(events, callback) {
-            if (!events) {
-              this._hub = null;
-              return;
-            }
-            var _hub = this._hub || (this._hub = {});
-            if (isString(events)) {
-                events = events.split(/\s/)
-            }
-
-            events.forEach(function(event) {
-                var parsed = parse(event),
-                    name = parsed.name,
-                    ns = parsed.ns;
-
-                var evts = _hub[name];
-
-                if (evts) {
-                    var liveEvents = [];
-
-                    if (callback || ns) {
-                        for (var i = 0, len = evts.length; i < len; i++) {
-                            
-                            if (callback && evts[i].fn !== callback && evts[i].fn._ !== callback) {
-                                liveEvents.push(evts[i]);
-                                continue;
-                            } 
-
-                            if (ns && (!evts[i].ns || evts[i].ns.indexOf(ns)!=0)) {
-                                liveEvents.push(evts[i]);
-                                continue;
-                            }
-                        }
-                    }
-
-                    if (liveEvents.length) {
-                        _hub[name] = liveEvents;
-                    } else {
-                        delete _hub[name];
-                    }
-
-                }
-            });
-
-            return this;
-        },
-
-        trigger  : function() {
-            return this.emit.apply(this,arguments);
-        },
-
-        queueTrigger : function (event) {
-            return this.queueEmit.apply(this,arguments);
-        }
-
-    });
-
-
-    return events.Emitter = Emitter;
-
-});
 define('skylark-langx-async/Deferred',[
     "skylark-langx-arrays",
     "skylark-langx-funcs",
@@ -23605,7 +23730,7 @@ define('skylark-domx-geom/geom',[
      * @param {HTMLElement} elm
      */
     function paddingExtents(elm) {
-        if (noder.isWindow(elm)) {
+        if (noder.isWindow(elm) || noder.isDoc(elm)) {
             return {
                 left : 0,
                 top : 0,
@@ -23897,6 +24022,25 @@ define('skylark-domx-geom/geom',[
         return result;
     };    
 
+
+    function isScrolledIntoView(elem,viewContainer) {
+        if (elem.style.display === "none") {
+            return false;
+        }
+
+        var docViewTop = container.scrollTop,
+            docViewBottom = docViewTop + container.clientHeight,
+            elemTop = elem.offsetTop,
+            elemBottom = elemTop + elem.clientHeight;
+
+        // Is in view if either the top or the bottom of the page is between the
+        // document viewport bounds,
+        // or if the top is above the viewport and the bottom is below it.
+        return (elemTop >= docViewTop && elemTop < docViewBottom)
+                || (elemBottom >= docViewTop && elemBottom < docViewBottom)
+                || (elemTop < docViewTop && elemBottom >= docViewBottom);
+    }
+
     function geom() {
         return geom;
     }
@@ -23926,6 +24070,8 @@ define('skylark-domx-geom/geom',[
         height: contentHeight,
 
         inview,
+
+        isScrolledIntoView,
 
         marginExtents: marginExtents,
 
@@ -49371,48 +49517,51 @@ define('skylark-appify-spa/router',[
 
 define('skylark-appify-spa/page',[
     "skylark-langx/langx",
+    "skylark-langx-events/optioned-emitter",
     "./spa",
     "./router"
-], function(langx, spa,router) {
+], function(langx, OptionedEmitter,spa,router) {
     var Deferred = langx.Deferred;
 
-    var Page = langx.Evented.inherit({
+    var Page = OptionedEmitter.inherit({
         klassName: "SpaPage",
 
-        _construct: function(config) {
+        _construct: function(options) {
 
             var plugins = this._plugins = {};
 
-            config = this._config = langx.mixin({
+            options = langx.mixin({
                 plugins: {}
-            }, config, true);
+            }, options, true);
 
-            langx.each(config.plugins, function(pluginName, setting) {
+            OptionedEmitter.prototype._construct.call(this,options);
+
+            langx.each(options.plugins, function(pluginName, setting) {
                 plugins[pluginName] = new spa.Plugin(pluginName, setting);
             });
 
-            router.routes(config.routes);
+            router.routes(options.routes);
 
             this._router = router;
 
-            ///this._page = new spa.Page(config.page);
+            ///this._page = new spa.Page(options.page);
             var params = langx.mixin({
                 "routeViewer": "body"
-            }, config.page);
+            }, options.page);
 
             this._params = params;
             this._rvc = document.querySelector(params.routeViewer);
             router.on("routed", langx.proxy(this, "refresh"));
 
-            document.title = config.title;
-            var baseUrl = config.baseUrl;
+            document.title = options.title;
+            var baseUrl = options.baseUrl;
             if (baseUrl === undefined) {
-                baseUrl = config.baseUrl = (new langx.URL(document.baseURI)).pathname;
+                baseUrl = options.baseUrl = (new langx.URL(document.baseURI)).pathname;
             }
             router.baseUrl(baseUrl);
 
-            if (config.homePath) {
-                router.homePath(config.homePath);
+            if (options.homePath) {
+                router.homePath(options.homePath);
             }
 
 
@@ -49423,7 +49572,7 @@ define('skylark-appify-spa/page',[
         },
 
         getConfig: function(key) {
-            return key ? this._config[key] : this._config;
+            return this.option(key);
         },
 
         go: function(path, force) {

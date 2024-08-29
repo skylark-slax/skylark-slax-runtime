@@ -91,7 +91,7 @@ define([
 
 	function fadeOut(alert) {
 		alert.fadeOut(500, function () {
-			$(this).remove();
+			alert.remove();
 		});
 	}
 
@@ -115,7 +115,7 @@ define([
 		// Handle mouseenter/mouseleave
 		alert
 			.on('mouseenter', function () {
-				$(this).css('transition-duration', 0);
+				alert.css('transition-duration', 0);
 			});
 	}
 
